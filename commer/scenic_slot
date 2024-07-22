@@ -1,0 +1,25 @@
+HMGY: '虎门公园'
+  host: ''
+  project:
+    HMGY_mountain_car:
+    HMGY_roller_coaster:
+    HMGY_pirate_ship_left:
+    HMGY_pirate_ship_right:
+    HMGY_Turntable:
+    HMGY_big_hammer:
+
+xgd: '新高度'
+  host: ''
+    project: ''
+
+ssty: '山水田园'
+  host: ''
+    project: ''
+
+YZSSLY: '永州水上乐园'
+  host: ''
+    project: ''
+
+
+
+
