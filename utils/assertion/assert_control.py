@@ -5,12 +5,12 @@ import ast
 import json
 from typing import Text, Dict, Any, Union
 from jsonpath import jsonpath
-from utils.other_tools.models import AssertMethod
-from utils.logging_tool.log_control import ERROR, WARNING
-from utils.read_files_tools.regular_control import cache_regular
-from utils.other_tools.models import load_module_functions
+from utils.otherUtils.models import AssertMethod
+from utils.logUtils.logControl import ERROR, WARNING
+from utils.readFilesUtils.regularControl import cache_regular
+from utils.otherUtils.models import load_module_functions
 from utils.assertion import assert_type
-from utils.other_tools.exceptions import JsonpathExtractionFailed, SqlNotFound, AssertTypeError
+from utils.otherUtils.exceptions import JsonpathExtractionFailed, SqlNotFound, AssertTypeError
 from utils import config
 
 
