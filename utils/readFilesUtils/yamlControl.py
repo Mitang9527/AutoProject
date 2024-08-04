@@ -2,7 +2,7 @@
 import os
 import ast
 import yaml.scanner
-from utils.read_files_tools.regular_control import regular
+from utils.readFilesUtils.regularControl import regular
 
 
 class GetYamlData:

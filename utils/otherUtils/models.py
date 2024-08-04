@@ -170,6 +170,7 @@ class PostgresqlDB(BaseModel):
 
 class Webhook(BaseModel):
     webhook: Union[Text, None]
+    secret: Union[Text, None]
 
 
 class Email(BaseModel):
@@ -179,6 +180,9 @@ class Email(BaseModel):
     # 收件人
     send_list: Union[Text, None]
 
+class FeiShu(BaseModel):
+    webhook: Union[Text, None]
+    secret: Union[Text, None]
 
 class Config(BaseModel):
     project_name: Text
@@ -188,11 +192,16 @@ class Config(BaseModel):
     excel_report: bool
     ding_talk: "DingTalk"
     mysql_db: "MySqlDB"
-    postgresql_db: "PostgresqlDB"
+    # postgresql_db: "PostgresqlDB"
     mirror_source: Text
     wechat: "Webhook"
     email: "Email"
     feishu: "Webhook"
+    real_time_update_test_cases: bool = False
+    host: Text
+    app_host: Union[Text, None]
+
+
     real_time_update_test_cases: bool = False
     host: Text
     app_host: Union[Text, None]

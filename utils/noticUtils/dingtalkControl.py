@@ -9,8 +9,8 @@ import time
 import urllib.parse
 from typing import Any, Text
 from dingtalkchatbot.chatbot import DingtalkChatbot, FeedLink
-from utils.other_tools.get_local_ip import get_host_ip
-from utils.other_tools.allure_data.allure_report_data import AllureFileClean, TestMetrics
+from utils.otherUtils.get_local_ip import get_host_ip
+from utils.otherUtils.allureDate.allure_report_data import AllureFileClean, TestMetrics
 from utils import config
 
 

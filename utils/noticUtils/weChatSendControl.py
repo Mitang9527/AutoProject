@@ -3,11 +3,11 @@
 """
 
 import requests
-from utils.logging_tool.log_control import ERROR
-from utils.other_tools.allure_data.allure_report_data import TestMetrics, AllureFileClean
-from utils.times_tool.time_control import now_time
-from utils.other_tools.get_local_ip import get_host_ip
-from utils.other_tools.exceptions import SendMessageError, ValueTypeError
+from utils.logUtils.logControl import ERROR
+from utils.otherUtils.allureDate.allure_report_data import TestMetrics, AllureFileClean
+from utils.timeUtils.time_control import now_time
+from utils.otherUtils.get_local_ip import get_host_ip
+from utils.otherUtils.exceptions import SendMessageError, ValueTypeError
 from utils import config
 
 

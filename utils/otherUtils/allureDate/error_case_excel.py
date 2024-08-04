@@ -3,9 +3,9 @@ import shutil
 import ast
 import xlwings
 from common.setting import ensure_path_sep
-from utils.read_files_tools.get_all_files_path import get_all_files
-from utils.notify.wechat_send import WeChatSend
-from utils.other_tools.allure_data.allure_report_data import AllureFileClean
+from utils.readFilesUtils.get_all_files_path import get_all_files
+from utils.noticUtils.weChatSendControl import WeChatSend
+from utils.otherUtils.allureDate.allure_report_data import AllureFileClean
 
 
 # TODO 还需要处理动态值

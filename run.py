@@ -1,15 +1,16 @@
+
 import os
 import sys
 import traceback
 import pytest
-from utils.other_tools.models import NotificationType
-from utils.other_tools.allure_data.allure_report_data import AllureFileClean
-from utils.logging_tool.log_control import INFO
-from utils.notify.wechat_send import WeChatSend
-from utils.notify.ding_talk import DingTalkSendMsg
-from utils.notify.send_mail import SendEmail
-from utils.notify.feishu import FeiShuTalkChatBot
-from utils.other_tools.allure_data.error_case_excel import ErrorCaseExcel
+from utils.otherUtils.models import NotificationType
+from utils.otherUtils.allureDate.allure_report_data import AllureFileClean
+from utils.logUtils.logControl import INFO
+from utils.noticUtils.weChatSendControl import WeChatSend
+from utils.noticUtils.dingtalkControl import DingTalkSendMsg
+from utils.noticUtils.sendmailControl import SendEmail
+from utils.noticUtils.feishuControl import FeiShuTalkChatBot
+from utils.otherUtils.allureDate.error_case_excel import ErrorCaseExcel
 from utils import config
 
 

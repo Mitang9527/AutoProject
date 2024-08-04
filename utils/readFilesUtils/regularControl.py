@@ -6,7 +6,7 @@ from datetime import date, timedelta, datetime
 from faker import Faker
 from jsonpath import jsonpath
 
-from utils.logging_tool.log_control import ERROR
+from utils.logUtils.logControl import ERROR
 
 
 class Context:

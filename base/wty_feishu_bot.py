@@ -6,15 +6,6 @@ import json
 import time
 
 
-def get_iciba():
-    url = 'http://open.iciba.com/dsapi/'
-    res  = requests.get(url)
-    content = res.json()['content']
-    print(content)
-    note = res.json()['note']
-    print(note)
-    return note
-
 # 加签
 import requests
 import urllib3
@@ -34,9 +25,78 @@ def Dingmessage ():
     webhook = f"https://open.feishu.cn/open-apis/bot/v2/hook/69dc685f-3da3-4d47-9fd0-d018c5278ec5"
     # 构建请求头部
     header = {"Content-Type": "application/json", "Charset": "UTF-8"}
+    print(sign)
+    print(timestamp)
+    rich_text = {
+            "msg_type": "interactive",
+            "card": {
+                "elements": [
+                    {
+                        "tag": "markdown",
+                        "content": "**🤖 测试人员： "
+                    },
+                    {
+                        "tag": "markdown",
+                        "content": "**🚀 运行环境： "
+                    },
+                    {
+                        "tag": "markdown",
+                        "content": "**💌 成功率： "
+                    },
+                    {
+                        "tag": "markdown",
+                        "content": "**🎖️ 用例数： "
+                    },
+                    {
+                        "tag": "markdown",
+                        "content": "**⭕ 成功用例： "
+                    },
+                    {
+                        "tag": "markdown",
+                        "content": "**❌ 失败用例： "
+                    },
+                    {
+                        "tag": "markdown",
+                        "content": "**❗ 异常用例： "
+                    },
+                    {
+                        "tag": "markdown",
+                        "content": "**❓ 跳过用例： "
+                    },
+                    {
+                        "tag": "markdown",
+                        "content": "📅 时间： "
+                    },
+                    {
+                        "tag": "action",
+                        "actions": [
+                            {
+                                "tag": "button",
+                                "text": {
+                                    "tag": "plain_text",
+                                    "content": "报告详情"
+                                },
+                                "type": "primary",
+                                "url": "https://mam-testcase-report.yiye.ai/"
+                            }
+                        ]
+                    }
+                ],
+                "header": {
+                    "template": "header_color",
+                    "title": {
+                        "content": "header_text",
+                        "tag": "plain_text"
+                    }
+                }
+            },
+            "timestamp":timestamp,
+            "sign" : sign
+    }
+    print(rich_text)
 
-    message_json = json.dumps({
-
+    message_json_1 = json.dumps(
+        {
         "content": {
             "text": "<at user_id='all'>所有人</at>"
         },
@@ -45,9 +105,12 @@ def Dingmessage ():
         "msg_type": "text",
         "tag": "at"
     })
-    info = requests.post(url=webhook, data=message_json, headers=header, verify=False)
-    print("hello")# 打印返回的结果
+    print(message_json_1)
+    message_json = json.dumps(rich_text)
+    info = requests.post(url=webhook,data=message_json, headers=header, verify=False)
     print(info.text)
+    info_1 = requests.post(url=webhook,data=message_json_1, headers=header, verify=False)
+    print(info_1.json())
 
 urllib3.disable_warnings()
 Dingmessage()

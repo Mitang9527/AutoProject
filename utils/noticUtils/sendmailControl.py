@@ -4,7 +4,7 @@
 
 import smtplib
 from email.mime.text import MIMEText
-from utils.other_tools.allure_data.allure_report_data import TestMetrics, AllureFileClean
+from utils.otherUtils.allureDate.allure_report_data import TestMetrics, AllureFileClean
 from utils import config
 
 

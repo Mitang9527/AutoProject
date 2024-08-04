@@ -5,8 +5,8 @@
 import json
 from typing import List, Text
 from common.setting import ensure_path_sep
-from utils.read_files_tools.get_all_files_path import get_all_files
-from utils.other_tools.models import TestMetrics
+from utils.readFilesUtils.get_all_files_path import get_all_files
+from utils.otherUtils.models import TestMetrics
 
 
 class AllureFileClean:
