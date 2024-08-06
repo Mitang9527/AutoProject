@@ -1,16 +1,11 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
 """
-# @Time    : 2022/5/10 14:02
-# @Author  : 余少琪
-# @Email   : 1603453211@qq.com
-# @File    : install_requirements
-# @describe: 判断程序是否每次会更新依赖库，如有更新，则自动安装
+判断程序是否每次会更新依赖库，如有更新，则自动安装
 """
+
 import os
 import chardet
 from common.setting import ensure_path_sep
-from utils.logging_tool.log_control import INFO
+from utils.logUtils.logControl import INFO
 from utils import config
 
 os.system("pip3 install chardet")

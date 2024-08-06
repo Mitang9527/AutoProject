@@ -3,8 +3,8 @@ import datetime
 import os
 
 from common.setting import ensure_path_sep
-from utils.other_tools.exceptions import ValueNotFoundError
-from utils.read_files_tools.yaml_control import GetYamlData
+from utils.otherUtils.exceptions import ValueNotFoundError
+from utils.readFilesUtils.yamlControl import GetYamlData
 
 
 def write_case(case_path, page):

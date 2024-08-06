@@ -5,15 +5,15 @@ from typing import Text, Dict, Union, List
 from jsonpath import jsonpath
 
 from utils import config
-from utils.cache_process.cache_control import CacheHandler
-from utils.logging_tool.log_control import WARNING
-from utils.other_tools.exceptions import ValueNotFoundError
-from utils.other_tools.jsonpath_date_replace import jsonpath_replace
-from utils.other_tools.models import DependentType
-from utils.other_tools.models import TestCase, DependentCaseData, DependentData
+from utils.cache_process.cacheControl import CacheHandler
+from utils.logUtils.logControl import WARNING
+from utils.otherUtils.exceptions import ValueNotFoundError
+from utils.otherUtils.jsonpath_date_replace import jsonpath_replace
+from utils.otherUtils.models import DependentType
+from utils.otherUtils.models import TestCase, DependentCaseData, DependentData
 from utils.postgresql_tool.postgresql_control import SetUpPostgresql
-from utils.read_files_tools.regular_control import regular, cache_regular
-from utils.requests_tool.request_control import RequestControl
+from utils.readFilesUtils.regularControl import regular, cache_regular
+from utils.requestsUtils.requestControl import RequestControl
 
 
 class DependentCase:

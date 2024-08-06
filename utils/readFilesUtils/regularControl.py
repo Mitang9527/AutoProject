@@ -131,7 +131,7 @@ def sql_regular(value, res=None):
 
 
 def cache_regular(value):
-    from utils.cache_process.cache_control import CacheHandler
+    from utils.cache_process.cacheControl import CacheHandler
 
     """
     通过正则的方式，读取缓存中的内容

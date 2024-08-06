@@ -3,7 +3,7 @@ import os
 import shutil
 
 
-def copy_and_modify_files(src_dirs, dst_dirs, file_ext=".dat", minute_add=2):
+def copy_and_modify_files(src_dirs, dst_dirs, file_ext=".dat", minute_add=10):
     """
     从源目录修改文件时间，然后复制特定扩展名的文件到目标目录。
 
@@ -11,7 +11,7 @@ def copy_and_modify_files(src_dirs, dst_dirs, file_ext=".dat", minute_add=2):
     - src_dirs: 源目录列表。
     - dst_dirs: 目标目录列表（与src_dirs对应）。
     - file_ext: 要处理的文件扩展名（默认为".dat"）。
-    - minute_add: 要增加的分钟数（默认为2）。
+    - minute_add: 要增加的分钟数（默认为10）。
     """
     for src_dir, dst_dir in zip(src_dirs, dst_dirs):
         # 遍历每个源目录中的文件

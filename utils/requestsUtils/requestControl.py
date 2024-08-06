@@ -11,14 +11,14 @@ from requests_toolbelt import MultipartEncoder
 
 from common.setting import ensure_path_sep
 from utils import config
-from utils.logging_tool.log_decorator import log_decorator
-from utils.logging_tool.run_time_decorator import execution_duration
-from utils.other_tools.allure_data.allure_tools import allure_step, allure_step_no, allure_attach
-from utils.other_tools.models import RequestType
-from utils.other_tools.models import TestCase, ResponseData
+from utils.logUtils.logDecoratrol import log_decorator
+from utils.logUtils.runTimeDecoratrol import execution_duration
+from utils.otherUtils.allureDate.allure_tools import allure_step, allure_step_no, allure_attach
+from utils.otherUtils.models import RequestType
+from utils.otherUtils.models import TestCase, ResponseData
 from utils.postgresql_tool.postgresql_control import AssertExecution
-from utils.read_files_tools.regular_control import cache_regular
-from utils.requests_tool.set_current_request_cache import SetCurrentRequestCache
+from utils.readFilesUtils.regularControl import cache_regular
+from utils.requestsUtils.set_current_request_cache import SetCurrentRequestCache
 
 # from utils.requests_tool.encryption_algorithm_control import encryption
 

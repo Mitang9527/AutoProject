@@ -6,14 +6,15 @@ from typing import Dict, Text
 from jsonpath import jsonpath
 
 from utils import config
-from utils.cache_process.cache_control import CacheHandler
-from utils.logging_tool.log_control import WARNING
-from utils.other_tools.exceptions import JsonpathExtractionFailed, ValueNotFoundError
-from utils.other_tools.jsonpath_date_replace import jsonpath_replace
-from utils.other_tools.models import ResponseData, TearDown, SendRequest, ParamPrepare
+from utils.cache_process.cacheControl import CacheHandler
+from utils.logUtils.logControl import WARNING
+from utils.otherUtils.exceptions import JsonpathExtractionFailed, ValueNotFoundError
+from utils.otherUtils.jsonpath_date_replace import jsonpath_replace
+from utils.otherUtils.models import ResponseData, TearDown, SendRequest, ParamPrepare
 from utils.postgresql_tool.postgresql_control import PostgresqlDB
-from utils.read_files_tools.regular_control import cache_regular, sql_regular, regular
-from utils.requests_tool.request_control import RequestControl
+from utils.mysqlUtils.mysqlControl import MysqlDB
+from utils.readFilesUtils.regularControl import cache_regular, sql_regular, regular
+from utils.requestsUtils.requestControl import RequestControl
 
 
 class TearDownHandler:
@@ -308,6 +309,6 @@ class TearDownHandler:
             for i in sql_data:
                 if config.postgresql_db.switch:
                     _sql_data = sql_regular(value=i, res=json.loads(_response_data))
-                    PostgresqlDB().execute(cache_regular(_sql_data))
+                    MysqlDB().execute(cache_regular(_sql_data))
                 else:
                     WARNING.logger.warning("程序中检查到您数据库开关为关闭状态，已为您跳过删除sql: %s", i)

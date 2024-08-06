@@ -5,7 +5,7 @@ env: 生产环境
 tester_name: 初七
 
 # 域名1
-host: www.baidu.com
+host: https://www.wanandroid.com
 # 域名2，支持多个域名配置
 app_host:
 
@@ -23,7 +23,7 @@ excel_report: False
 # 钉钉相关配置
 ding_talk:
   webhook: https://oapi.dingtalk.com/robot/send?access_token=a59902a7e811f93ffe301d8326b07a2acc8aa2a864e7d61ee9fc076481ced2a6
-  secret: SECdea6489dfcc3b9259da943c5ae38d3530696f2fa83ac72a9ee716e9511675b9b11
+  secret: SECdea6489dfcc3b9259da943c5ae38d3530696f2fa83ac72a9ee716e9511675b9b777
 
 # 数据库相关配置
 mysql_db:

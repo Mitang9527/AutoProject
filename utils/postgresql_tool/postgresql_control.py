@@ -11,10 +11,10 @@ import psycopg2
 import psycopg2.extras
 
 from utils import config
-from utils.logging_tool.log_control import ERROR
-from utils.other_tools.exceptions import DataAcquisitionFailed, ValueTypeError
-from utils.read_files_tools.regular_control import cache_regular
-from utils.read_files_tools.regular_control import sql_regular
+from utils.logUtils.logControl import ERROR
+from utils.otherUtils.exceptions import DataAcquisitionFailed, ValueTypeError
+from utils.readFilesUtils.regularControl import cache_regular
+from utils.readFilesUtils.regularControl import sql_regular
 
 
 # filterwarnings("ignore", category=psycopg2.Warning)
