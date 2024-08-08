@@ -199,12 +199,17 @@ class Config(BaseModel):
     feishu: "Webhook"
     real_time_update_test_cases: bool = False
     host: Text
+    ConnectClient : "ConnectClient"
     app_host: Union[Text, None]
 
 
-    real_time_update_test_cases: bool = False
-    host: Text
-    app_host: Union[Text, None]
+class ConnectClient(BaseModel):
+    switch: bool = False
+    host: Union[Text, None] = None
+    user: Union[Text, None] = None
+    password: Union[Text, None] = None
+    port: Union[int, None] = 22
+
 
 
 @unique

@@ -64,5 +64,17 @@ feishu:
   webhook: https://open.feishu.cn/open-apis/bot/v2/hook/69dc685f-3da3-4d47-9fd0-d018c5278ec5
   secret: gw5LXZ0acv5HvBazHblE8
 
+# 服务器连接相关配置
+
+ConnectClient:
+  # 连接类型
+  type:
+  #数据库开关
+  Switch:
+  host:
+  user:
+  password:
+  port:
+
 
 

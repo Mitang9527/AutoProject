@@ -1,10 +1,10 @@
 # 山水田园公共参数
 case_common:
   allureEpic: 山水田园
-  allureFeature: 自控飞机
-  allureStory: 飞机自动化
+  allureFeature: 园区
+  allureStory: 自动化测试
 
-add_dept_01:
+feiji:
   host: ${{host()}}
   url: /api/v1/depts
   method: POST

@@ -8,16 +8,16 @@ from utils.readFilesUtils.regularControl import regular
 from utils.requestsUtils.teardown_control import TearDownHandler
 
 
-case_id = ['add_dept_01']
+case_id = ['feiji','dabai']
 TestData = GetTestCase.case_data(case_id)
 re_data = regular(str(TestData))
 
 
 @allure.epic("山水田园")
 @allure.feature("自控飞机")
-class TestCollectAddtool:
+class ssty_automated_test:
 
-    @allure.story("飞机自动化")
+    @allure.story("自动化测试")
     @pytest.mark.parametrize('in_data', eval(re_data), ids=[i['detail'] for i in TestData])
     def test_ssty(self, in_data, case_skip):
         """
