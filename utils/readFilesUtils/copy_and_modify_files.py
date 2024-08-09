@@ -1,71 +1,89 @@
-#自动增加文件名称且复制，输出日志
+# 自动增加文件名称且复制，输出日志
 import os
-
+from utils.logUtils.logControl import INFO
 import shutil
+import time
 from datetime import datetime, timedelta
 
-def wlog(log_str, logfile=""):
-    """
-    记录日志到文件中，带有时间戳。
 
-    参数：
-    - log_str: 要记录的日志消息。
-    - logfile: 可选，日志文件名（默认为空字符串）。
+def  wlog(message):
+    INFO.logger.info(message)
+    print(message)  # 同时打印到控制台
 
-    日志文件将存储在 './logs/' 目录下，文件名基于当前日期。
-    """
-    # 格式化日志消息，加上当前时间戳
-    txt = f"\n {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {log_str}"
-    # 日志文件目录路径
-    path = "./logs/"
-    # 如果日志目录不存在，则创建
-    if not os.path.exists(path):
-        os.makedirs(path, 0o777, True)
-    # 定义带有当前日期的日志文件路径
-    logfile = f"{path}{logfile}{datetime.now().strftime('%Y%m%d')}.log"
-    # 写入日志消息到文件
-    with open(logfile, "a+") as f:
-        f.write(txt)
+
+def update_file_times(file_path, minute_add):
+    try:
+        modified_time = os.path.getmtime(file_path)
+        new_time = datetime.fromtimestamp(modified_time) + timedelta(minutes=minute_add)
+        os.utime(file_path, (os.path.getatime(file_path), new_time.timestamp()))
+        return new_time
+    except Exception as e:
+        wlog(f"Error updating file times for {file_path}: {str(e)}")
+        return None
+
+
 
 def copy_and_modify_files(src_dirs, dst_dirs, file_ext=".dat", minute_add=2):
-    """
-    从源目录修改文件时间，然后复制特定扩展名的文件到目标目录。
 
-    参数:
-    - src_dirs: 源目录列表。
-    - dst_dirs: 目标目录列表（与src_dirs对应）。
-    - file_ext: 要处理的文件扩展名（默认为".dat"）。
-    - minute_add: 要增加的分钟数（默认为10）。
-    """
     for src_dir, dst_dir in zip(src_dirs, dst_dirs):
         # 如果目标目录不存在，则创建
         if not os.path.exists(dst_dir):
-            os.makedirs(dst_dir, 0o777, True)
+            os.makedirs(dst_dir, mode=0o777, exist_ok=True)
 
-        # 遍历每个源目录中的文件
+        filelist = []
         for filename in os.listdir(src_dir):
             if filename.endswith(file_ext):
-                src_path = os.path.join(src_dir, filename)  # 源文件路径
-                dst_path = os.path.join(dst_dir, filename)  # 目标文件路径
+                src_path = os.path.join(src_dir, filename)
+                if os.path.isfile(src_path):  # 仅处理文件
+                    filelist.append(filename)
 
-                try:
-                    # 获取文件的最后修改时间
-                    modified_time = os.path.getmtime(src_path)
-                    new_time = datetime.fromtimestamp(modified_time) + timedelta(minutes=minute_add)
+        filelist.sort()  # 从小到大排序
 
-                    # 修改文件的访问时间和修改时间
-                    os.utime(src_path, (os.path.getatime(src_path), new_time.timestamp()))
+        for filename in filelist:
+            src_path = os.path.join(src_dir, filename)
+            base_name, ext = os.path.splitext(filename)
 
-                    # 复制文件到目标目录
-                    shutil.copy(src_path, dst_path)
+            # 增加时间
+            hour = int(base_name[:2])
+            min = int(base_name[2:4])
+            second = int(base_name[4:])
+            min += minute_add
+            if min >= 60:
+                hour += min // 60
+                min = min % 60
+            if hour >= 24:
+                hour = 0
 
-                    # 记录操作日志
-                    wlog(f"Copied {src_path} to {dst_path}")
+            new_base_name = f"{hour:02d}{min:02d}{second:02d}"
+            new_filename = f"{new_base_name}{file_ext}"
+            new_src_path = os.path.join(src_dir, new_filename)
+            dst_path = os.path.join(dst_dir, new_filename)
 
-                except Exception as e:
-                    wlog(f"Error copying {src_path} to {dst_path}: {str(e)}")
+            try:
+                # 更新文件时间
+                new_time = update_file_times(src_path, minute_add)
+                if new_time is None:
+                    continue
 
-        wlog(f"Processed {src_dir}")
+                # 重命名文件
+                os.rename(src_path, new_src_path)
+                wlog(f"Renamed {src_path} to {new_src_path}")
+
+                # 复制到目标目录
+                shutil.copy(new_src_path, dst_path)
+                wlog(f"Copied {new_src_path} to {dst_path}")
+
+                # 可选：删除临时重命名的文件（如果需要）
+                # os.remove(new_src_path)
+
+                # 暂停1秒
+                wlog("Sleeping for 1 second")
+                time.sleep(1)
+
+            except Exception as e:
+                wlog(f"Error processing {src_path}: {str(e)}")
+
+        wlog(f"Processed {src_dir} to {dst_dir}")
 
 #删除多个目录下的文件
 def delete_files_in_directory(directories):
@@ -104,8 +122,8 @@ def delete_files_in_directory(directories):
         print(f"已完成删除目录 '{directory}' 下的所有文件和子目录。")
 
 
-src_dirs = ["./source_dir1", "./source_dir2"]
-dst_dirs = ["./destination_dir1", "./destination_dir2"]
-copy_and_modify_files(src_dirs, dst_dirs)
-#删除实例用法
-delete_files_in_directory(src_dirs)
+# src_dirs = ["./source_dir1", "./source_dir2"]
+# dst_dirs = ["./destination_dir1", "./destination_dir2"]
+# copy_and_modify_files(src_dirs, dst_dirs)
+# #删除实例用法
+# delete_files_in_directory(src_dirs)

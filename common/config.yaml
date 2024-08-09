@@ -66,11 +66,9 @@ feishu:
 
 # 服务器连接相关配置
 
-ConnectClient:
-  # 连接类型
-  type:
-  #数据库开关
-  Switch:
+SSHConnectClient:
+ #数据库开关
+  Switch: False
   host:
   user:
   password:

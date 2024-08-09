@@ -3,20 +3,20 @@ from utils import config
 
 class SSHClient:
 
-    if config.ConnectClient.ConnectClient.switch:
-        def __init__(self, hostname, username, password, port=22):
+    if config.ConnectClient.switch:
+        def __init__(self,hostname, username, password, port=22):
             """
             初始化 SSHClient 类
-
+            :param type: 服务器类型
             :param hostname: 服务器地址
             :param username: SSH 用户名
             :param password: SSH 密码
             :param port: SSH 端口，默认是22
             """
-            self.hostname = config.ConnectClient.host
-            self.username = config.ConnectClient.user
-            self.password = config.ConnectClient.password
-            self.port = config.ConnectClient.port
+            self.hostname = config.SSHConnectClient.host
+            self.username = config.SSHConnectClient.user
+            self.password = config.SSHConnectClient.password
+            self.port = config.SSHConnectClient.port
             self.client = None
 
         def connect(self):

@@ -2,13 +2,14 @@
 日志封装，可设置不同等级的日志颜色
 """
 import logging
+import os
 from logging import handlers
 from typing import Text
 import colorlog
-import time
 from common.setting import ensure_path_sep
+from utils.timeUtils.time_control import now_time_day
 
-
+now_time_day = now_time_day()
 class LogHandler:
     """ 日志打印封装"""
     # 日志级别关系映射
@@ -70,8 +71,15 @@ class LogHandler:
         )
         return formatter
 
+    def setup_logging(self,logfile=""):
+        log_dir = self.log_path
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir, mode=0o777, exist_ok=True)
 
-now_time_day = time.strftime("%Y-%m-%d", time.localtime())
+        log_file = os.path.join(log_dir, f"{logfile}{now_time_day}.log")
+        logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(message)s')
+
+
 INFO = LogHandler(ensure_path_sep(f"\\logs\\info-{now_time_day}.log"), level='info')
 ERROR = LogHandler(ensure_path_sep(f"\\logs\\error-{now_time_day}.log"), level='error')
 WARNING = LogHandler(ensure_path_sep(f'\\logs\\warning-{now_time_day}.log'))

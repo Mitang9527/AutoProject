@@ -2,7 +2,6 @@ import types
 from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Text, Dict, Callable, Union, Optional, List, Any
-
 from pydantic import BaseModel
 
 
@@ -184,6 +183,13 @@ class FeiShu(BaseModel):
     webhook: Union[Text, None]
     secret: Union[Text, None]
 
+class SSHClient(BaseModel):
+    switch: bool = False
+    host: Union[Text, None] = None
+    user: Union[Text, None] = None
+    password: Union[Text, None] = None
+    port: Union[int, None] = 22
+
 class Config(BaseModel):
     project_name: Text
     env: Text
@@ -199,16 +205,8 @@ class Config(BaseModel):
     feishu: "Webhook"
     real_time_update_test_cases: bool = False
     host: Text
-    ConnectClient : "ConnectClient"
+    SSHConnectClient : "SSHClient"
     app_host: Union[Text, None]
-
-
-class ConnectClient(BaseModel):
-    switch: bool = False
-    host: Union[Text, None] = None
-    user: Union[Text, None] = None
-    password: Union[Text, None] = None
-    port: Union[int, None] = 22
 
 
 
@@ -261,3 +259,6 @@ class AssertMethod(Enum):
     contained_by = 'contained_by'
     startswith = 'startswith'
     endswith = 'endswith'
+
+# 解决前向引用
+Config.update_forward_refs()

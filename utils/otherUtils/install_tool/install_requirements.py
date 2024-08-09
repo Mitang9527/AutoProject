@@ -2,6 +2,7 @@
 判断程序是否每次会更新依赖库，如有更新，则自动安装
 """
 
+
 import os
 import chardet
 from common.setting import ensure_path_sep
@@ -15,9 +16,9 @@ class InstallRequirements:
     """ 自动识别安装最新的依赖库 """
 
     def __init__(self):
-        self.version_library_comparisons_path = ensure_path_sep("\\utils\\other_tools\\install_tool\\") \
+        self.version_library_comparisons_path = ensure_path_sep("\\utils\\otherUtils\\install_tool\\") \
                                                 + "version_library_comparisons.txt"
-        self.requirements_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) \
+        self.requirements_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))) \
                                  + os.sep + "requirements.txt"
 
         self.mirror_url = config.mirror_source

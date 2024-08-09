@@ -1,12 +1,12 @@
-import time
-now_time_day = time.strftime("%Y-%m-%d", time.localtime())
-print(now_time_day)
-
-dsc_dir = [
-    f"/resource/ftp/ssty/gsc1/rec/{now_time_day}/127.0.0.1/000/",
-    "/resource/ftp/ssty/gsc2/rec/2024-06-28/127.0.0.1/000/",
-    "/resource/ftp/ssty/gsc3/rec/2024-06-28/127.0.0.1/000/",
-    "/resource/ftp/ssty/gsc4/rec/2024-06-28/127.0.0.1/000/",
-    "/resource/ftp/ssty/gsc5/rec/2024-06-28/127.0.0.1/000/"
+from utils.timeUtils.time_control import now_time_day
+dst_dir = [
+    f"/resource/ftp/hmgy/gsc1/rec/{now_time_day()}/127.0.0.1/000/",
+    f"/resource/ftp/hmgy/gsc2/rec/{now_time_day()}/127.0.0.1/000/",
+    f"/resource/ftp/hmgy/gsc3/rec/{now_time_day()}/127.0.0.1/000/",
+    f"/resource/ftp/hmgy/gsc4/rec/{now_time_day()}/127.0.0.1/000/",
+    f"/resource/ftp/hmgy/gsc5/rec/{now_time_day()}/127.0.0.1/000/",
+    f"/resource/ftp/hmgy/gsc6/rec/{now_time_day()}/127.0.0.1/000/"
 ]
-print(dsc_dir)
+
+print(dst_dir
+      )

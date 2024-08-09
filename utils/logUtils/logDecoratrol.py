@@ -1,7 +1,7 @@
 import ast
 from functools import wraps
-from utils.read_files_tools.regular_control import cache_regular
-from utils.logging_tool.log_control import INFO, ERROR
+from utils.readFilesUtils.regularControl import cache_regular
+from utils.logUtils.logControl import INFO, ERROR
 
 
 def log_decorator(switch: bool):

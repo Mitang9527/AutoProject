@@ -1,4 +1,4 @@
-#山水田园过山车脚本  验证推送
+#山水田园过山车脚本
 from utils.readFilesUtils.copy_and_modify_files import copy_and_modify_files
 import time
 
