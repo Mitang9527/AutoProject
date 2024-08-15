@@ -66,14 +66,14 @@ class Assert:
         :return:
         """
         # 判断数据库为开关为关闭状态
-        # if config.mysql_db.switch is False:
-        if config.postgresql_db.switch is False:
+        if config.mysql_db.switch is False:
+        # if config.postgresql_db.switch is False:
             WARNING.logger.warning(
                 "检测到数据库状态为关闭状态，程序已为您跳过此断言，断言值:%s", values
             )
         # 数据库开关为开启
-        # if config.mysql_db.switch:
-        if config.postgresql_db.switch:
+        if config.mysql_db.switch:
+        # if config.postgresql_db.switch:
             # 走正常SQL断言逻辑
             if sql_data != {'sql': None}:
                 res_sql_data = jsonpath(sql_data, assert_value)
