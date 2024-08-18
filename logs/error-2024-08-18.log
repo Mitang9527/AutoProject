@@ -1,0 +1,9 @@
+ERROR   2024-08-18 08:20:23,105D:\PycharmProjects\wty_test\logs\error-2024-08-18.log:ParamikoSSH.py:16 无法连接至192.168.31.24
+ERROR   2024-08-18 08:20:28,120D:\PycharmProjects\wty_test\logs\error-2024-08-18.log:ParamikoSSH.py:33 Failed to connect to 192.168.31.24: Error reading SSH protocol banner[WinError 10054] 远程主机强迫关闭了一个现有的连接。
+ERROR   2024-08-18 08:21:59,369D:\PycharmProjects\wty_test\logs\error-2024-08-18.log:ParamikoSSH.py:17 无法连接至192.168.31.24
+ERROR   2024-08-18 08:25:06,665D:\PycharmProjects\wty_test\logs\error-2024-08-18.log:ParamikoSSH.py:34 Failed to connect to 192.168.31.24: Error reading SSH protocol banner[WinError 10054] 远程主机强迫关闭了一个现有的连接。
+ERROR   2024-08-18 08:25:11,674D:\PycharmProjects\wty_test\logs\error-2024-08-18.log:ParamikoSSH.py:34 Failed to connect to 192.168.31.24: Error reading SSH protocol banner[WinError 10054] 远程主机强迫关闭了一个现有的连接。
+ERROR   2024-08-18 08:26:59,905D:\PycharmProjects\wty_test\logs\error-2024-08-18.log:ParamikoSSH.py:17 无法连接至192.168.31.24请检查配置文件
+ERROR   2024-08-18 08:27:04,919D:\PycharmProjects\wty_test\logs\error-2024-08-18.log:ParamikoSSH.py:34 Failed to connect to 192.168.31.24: Error reading SSH protocol banner[WinError 10054] 远程主机强迫关闭了一个现有的连接。
+ERROR   2024-08-18 08:27:47,977D:\PycharmProjects\wty_test\logs\error-2024-08-18.log:ParamikoSSH.py:17 无法连接至192.168.31.24，请检查配置文件
+ERROR   2024-08-18 08:29:47,140D:\PycharmProjects\wty_test\logs\error-2024-08-18.log:ParamikoSSH.py:17 无法连接至192.168.31.24，请检查配置文件

@@ -1,35 +1,37 @@
 import paramiko
 from utils import config
+from utils.logUtils.logControl import INFO, ERROR
 
-class SSHClient:
 
-    if config.ConnectClient.switch:
-        def __init__(self,hostname, username, password, port=22):
-            """
-            初始化 SSHClient 类
-            :param type: 服务器类型
-            :param hostname: 服务器地址
-            :param username: SSH 用户名
-            :param password: SSH 密码
-            :param port: SSH 端口，默认是22
-            """
-            self.hostname = config.SSHConnectClient.host
-            self.username = config.SSHConnectClient.user
-            self.password = config.SSHConnectClient.password
-            self.port = config.SSHConnectClient.port
+class SSHClient():
+
+        def __init__(self):
+
+            self.hostname = config.ConnectClient.host
+            self.username = config.ConnectClient.user
+            self.password = config.ConnectClient.password
+            self.port = config.ConnectClient.port
             self.client = None
 
+            if not config.ConnectClient.switch:
+                ERROR.logger.error(f'无法连接至{self.hostname}'+'，请检查配置文件')
+                return
+
+            self.connect()
+
         def connect(self):
-            """
-            连接到 SSH 服务器
-            """
+
+
             try:
                 self.client = paramiko.SSHClient()
                 self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                self.client.connect(self.hostname, username=self.username, password=self.password, port=self.port)
-                print(f"Connected to {self.hostname}")
+                self.client.connect(hostname = self.hostname,
+                                    username=self.username,
+                                    password=self.password,
+                                    port=self.port)
+                INFO.logger.info(f"Connected to {self.hostname}")
             except Exception as e:
-                print(f"Failed to connect to {self.hostname}: {e}")
+                ERROR.logger.error(f"Failed to connect to {self.hostname}: {e}")
 
         def execute_command(self, command):
             """
@@ -39,9 +41,10 @@ class SSHClient:
             :return: 命令的输出和错误信息
             """
             if self.client is None:
-                raise Exception("Connection not established. Call connect() first.")
+                raise Exception("未建立连接。请先检查 connect()。.")
             stdin, stdout, stderr = self.client.exec_command(command)
-            return stdout.read().decode(), stderr.read().decode()
+            return stdout.read().decode(),\
+                   stderr.read().decode()
 
         def close(self):
             """
@@ -51,10 +54,12 @@ class SSHClient:
                 self.client.close()
                 print(f"Connection to {self.hostname} closed")
 
+
+
 # 使用示例
-ssh_client = SSHClient(hostname='example.com', username='user', password='password')
-ssh_client.connect()
-stdout, stderr = ssh_client.execute_command('python3 /script/sstygsc.py')
-print("STDOUT:", stdout)
-print("STDERR:", stderr)
-ssh_client.close()
+# ssh_client = SSHClient()
+# ssh_client.connect()
+# stdout, stderr = ssh_client.execute_command('python3 /script/sstygsc.py')
+# print("STDOUT:", stdout)
+# print("STDERR:", stderr)
+# ssh_client.close()

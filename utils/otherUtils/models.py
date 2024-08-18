@@ -2,7 +2,7 @@ import types
 from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Text, Dict, Callable, Union, Optional, List, Any
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 
 
 class NotificationType(Enum):
@@ -184,11 +184,12 @@ class FeiShu(BaseModel):
     secret: Union[Text, None]
 
 class SSHClient(BaseModel):
-    switch: bool = False
-    host: Union[Text, None] = None
-    user: Union[Text, None] = None
-    password: Union[Text, None] = None
-    port: Union[int, None] = 22
+    switch: bool = Field(default=False, description="是否启用该 SSH 配置")
+    host: Union[Text, None] = Field(default=None, description="服务器地址")
+    user: Union[Text, None] = Field(default=None, description="SSH 用户名")
+    password: Union[Text, None] = Field(default=None, description="SSH 密码")
+    port: Union[int, None] = Field(default=22, description="SSH 端口")
+
 
 class Config(BaseModel):
     project_name: Text
@@ -205,7 +206,7 @@ class Config(BaseModel):
     feishu: "Webhook"
     real_time_update_test_cases: bool = False
     host: Text
-    SSHConnectClient : "SSHClient"
+    ConnectClient : "SSHClient"
     app_host: Union[Text, None]
 
 

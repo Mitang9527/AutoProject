@@ -1,6 +1,7 @@
 project_name: wty自动化测试
 
 env: 生产环境
+
 # 测试人员名称，作用于自动生成代码的作者，以及发送企业微信、钉钉通知的测试负责人
 tester_name: 初七
 
@@ -22,13 +23,13 @@ excel_report: False
 
 # 钉钉相关配置
 ding_talk:
-  webhook: https://oapi.dingtalk.com/robot/send?access_token=a59902a7e811f93ffe301d8326b07a2acc8aa2a864e7d61ee9fc076481ced2a6
-  secret: SECdea6489dfcc3b9259da943c5ae38d3530696f2fa83ac72a9ee716e9511675b9b777
+  webhook:
+  secret:
 
 # 数据库相关配置
 mysql_db:
   # 数据库开关
-  switch: False
+  switch: True
   host: prodjq.rwlb.rds.aliyuncs.com
   user: prodwty
   password: 'Prod_Wty123^'
@@ -38,7 +39,7 @@ mysql_db:
 # 镜像源
 mirror_source: http://mirrors.aliyun.com/pypi/simple/
 
-# 企业通知的相关配置
+# 企业微信通知的相关配置
 wechat:
   webhook:
 
@@ -60,19 +61,20 @@ lark:
   webhook:
   secret :
 
+
 feishu:
   webhook: https://open.feishu.cn/open-apis/bot/v2/hook/69dc685f-3da3-4d47-9fd0-d018c5278ec5
   secret: gw5LXZ0acv5HvBazHblE8
 
 # 服务器连接相关配置
-
-SSHConnectClient:
- #数据库开关
-  Switch: False
-  host:
-  user:
-  password:
-  port:
+ConnectClient:
+#本地服务器31.24
+#数据库开关
+    Switch: True
+    host: 192.168.31.24
+    user: lzroot
+    password: 123456
+    port: 22
 
 
 
