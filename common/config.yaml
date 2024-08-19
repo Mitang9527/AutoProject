@@ -74,7 +74,7 @@ ConnectClient:
     Switch: True
     host: 192.168.31.24
     user: lzroot
-    password: 123456
+    password: lzroot
     port: 22
 
   - name: 本地1

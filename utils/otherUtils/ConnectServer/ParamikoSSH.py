@@ -1,8 +1,13 @@
+import sys
+
 import paramiko
 import yaml
-
 from common.setting import ensure_path_sep
+from utils.readFilesUtils.yamlControl import GetYamlData
+from utils.otherUtils.models import Config
 from utils.logUtils.logControl import INFO, ERROR
+
+
 
 class SSHClient:
 
@@ -23,7 +28,7 @@ class SSHClient:
         if self.switch:
             self.connect()
         else:
-            ERROR.logger.error(f'无法连接至 {self.name} ({self.hostname}), 因为开关关闭')
+            ERROR.logger.error(f'无法连接至 {self.name} {self.hostname}, 因为开关关闭')
 
     def connect(self):
         try:
@@ -55,7 +60,7 @@ class SSHClient:
         """
         if self.client:
             self.client.close()
-            INFO.logger.info(f"Connection to {self.hostname} closed")
+            INFO.logger.info(f"已关闭  {self.name} {self.hostname} 连接")
 
 
 def connect_to_servers(config_file):
@@ -74,12 +79,25 @@ def connect_to_servers(config_file):
 
     return clients
 
-# 获取服务器列表并连接
+
+args = sys.argv
+config_name = "config.yaml"
+if len(args) > 1 and "config.yaml" in args[1]:
+    config_name = args[1]
+
+yaml_data = GetYamlData(ensure_path_sep("\\common\\" + config_name)).get_yaml_data()
+config = Config(**yaml_data)
+
+# 获取服务器列表并实例化 SSHClient
+clients_config = yaml_data.get('ConnectClient', [])
+clients = [SSHClient(config) for config in clients_config]
+
+# # 获取服务器列表并连接
 # config_name = "config.yaml"
 # config_file_path = ensure_path_sep("\\common\\" + config_name)
 # clients = connect_to_servers(config_file_path)
-
-# 使用每个客户端
+#
+# # 使用每个客户端
 # for client in clients:
 #     client.connect()
 #     stdout, stderr = client.execute_command('python3 /script/sstygsc.py')

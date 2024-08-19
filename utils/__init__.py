@@ -1,4 +1,4 @@
-from utils.otherUtils.ConnectServer.ParamikoSSH import SSHClient, connect_to_servers
+from utils.otherUtils.ConnectServer.ParamikoSSH import SSHClient,connect_to_servers
 from utils.readFilesUtils.yamlControl import GetYamlData
 from common.setting import ensure_path_sep
 from utils.otherUtils.models import Config
@@ -15,7 +15,7 @@ print(f">>>>>>>>>>>>> load config file: {config_name} >>>>>>>>>>>>>>")
 yaml_data = GetYamlData(ensure_path_sep("\\common\\" + config_name)).get_yaml_data()
 config = Config(**yaml_data)
 
-# 获取服务器列表并连接
-config_file_path = ensure_path_sep("\\common\\" + config_name)
-clients = connect_to_servers(config_file_path)
+# # 获取服务器列表并实例化 SSHClient
+# clients_config = yaml_data.get('ConnectClient', [])
+# clients = [SSHClient(config) for config in clients_config]
 

@@ -208,7 +208,7 @@ class Config(BaseModel):
     feishu: "Webhook"
     real_time_update_test_cases: bool = False
     host: Text
-    ConnectClient : typing.List[SSHClient]  #Python 3.8使用typing,List
+    ConnectClient : typing.List[SSHClient]  #Python 3.8以下使用typing,List
     app_host: Union[Text, None]
 
 
