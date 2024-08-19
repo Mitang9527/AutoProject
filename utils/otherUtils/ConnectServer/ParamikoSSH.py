@@ -1,65 +1,94 @@
 import paramiko
-from utils import config
+import yaml
+
+from common.setting import ensure_path_sep
 from utils.logUtils.logControl import INFO, ERROR
 
+class SSHClient:
 
-class SSHClient():
+    def __init__(self, server_config):
+        """
+        初始化 SSHClient 实例
 
-        def __init__(self):
+        :param server_config: 包含服务器配置信息的字典
+        """
+        self.name = server_config.get('name', 'default_name')
+        self.hostname = server_config.get('host')
+        self.username = server_config.get('user')
+        self.password = server_config.get('password')
+        self.port = server_config.get('port', 22)
+        self.client = None
+        self.switch = server_config.get('Switch', False)
 
-            self.hostname = config.ConnectClient.host
-            self.username = config.ConnectClient.user
-            self.password = config.ConnectClient.password
-            self.port = config.ConnectClient.port
-            self.client = None
-
-            if not config.ConnectClient.switch:
-                ERROR.logger.error(f'无法连接至{self.hostname}'+'，请检查配置文件')
-                return
-
+        if self.switch:
             self.connect()
+        else:
+            ERROR.logger.error(f'无法连接至 {self.name} ({self.hostname}), 因为开关关闭')
 
-        def connect(self):
+    def connect(self):
+        try:
+            self.client = paramiko.SSHClient()
+            self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.client.connect(hostname=self.hostname,
+                                username=self.username,
+                                password=self.password,
+                                port=self.port)
+            INFO.logger.info(f"已连接至 {self.name} {self.hostname}")
+        except Exception as e:
+            ERROR.logger.error(f"无法连接至 {self.name} {self.hostname}: {e}")
 
+    def execute_command(self, command):
+        """
+        在 SSH 服务器上执行命令
 
-            try:
-                self.client = paramiko.SSHClient()
-                self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                self.client.connect(hostname = self.hostname,
-                                    username=self.username,
-                                    password=self.password,
-                                    port=self.port)
-                INFO.logger.info(f"Connected to {self.hostname}")
-            except Exception as e:
-                ERROR.logger.error(f"Failed to connect to {self.hostname}: {e}")
+        :param command: 要执行的命令
+        :return: 命令的输出和错误信息
+        """
+        if self.client is None:
+            raise Exception("未建立连接。请先检查 connect()。.")
+        stdin, stdout, stderr = self.client.exec_command(command)
+        return stdout.read().decode(), stderr.read().decode()
 
-        def execute_command(self, command):
-            """
-            在 SSH 服务器上执行命令
-
-            :param command: 要执行的命令
-            :return: 命令的输出和错误信息
-            """
-            if self.client is None:
-                raise Exception("未建立连接。请先检查 connect()。.")
-            stdin, stdout, stderr = self.client.exec_command(command)
-            return stdout.read().decode(),\
-                   stderr.read().decode()
-
-        def close(self):
-            """
-            关闭 SSH 连接
-            """
-            if self.client:
-                self.client.close()
-                print(f"Connection to {self.hostname} closed")
-
+    def close(self):
+        """
+        关闭 SSH 连接
+        """
+        if self.client:
+            self.client.close()
+            INFO.logger.info(f"Connection to {self.hostname} closed")
 
 
-# 使用示例
-# ssh_client = SSHClient()
-# ssh_client.connect()
-# stdout, stderr = ssh_client.execute_command('python3 /script/sstygsc.py')
-# print("STDOUT:", stdout)
-# print("STDERR:", stderr)
-# ssh_client.close()
+def connect_to_servers(config_file):
+    # 读取 YAML 文件
+    with open(config_file, 'r', encoding='utf-8') as file:
+        yaml_data = yaml.safe_load(file)
+
+    # 获取所有服务器的配置
+    servers = yaml_data['ConnectClient']
+
+    # 遍历每个服务器的配置
+    clients = []
+    for server in servers:
+        ssh_client = SSHClient(server)  # 这里传递了 server 配置字典
+        clients.append(ssh_client)
+
+    return clients
+
+# 获取服务器列表并连接
+# config_name = "config.yaml"
+# config_file_path = ensure_path_sep("\\common\\" + config_name)
+# clients = connect_to_servers(config_file_path)
+
+# 使用每个客户端
+# for client in clients:
+#     client.connect()
+#     stdout, stderr = client.execute_command('python3 /script/sstygsc.py')
+#     print("STDOUT:", stdout)
+#     print("STDERR:", stderr)
+#     client.close()
+
+
+
+
+
+

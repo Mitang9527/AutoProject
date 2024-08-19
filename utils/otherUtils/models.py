@@ -1,4 +1,5 @@
 import types
+import typing
 from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Text, Dict, Callable, Union, Optional, List, Any
@@ -184,6 +185,7 @@ class FeiShu(BaseModel):
     secret: Union[Text, None]
 
 class SSHClient(BaseModel):
+    name: Union[Text, None] = Field(default=None, description="服务器名称")
     switch: bool = Field(default=False, description="是否启用该 SSH 配置")
     host: Union[Text, None] = Field(default=None, description="服务器地址")
     user: Union[Text, None] = Field(default=None, description="SSH 用户名")
@@ -206,7 +208,7 @@ class Config(BaseModel):
     feishu: "Webhook"
     real_time_update_test_cases: bool = False
     host: Text
-    ConnectClient : "SSHClient"
+    ConnectClient : typing.List[SSHClient]  #Python 3.8使用typing,List
     app_host: Union[Text, None]
 
 

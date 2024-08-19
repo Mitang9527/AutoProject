@@ -70,11 +70,21 @@ feishu:
 ConnectClient:
 #本地服务器31.24
 #数据库开关
+  - name: 本地
     Switch: True
     host: 192.168.31.24
     user: lzroot
     password: 123456
     port: 22
+
+  - name: 本地1
+    Switch: False
+    host: 192.168.31.23
+    user: lzroot
+    password: 123456
+    port: 22
+
+
 
 
 
