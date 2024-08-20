@@ -1,6 +1,4 @@
 import allure
-import clients as clients
-
 import pytest
 
 from utils.otherUtils.ConnectServer.ParamikoSSH import clients
@@ -13,19 +11,37 @@ class Testhmgy():
     @pytest.fixture(scope="class")
     def ssh_client_and_command(self):
 
-        if clients:
-            print("开始执行脚本...")
-            process = subprocess.Popen(['python', './wty_test/script/hmgy_script.py'], stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE, text=True)
-            # 等待脚本执行结束
-            stdout, stderr = process.communicate()
-            print("执行脚本结束...")
+        for client in clients:
+            if client.switch:
+                client.connect()
+                print("开始执行脚本...")
 
-            for line in stdout.splitlines():
-                print("hmgy_script.py脚本执行:", line, end="")
+                process = subprocess.Popen(
+                    ['python', r'D:\Code\wty_test\script\hmgy_scipt.py'],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,  # 行缓冲
+                    universal_newlines=True,  # 处理换行符
+                    encoding='utf-8' #指定编码utf8
+                )
 
-            for line in stderr.splitlines():
-                print("hmgy_script.py脚本执行错误:", line, end="")
+                # 实时读取并打印 stdout 和 stderr
+                try:
+                    for line in iter(process.stdout.readline, ''):
+                        print(f"STDOUT: {line.strip()}")
+                    for line in iter(process.stderr.readline, ''):
+                        print(f"STDERR: {line.strip()}")
+                except Exception as e:
+                    print(f"Error: {e}")
+
+                finally:
+                    # 确保流和进程被正确关闭
+                    process.stdout.close()
+                    process.stderr.close()
+                    process.wait()
+
+            client.close()
 
 
 

@@ -26,9 +26,10 @@ class SSHClient:
         self.switch = server_config.get('Switch', False)
 
         if self.switch:
-            self.connect()
+            INFO.logger.info(f"{self.name}:{self.hostname} 开关为True,开始连接服务器...")
+            # self.connect()
         else:
-            ERROR.logger.error(f'无法连接至 {self.name} {self.hostname}, 因为开关关闭')
+            ERROR.logger.error(f'{self.name}:{self.hostname}, 开关未打开')
 
     def connect(self):
         try:
@@ -50,7 +51,7 @@ class SSHClient:
         :return: 命令的输出和错误信息
         """
         if self.client is None:
-            raise Exception("未建立连接。请先检查 connect()。.")
+            raise Exception("未建立连接,请先检查服务器状态.")
         stdin, stdout, stderr = self.client.exec_command(command)
         return stdout.read().decode(), stderr.read().decode()
 
@@ -60,7 +61,7 @@ class SSHClient:
         """
         if self.client:
             self.client.close()
-            INFO.logger.info(f"已关闭  {self.name} {self.hostname} 连接")
+            INFO.logger.info(f"已关闭:{self.name}：{self.hostname} 连接")
 
 
 def connect_to_servers(config_file):
@@ -92,18 +93,18 @@ config = Config(**yaml_data)
 clients_config = yaml_data.get('ConnectClient', [])
 clients = [SSHClient(config) for config in clients_config]
 
-# # 获取服务器列表并连接
-# config_name = "config.yaml"
-# config_file_path = ensure_path_sep("\\common\\" + config_name)
-# clients = connect_to_servers(config_file_path)
-#
-# # 使用每个客户端
-# for client in clients:
-#     client.connect()
-#     stdout, stderr = client.execute_command('python3 /script/sstygsc.py')
-#     print("STDOUT:", stdout)
-#     print("STDERR:", stderr)
-#     client.close()
+# 遍历客户端列表筛选开关状态
+for client in clients:
+    if client.switch:
+        client.connect()
+
+        stdout, stderr = client.execute_command('python3 /home/lzroot/yzssly_scipt.py')
+        print("STDOUT:", stdout)
+        print("STDERR:", stderr)
+        client.close()
+
+
+
 
 
 
