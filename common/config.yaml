@@ -69,8 +69,8 @@ feishu:
 # 服务器连接相关配置
 ConnectClient:
 #本地服务器31.24
-#数据库开关
   - name: 本地
+    #数据库开关
     Switch: True
     host: 192.168.30.24
     user: lzroot

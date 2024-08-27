@@ -63,33 +63,27 @@ dst_dir_psc = [
     f"/resource/ftp/hmgy/psc3/rec/{now_time_day}/127.0.0.1/000/"
 ]
 
-# 虎门公园海盗船左脚本
-src_dir_hdcz = [
+# 虎门公园海盗船脚本
+src_dir_hdc = [
     "/resource3/ftp/hmgy/hdcz1/rec/2024-07-30/127.0.0.1/000/",
     "/resource3/ftp/hmgy/hdcz2/rec/2024-07-30/127.0.0.1/000/",
-    "/resource3/ftp/hmgy/hdcz3/rec/2024-07-30/127.0.0.1/000/"
-
-]
-# 目标目录列表
-dst_dir_hdcz = [
-    f"/resource/ftp/hmgy/hdcz1/rec/{now_time_day}/127.0.0.1/000/",
-    f"/resource/ftp/hmgy/hdcz2/rec/{now_time_day}/127.0.0.1/000/",
-    f"/resource/ftp/hmgy/hdcz3/rec/{now_time_day}/127.0.0.1/000/"
-]
-
-# 虎门公园海盗船右脚本
-src_dir_hdcy = [
+    "/resource3/ftp/hmgy/hdcz3/rec/2024-07-30/127.0.0.1/000/",
     "/resource3/ftp/hmgy/hdcy1/rec/2024-07-30/127.0.0.1/000/",
     "/resource3/ftp/hmgy/hdcy2/rec/2024-07-30/127.0.0.1/000/",
     "/resource3/ftp/hmgy/hdcy3/rec/2024-07-30/127.0.0.1/000/"
 
 ]
 # 目标目录列表
-dst_dir_hdcy = [
+dst_dir_hdc = [
+    f"/resource/ftp/hmgy/hdcz1/rec/{now_time_day}/127.0.0.1/000/",
+    f"/resource/ftp/hmgy/hdcz2/rec/{now_time_day}/127.0.0.1/000/",
+    f"/resource/ftp/hmgy/hdcz3/rec/{now_time_day}/127.0.0.1/000/",
     f"/resource/ftp/hmgy/hdcy1/rec/{now_time_day}/127.0.0.1/000/",
     f"/resource/ftp/hmgy/hdcy2/rec/{now_time_day}/127.0.0.1/000/",
     f"/resource/ftp/hmgy/hdcy3/rec/{now_time_day}/127.0.0.1/000/"
+
 ]
+
 
 file_ext = "dat"  # 只处理.dat文件
 minute_add = 10  # 增加的分钟数
@@ -102,8 +96,6 @@ minute_add = 10  # 增加的分钟数
 
 # copy_and_modify_files(src_dir_psc, dst_dir_psc, file_ext, minute_add)
 
-# copy_and_modify_files(src_dir_hdcz, dst_dir_hdcz, file_ext, minute_add)
-
-# copy_and_modify_files(src_dir_hdcy, dst_dir_hdcy, file_ext, minute_add)
+# copy_and_modify_files(src_dir_hdc, dst_dir_hdc, file_ext, minute_add)
 
 

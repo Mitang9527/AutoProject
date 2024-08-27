@@ -4,6 +4,7 @@ mysql 封装，支持 增、删、改、查
 import ast
 import datetime
 import decimal
+import time
 from warnings import filterwarnings
 import pymysql
 from typing import List, Union, Text, Dict
@@ -66,6 +67,17 @@ class MysqlDB:
             except AttributeError as error_data:
                 ERROR.logger.error("数据库连接失败，失败原因 %s", error_data)
                 raise
+
+        def wait_for_result(self,sql_query, params=None, timeout=60, interval=5, expected_result=None):
+            """等待结果，直到超时或匹配预期结果"""
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                result = self.query(sql_query, params)
+                if result:
+                    if result[0].get('result_column') == expected_result:
+                        return
+                time.sleep(interval)
+            raise AssertionError("数据库结果未按预期返回")
 
         def execute(self, sql: Text):
             """
@@ -165,9 +177,11 @@ class AssertExecution(MysqlDB):
             raise error_data
 
 
+
+
 mysql_db = MysqlDB()
 
-# if __name__ == '__main__':
-#     MysqlDB = MysqlDB()
-#     b = MysqlDB.query(sql="select * from `test_obp_configure`.lottery_prize where activity_id = 3")
-#     print(b)
+if __name__ == '__main__':
+    MysqlDB = MysqlDB()
+    b = MysqlDB.query(sql="select * from `test_obp_configure`.lottery_prize where activity_id = 3")
+    print(b)
