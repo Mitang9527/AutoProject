@@ -118,7 +118,8 @@ class FeiShuTalkChatBot:
                                     "content": "报告详情"
                                 },
                                 "type": "primary",
-                                "url": "https://mam-testcase-report.yiye.ai/"
+                                # "url": "https://mam-testcase-report.yiye.ai/"
+                                "url":""
                             }
                         ]
                     }

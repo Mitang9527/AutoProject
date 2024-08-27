@@ -94,7 +94,7 @@ dst_dir_hdcy = [
 file_ext = "dat"  # 只处理.dat文件
 minute_add = 10  # 增加的分钟数
 
-copy_and_modify_files(src_dir, dst_dir, file_ext, minute_add)
+# copy_and_modify_files(src_dir, dst_dir, file_ext, minute_add)
 
 # copy_and_modify_files(src_dir_dbc, dst_dir_dbc, file_ext, minute_add)
 

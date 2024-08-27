@@ -164,7 +164,7 @@ class PostgresqlDB(BaseModel):
     host: Union[Text, None] = None
     user: Union[Text, None] = None
     password: Union[Text, None] = None
-    port: Union[int, None] = 5432
+    port: Union[int, None] = 3306
     dbname: Union[Text, None] = None
 
 

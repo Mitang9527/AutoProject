@@ -1,14 +1,14 @@
 project_name: wty自动化测试
 
-env: 生产环境
+env: 测试环境
 
 # 测试人员名称，作用于自动生成代码的作者，以及发送企业微信、钉钉通知的测试负责人
 tester_name: 初七
 
 # 域名1
-host: https://www.wanandroid.com
+host: None
 # 域名2，支持多个域名配置
-app_host:
+app_host: None
 
 # 实时更新用例内容，False时，已生成的代码不会在做变更
 # 设置为True的时候，修改yaml文件的用例，代码中的内容会实时更新
@@ -29,7 +29,7 @@ ding_talk:
 # 数据库相关配置
 mysql_db:
   # 数据库开关
-  switch: True
+  switch: False
   host: prodjq.rwlb.rds.aliyuncs.com
   user: prodwty
   password: 'Prod_Wty123^'
@@ -78,7 +78,7 @@ ConnectClient:
     port: 22
 
   - name: 本地1
-    Switch: True
+    Switch: False
     host: 192.168.31.13
     user: lzroot
     password: '123456'

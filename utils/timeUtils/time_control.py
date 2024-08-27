@@ -2,7 +2,7 @@
 
 import time
 from typing import Text
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def count_milliseconds():
@@ -63,6 +63,18 @@ def now_time_day():
     """
     localtime = time.strftime("%Y-%m-%d", time.localtime())
     return localtime
+
+def tomorrow_time_day():
+    """
+    获取明天的日期，日期格式: YYYY-MM-DD
+    :return:
+    """
+    # 获取当前日期
+    today = datetime.now()
+    # 计算明天的日期
+    tomorrow = today + timedelta(days=1)
+    # 格式化日期
+    return tomorrow.strftime("%Y-%m-%d")
 
 
 def get_time_for_min(minute: int) -> int:

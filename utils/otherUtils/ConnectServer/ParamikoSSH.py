@@ -1,11 +1,14 @@
+import subprocess
 import sys
 
 import paramiko
 import yaml
+
 from common.setting import ensure_path_sep
-from utils.readFilesUtils.yamlControl import GetYamlData
+from utils.logUtils.logControl import INFO, ERROR, WARNING
 from utils.otherUtils.models import Config
-from utils.logUtils.logControl import INFO, ERROR
+from utils.readFilesUtils.yamlControl import GetYamlData
+from utils.timeUtils.time_control import now_time_day
 
 
 
@@ -29,7 +32,7 @@ class SSHClient:
             INFO.logger.info(f"{self.name}:{self.hostname} 开关为True,开始连接服务器...")
             # self.connect()
         else:
-            ERROR.logger.error(f'{self.name}:{self.hostname}, 开关未打开')
+            WARNING.logger.warning(f'{self.name}:{self.hostname}, 开关未打开')
 
     def connect(self):
         try:
@@ -102,6 +105,36 @@ for client in clients:
         print("STDOUT:", stdout)
         print("STDERR:", stderr)
         client.close()
+#TODO 待定方案
+
+# for client in clients:
+#     if client.switch:
+#         client.connect()
+#         process = subprocess.Popen(
+#             ['python', r'.\script\hmgy_scipt.py'],
+#             stdout=subprocess.PIPE,
+#             stderr=subprocess.PIPE,
+#             text=True,
+#             bufsize=1,  # 行缓冲
+#             universal_newlines=True,  # 处理换行符
+#             encoding='utf-8' #指定编码utf8
+#         )
+#
+#         # 实时读取并打印 stdout 和 stderr
+#         try:
+#             for line in iter(process.stdout.readline, ''):
+#                 print(f"STDOUT: {line.strip()}")
+#             for line in iter(process.stderr.readline, ''):
+#                 print(f"STDERR: {line.strip()}")
+#         except Exception as e:
+#             print(f"Error: {e}")
+#
+#         finally:
+#             # 确保流和进程被正确关闭
+#             process.stdout.close()
+#             process.stderr.close()
+#             process.wait()
+#     client.close()
 
 
 

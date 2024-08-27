@@ -165,7 +165,9 @@ class AssertExecution(MysqlDB):
             raise error_data
 
 
-if __name__ == '__main__':
-    a = MysqlDB()
-    b = a.query(sql="select * from `test_obp_configure`.lottery_prize where activity_id = 3")
-    print(b)
+mysql_db = MysqlDB()
+
+# if __name__ == '__main__':
+#     MysqlDB = MysqlDB()
+#     b = MysqlDB.query(sql="select * from `test_obp_configure`.lottery_prize where activity_id = 3")
+#     print(b)

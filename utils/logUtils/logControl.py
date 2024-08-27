@@ -82,7 +82,7 @@ class LogHandler:
 
 INFO = LogHandler(ensure_path_sep(f"\\logs\\info-{now_time_day}.log"), level='info')
 ERROR = LogHandler(ensure_path_sep(f"\\logs\\error-{now_time_day}.log"), level='error')
-DEBUG = LogHandler(ensure_path_sep(f"\\logs\\debug-{now_time_day}.log"),level='debug')
+# DEBUG = LogHandler(ensure_path_sep(f"\\logs\\debug-{now_time_day}.log"),level='debug')
 WARNING = LogHandler(ensure_path_sep(f'\\logs\\warning-{now_time_day}.log'),level='warning')
 
 if __name__ == '__main__':

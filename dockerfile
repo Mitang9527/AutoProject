@@ -1,4 +1,4 @@
-FROM registry.cn-hangzhou.aliyuncs.com/yiye_op/pinenut-autoapi-base
+FROM
 
 LABEL version="1.0.0" maintainer="镜像名称"
 

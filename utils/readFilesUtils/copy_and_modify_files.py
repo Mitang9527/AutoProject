@@ -23,10 +23,11 @@ def update_file_times(file_path, minute_add):
 
 
 
-def copy_and_modify_files(src_dirs, dst_dirs, file_ext=".dat", minute_add=2):
+def copy_and_modify_files(src_dirs, dst_dirs, file_ext="dat", minute_add=2):
 
     for src_dir, dst_dir in zip(src_dirs, dst_dirs):
         # 如果目标目录不存在，则创建
+        # TODO 需运行后删除所创建的路径
         if not os.path.exists(dst_dir):
             os.makedirs(dst_dir, mode=0o777, exist_ok=True)
 
@@ -85,45 +86,10 @@ def copy_and_modify_files(src_dirs, dst_dirs, file_ext=".dat", minute_add=2):
 
         wlog(f"Processed {src_dir} to {dst_dir}")
 
-#删除多个目录下的文件
-def delete_files_in_directory(directories):
-    """
-    删除多个目录下的所有文件和子目录。
 
-    参数:
-    - directories: 包含多个目录路径的列表或元组。
-    """
-    for directory in directories:
-        # 确保目录存在
-        if not os.path.exists(directory):
-            print(f"目录 '{directory}' 不存在。")
-            continue
-
-        # 遍历目录中的所有文件和子目录
-        for root, dirs, files in os.walk(directory):
-            # 删除文件
-            for file in files:
-                file_path = os.path.join(root, file)
-                try:
-                    os.remove(file_path)
-                    print(f"已删除文件: {file_path}")
-                except Exception as e:
-                    print(f"删除文件 '{file_path}' 时出错: {str(e)}")
-
-            # 删除子目录
-            for dir_name in dirs:
-                dir_path = os.path.join(root, dir_name)
-                try:
-                    shutil.rmtree(dir_path)
-                    print(f"已删除目录及其内容: {dir_path}")
-                except Exception as e:
-                    print(f"删除目录 '{dir_path}' 及其内容时出错: {str(e)}")
-
-        print(f"已完成删除目录 '{directory}' 下的所有文件和子目录。")
 
 
 # src_dirs = ["./source_dir1", "./source_dir2"]
 # dst_dirs = ["./destination_dir1", "./destination_dir2"]
 # copy_and_modify_files(src_dirs, dst_dirs)
-# #删除实例用法
-# delete_files_in_directory(src_dirs)
+

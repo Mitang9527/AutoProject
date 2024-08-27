@@ -1,6 +1,5 @@
 
 import os
-import sys
 import traceback
 import pytest
 from utils.otherUtils.models import NotificationType
