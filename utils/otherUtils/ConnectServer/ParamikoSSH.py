@@ -5,6 +5,7 @@ import paramiko
 import yaml
 
 from common.setting import ensure_path_sep
+from utils import yaml_data
 from utils.logUtils.logControl import INFO, ERROR, WARNING
 from utils.otherUtils.models import Config
 from utils.readFilesUtils.yamlControl import GetYamlData
@@ -83,14 +84,6 @@ def connect_to_servers(config_file):
 
     return clients
 
-
-args = sys.argv
-config_name = "config.yaml"
-if len(args) > 1 and "config.yaml" in args[1]:
-    config_name = args[1]
-
-yaml_data = GetYamlData(ensure_path_sep("\\common\\" + config_name)).get_yaml_data()
-config = Config(**yaml_data)
 
 # 获取服务器列表并实例化 SSHClient
 clients_config = yaml_data.get('ConnectClient', [])

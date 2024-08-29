@@ -29,9 +29,9 @@ ding_talk:
 # 数据库相关配置
 mysql_db:
   # 数据库开关
-  switch: False
-  host: prodjq.rwlb.rds.aliyuncs.com
-  user: prodwty
+  switch: True
+  host: testwty.mysql.polardb.rds.aliyuncs.com
+  user: prod
   password: 'Prod_Wty123^'
   port: 3306
 
@@ -69,7 +69,7 @@ feishu:
 # 服务器连接相关配置
 ConnectClient:
 #本地服务器31.24
-  - name: 本地
+  - name: 本地收集
     #数据库开关
     Switch: True
     host: 192.168.30.24

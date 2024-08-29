@@ -15,6 +15,8 @@ from utils.readFilesUtils.regularControl import cache_regular
 from utils.otherUtils.exceptions import DataAcquisitionFailed, ValueTypeError
 
 # 忽略 Mysql 告警信息
+from utils.timeUtils.time_control import now_time_day, tomorrow_time_day
+
 filterwarnings("ignore", category=pymysql.Warning)
 
 
@@ -68,7 +70,7 @@ class MysqlDB:
                 ERROR.logger.error("数据库连接失败，失败原因 %s", error_data)
                 raise
 
-        def wait_for_result(self,sql_query, params=None, timeout=60, interval=5, expected_result=None):
+        def wait_for_result(self,sql_query, params=None, timeout=15, interval=5, expected_result=None):
             """等待结果，直到超时或匹配预期结果"""
             start_time = time.time()
             while time.time() - start_time < timeout:
@@ -181,7 +183,11 @@ class AssertExecution(MysqlDB):
 
 mysql_db = MysqlDB()
 
-if __name__ == '__main__':
-    MysqlDB = MysqlDB()
-    b = MysqlDB.query(sql="select * from `test_obp_configure`.lottery_prize where activity_id = 3")
-    print(b)
+# if __name__ == '__main__':
+#     MysqlDB = MysqlDB()
+#     b = MysqlDB.query(sql="""
+#         SELECT COUNT(id)
+#         FROM uat.c_video_collection
+#         WHERE create_time BETWEEN '{}' AND '{}';
+#         """.format(now_time_day,tomorrow_time_day))
+#     print(b)
