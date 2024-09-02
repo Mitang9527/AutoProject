@@ -68,14 +68,17 @@ class MysqlDB:
                 ERROR.logger.error("数据库连接失败，失败原因 %s", error_data)
                 raise
 
-        def wait_for_result(self,sql_query, params=None, timeout=60, interval=5, expected_result=None):
+        def wait_for_result(self, sql_query, params=None, timeout=60, interval=5, expected_result=None,
+                            result_column=None):
             """等待结果，直到超时或匹配预期结果"""
             start_time = time.time()
             while time.time() - start_time < timeout:
                 result = self.query(sql_query, params)
-                if result:
-                    if result[0].get('result_column') == expected_result:
-                        return
+                if result and result_column is not None:
+                    first_row = result[0]
+                    result_value = first_row.get(result_column)
+                    if result_value == expected_result:
+                        return result
                 time.sleep(interval)
             raise AssertionError("数据库结果未按预期返回")
 
@@ -183,5 +186,9 @@ mysql_db = MysqlDB()
 
 if __name__ == '__main__':
     MysqlDB = MysqlDB()
-    b = MysqlDB.query(sql="select * from `test_obp_configure`.lottery_prize where activity_id = 3")
+    b = MysqlDB.query(sql="""
+        SELECT COUNT(id)
+        FROM c_video_collection
+        WHERE create_time BETWEEN '{}' AND '{}';
+        """.format(now_time_day,tomorrow_time_day ))
     print(b)
