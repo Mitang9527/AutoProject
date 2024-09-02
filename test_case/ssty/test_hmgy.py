@@ -54,9 +54,7 @@ class Testhmgy():
         """.format(now_time_day,tomorrow_time_day )
 
         expected_result = "待填入的预期结果"
-        mysql_db.wait_for_result(sql_query, expected_result=expected_result)
-
-        result = mysql_db.query(sql_query)  # 执行查询
+        result = mysql_db.wait_for_result(sql_query, expected_result=expected_result)
         assert result and result[0].get('count') == expected_result #断言
 
     # @allure.title("过山车-云端推理")
