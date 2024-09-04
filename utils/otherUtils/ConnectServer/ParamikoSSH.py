@@ -57,7 +57,14 @@ class SSHClient:
         if self.client is None:
             raise Exception("未建立连接,请先检查服务器状态.")
         stdin, stdout, stderr = self.client.exec_command(command)
-        return stdout.read().decode(), stderr.read().decode()
+
+
+        # stdin 是一个 ChannelFile 对象，用于向远程进程发送输入（如果需要）。
+        # stdout 是一个 ChannelFile 对象，用于读取远程进程的标准输出。
+        # stderr 是一个 ChannelFile 对象，用于读取远程进程的标准错误输出。
+
+        return (stdout.read().decode(),
+                stderr.read().decode())
 
     def close(self):
         """
@@ -89,15 +96,15 @@ def connect_to_servers(config_file):
 clients_config = yaml_data.get('ConnectClient', [])
 clients = [SSHClient(config) for config in clients_config]
 
-# 遍历客户端列表筛选开关状态
-for client in clients:
-    if client.switch:
-        client.connect()
-
-        stdout, stderr = client.execute_command('python3 /home/lzroot/yzssly_scipt.py')
-        print("STDOUT:", stdout)
-        print("STDERR:", stderr)
-        client.close()
+# # 遍历客户端列表筛选开关状态
+# for client in clients:
+#     if client.switch:
+#         client.connect()
+#
+#         stdout, stderr = client.execute_command('python3 /home/lzroot/yzssly_scipt.py')
+#         print("STDOUT:", stdout)
+#         print("STDERR:", stderr)
+#         client.close()
 #TODO 待定方案
 
 # for client in clients:

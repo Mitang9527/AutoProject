@@ -4,7 +4,7 @@
 from utils.readFilesUtils.copy_and_modify_files import copy_and_modify_files
 from utils.timeUtils.time_control import now_time_day
 
-now_time_day = now_time_day()
+
 # 定义源目录和目标目录列表
 # 虎门公园过山车脚本
 src_dir = [

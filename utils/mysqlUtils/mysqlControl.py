@@ -8,15 +8,17 @@ import time
 from warnings import filterwarnings
 import pymysql
 from typing import List, Union, Text, Dict
+
+
+
 from utils import config
-from utils.logUtils.logControl import ERROR
+from utils.logUtils.logControl import ERROR, WARNING
 from utils.readFilesUtils.regularControl import sql_regular
 from utils.readFilesUtils.regularControl import cache_regular
 from utils.otherUtils.exceptions import DataAcquisitionFailed, ValueTypeError
-
-# 忽略 Mysql 告警信息
 from utils.timeUtils.time_control import now_time_day, tomorrow_time_day
 
+# 忽略 Mysql 告警信息
 filterwarnings("ignore", category=pymysql.Warning)
 
 
@@ -34,7 +36,6 @@ class MysqlDB:
                     password=config.mysql_db.password,
                     port=config.mysql_db.port
                 )
-
                 # 使用 cursor 方法获取操作游标，得到一个可以执行sql语句，并且操作结果为字典返回的游标
                 self.cur = self.conn.cursor(cursor=pymysql.cursors.DictCursor)
             except AttributeError as error:
@@ -70,19 +71,24 @@ class MysqlDB:
                 ERROR.logger.error("数据库连接失败，失败原因 %s", error_data)
                 raise
 
-        def wait_for_result(self, sql_query, params=None, timeout=60, interval=5, expected_result=None,
-                            result_column=None):
+        def wait_for_result(self, sql_query, state='all', timeout=60, interval=5, expected_result=None):
             """等待结果，直到超时或匹配预期结果"""
             start_time = time.time()
             while time.time() - start_time < timeout:
-                result = self.query(sql_query, params)
-                if result and result_column is not None:
-                    first_row = result[0]
-                    result_value = first_row.get(result_column)
-                    if result_value == expected_result:
-                        return result
+                result = self.query(sql_query, state)
+                if expected_result and result:
+                    if [expected_result] == result:
+                            return result
+                    else:
+                        WARNING.logger.warning("查询结果格式不符合预期: %s", result)
+
                 time.sleep(interval)
-            raise AssertionError("数据库结果未按预期返回")
+
+            # 如果超时仍未找到符合预期的结果
+            ERROR.logger.error("数据库结果未按预期返回: 预期结果 %s，实际结果 %s", expected_result, result)
+            print(type(expected_result))
+            print(type(result))
+            raise RuntimeError("数据库结果未按预期返回")
 
         def execute(self, sql: Text):
             """
@@ -183,14 +189,21 @@ class AssertExecution(MysqlDB):
 
 
 
-
 mysql_db = MysqlDB()
 
+
 if __name__ == '__main__':
-    MysqlDB = MysqlDB()
-    b = MysqlDB.query(sql="""
-        SELECT COUNT(id)
-        FROM c_video_collection
-        WHERE create_time BETWEEN '{}' AND '{}';
-        """.format(now_time_day,tomorrow_time_day ))
-    print(b)
+    mysql_db = MysqlDB()
+    # expected_result = {'COUNT(id)': 72}
+    # a = mysql_db.wait_for_result(sql_query="""
+    #     SELECT COUNT(id)
+    #     FROM uat.c_video_collection
+    #     WHERE create_time BETWEEN '{}' AND '{}';
+    #     """.format(now_time_day,tomorrow_time_day ),timeout=2,interval=3,expected_result=expected_result)
+    # # a = mysql_db.query(sql="""
+    # #     SELECT COUNT(id)
+    # #     FROM uat.c_video_collection
+    # #     WHERE create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
+    # #     """.format(now_time_day,tomorrow_time_day ))
+    # print(a)
+

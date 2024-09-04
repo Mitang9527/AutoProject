@@ -9,7 +9,6 @@ import colorlog
 from common.setting import ensure_path_sep
 from utils.timeUtils.time_control import now_time_day
 
-now_time_day = now_time_day()
 class LogHandler:
     """ 日志打印封装"""
     # 日志级别关系映射

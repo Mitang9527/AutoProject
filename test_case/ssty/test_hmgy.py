@@ -1,10 +1,13 @@
 import allure
 import pytest
+from Demos.EvtSubscribe_push import query_text
+
 from script.hmgy_scipt import src_dir,dst_dir,src_dir_hdc,dst_dir_hdc
 from utils.readFilesUtils.copy_and_modify_files import copy_and_modify_files
 from utils.otherUtils.ConnectServer.ParamikoSSH import clients
 from utils.mysqlUtils.mysqlControl import mysql_db
-from utils.timeUtils.time_control import now_time_day, tomorrow_time_day
+from utils.timeUtils.time_control import now_time_day,tomorrow_time_day
+
 
 @allure.epic("wty自动化测试")
 @allure.feature("虎门公园")
@@ -27,7 +30,7 @@ def ssh_client():
 
 
 @pytest.mark.usefixtures("ssh_client")
-class Testhmgy():
+class Test_hmgy():
 
     @pytest.fixture(autouse=True)
     def setup_class(self, ssh_client):
@@ -37,9 +40,9 @@ class Testhmgy():
     @pytest.mark.run(order=1)
     def test_gsc(self):
         #执行虎门公园过山车脚本
-        # copy_and_modify_files(src_dir, dst_dir,file_ext = "dat",minute_add = 10)
+        # copy_andCOPY_modify_files(src_dir, dst_dir,file_ext = "dat",minute_add = 10)
         for client in self.ssh_client:
-            stdout, stderr = client.execute_command('python3 /home/lzroot/yzssly_scipt.py')
+            stdout, stderr = client.execute_command('python3 /home/lzroot/hmgy_scipt.py')
             print("STDOUT:", stdout)
             print("STDERR:", stderr)
 
@@ -50,11 +53,12 @@ class Testhmgy():
         sql_query = """
         SELECT COUNT(id)
         FROM uat.c_video_collection
-        WHERE create_time BETWEEN '{}' AND '{}';
+        WHERE create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
         """.format(now_time_day,tomorrow_time_day )
 
-        expected_result = "待填入的预期结果"
-        result = mysql_db.wait_for_result(sql_query, expected_result=expected_result)
+        expected_result = {'COUNT(id)': 72}
+        result = mysql_db.wait_for_result(sql_query,timeout=10,interval=3,expected_result=expected_result)
+
         assert result and result[0].get('count') == expected_result #断言
 
     # @allure.title("过山车-云端推理")

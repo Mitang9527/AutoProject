@@ -92,3 +92,6 @@ def get_now_time() -> int:
     @return: 当前时间戳
     """
     return int(time.time()) * 1000
+
+now_time_day = now_time_day()
+tomorrow_time_day = tomorrow_time_day()
