@@ -113,4 +113,4 @@ def Dingmessage ():
     print(info_1.json())
 
 urllib3.disable_warnings()
-Dingmessage()
+# Dingmessage()

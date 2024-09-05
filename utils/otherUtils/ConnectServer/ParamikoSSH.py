@@ -47,24 +47,42 @@ class SSHClient:
         except Exception as e:
             ERROR.logger.error(f"无法连接至 {self.name} {self.hostname}: {e}")
 
-    def execute_command(self, command):
+    import paramiko
+
+    def execute_command(self, command, timeout=60):
         """
         在 SSH 服务器上执行命令
 
         :param command: 要执行的命令
+        :param timeout: 命令执行的超时时间（秒）
         :return: 命令的输出和错误信息
         """
-        if self.client is None:
-            raise Exception("未建立连接,请先检查服务器状态.")
-        stdin, stdout, stderr = self.client.exec_command(command)
+        if self.client:
+            try:
+                # 执行命令
+                stdin, stdout, stderr = self.client.exec_command(command, timeout=timeout)
 
+                # 读取输出
+                stdout_output = stdout.read().decode()
+                stderr_output = stderr.read().decode()
 
-        # stdin 是一个 ChannelFile 对象，用于向远程进程发送输入（如果需要）。
-        # stdout 是一个 ChannelFile 对象，用于读取远程进程的标准输出。
-        # stderr 是一个 ChannelFile 对象，用于读取远程进程的标准错误输出。
+                # 确保流关闭
+                stdout.channel.shutdown_read()
+                stderr.channel.shutdown_read()
 
-        return (stdout.read().decode(),
-                stderr.read().decode())
+                # 处理可能的错误
+                if stderr_output:
+                    print(f"错误信息: {stderr_output}")
+
+                return stdout_output, stderr_output
+
+            except paramiko.SSHException as e:
+                raise Exception(f"SSH 执行命令时出现错误: {e}")
+            except Exception as e:
+                raise Exception(f"执行命令时出现异常: {e}")
+
+        else:
+            raise Exception("未建立连接，请先检查服务器状态。")
 
     def close(self):
         """
@@ -96,7 +114,7 @@ def connect_to_servers(config_file):
 clients_config = yaml_data.get('ConnectClient', [])
 clients = [SSHClient(config) for config in clients_config]
 
-# # 遍历客户端列表筛选开关状态
+# 遍历客户端列表筛选开关状态
 # for client in clients:
 #     if client.switch:
 #         client.connect()
