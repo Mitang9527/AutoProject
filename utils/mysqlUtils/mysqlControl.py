@@ -71,11 +71,11 @@ class MysqlDB:
                 ERROR.logger.error("数据库连接失败，失败原因 %s", error_data)
                 raise
 
-        def wait_for_result(self, sql_query, state='all', timeout=60, interval=5, expected_result=None):
+        def wait_for_result(self, sql_query, timeout=60, interval=5, expected_result=None):
             """等待结果，直到超时或匹配预期结果"""
             start_time = time.time()
             while time.time() - start_time < timeout:
-                result = self.query(sql_query, state)
+                result = self.query(sql_query)
                 if expected_result and result:
                     if [expected_result] == result:
                             return result
@@ -86,8 +86,6 @@ class MysqlDB:
 
             # 如果超时仍未找到符合预期的结果
             ERROR.logger.error("数据库结果未按预期返回: 预期结果 %s，实际结果 %s", expected_result, result)
-            print(type(expected_result))
-            print(type(result))
             raise RuntimeError("数据库结果未按预期返回")
 
         def execute(self, sql: Text):
@@ -188,22 +186,4 @@ class AssertExecution(MysqlDB):
             raise error_data
 
 
-
 mysql_db = MysqlDB()
-
-
-if __name__ == '__main__':
-    mysql_db = MysqlDB()
-    # expected_result = {'COUNT(id)': 72}
-    # a = mysql_db.wait_for_result(sql_query="""
-    #     SELECT COUNT(id)
-    #     FROM uat.c_video_collection
-    #     WHERE create_time BETWEEN '{}' AND '{}';
-    #     """.format(now_time_day,tomorrow_time_day ),timeout=2,interval=3,expected_result=expected_result)
-    # # a = mysql_db.query(sql="""
-    # #     SELECT COUNT(id)
-    # #     FROM uat.c_video_collection
-    # #     WHERE create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
-    # #     """.format(now_time_day,tomorrow_time_day ))
-    # print(a)
-
