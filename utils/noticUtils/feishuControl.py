@@ -118,9 +118,7 @@ class FeiShuTalkChatBot:
                                     "content": "报告详情"
                                 },
                                 "type": "primary",
-                                # "url": "https://mam-testcase-report.yiye.ai/"
-                                #TODO 等待集成
-                                "url":""
+                                "url":"http://192.168.30.24:8034/"
                             }
                         ]
                     }
@@ -165,17 +163,12 @@ class FeiShuTalkChatBot:
 
 
 
-# 测试导入所有需要的模块和类，并且有合适的配置信息在 config 模块中
 
-# 创建 TestMetrics 的实例，可以根据你的具体数据来创建
+
 # metrics_instance = TestMetrics(passed=80, failed=10, broken=5, skipped=5, total=100, pass_rate=80.0,time = '2024/01/05')
-#
-# # 创建 FeiShuTalkChatBot 的实例，传入 metrics 参数
 # bot = FeiShuTalkChatBot(metrics_instance)
+# 调用发送文本消息的方法示例
+# # msg = "自动化测试完成！"
+# # bot.send_text(msg)
 #
-# # 调用发送文本消息的方法示例
-# msg = "自动化测试完成！"
-# bot.send_text(msg)
-#
-# # 或者直接调用发送消息的方法
 # bot.post()

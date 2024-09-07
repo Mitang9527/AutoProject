@@ -39,41 +39,91 @@ class Test_hmgy():
     @allure.title("过山车执行脚本")
     def test_gsc(self):
         with allure.step("执行虎门公园过山车脚本"):
-        #执行虎门公园过山车脚本
             for client in self.ssh_client:
                 if client.switch:
                     stdout, stderr = client.execute_command('python3 /home/lzroot/hmgy_scipt.py')
                     print("STDOUT:", stdout)
                     print("STDERR:", stderr)
+
     @allure.story("过山车")
     @allure.title("云端收集")
+    # 从c_video_collect表中获取数据进行断言
     def test_gsc_collect(self):
-        #从c_video_collect表中获取数据进行断言
         sql_query = """
         SELECT COUNT(id)
         FROM uat.c_video_collection
         WHERE create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
+        """.format(now_time_day,tomorrow_time_day)
+
+        expected_result = {'COUNT(id)': 5}
+        result = mysql_db.wait_for_result(sql_query,timeout=6,interval=5,expected_result=expected_result)
+        assert result and result[0].get('COUNT(id)') == 5
+
+    @allure.story("过山车")
+    @allure.title("过山车-云端启动")
+    # 从c_project_record获取数据进行断言
+    def test_gsc_record(self):
+        sql_query = """
+            select count(id)
+            from uat.c_project_record where project_name = 'HMGY_roller_coaster' 
+            and is_push = 1
+            and is_finish = 1 
+            and create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
+            """.format(now_time_day, tomorrow_time_day)
+
+        expected_result = {'COUNT(id)': 2}
+        result = mysql_db.wait_for_result(sql_query, timeout=3, interval=5, expected_result=expected_result)
+        assert result and result[0].get('COUNT(id)') == 2
+
+    @allure.story("过山车")
+    @allure.title("过山车-云端推理")
+    # 从c_inference中获取数据进行断言
+    def test_gsc_inference(self):
+        sql_query = """
+        select count(id)
+        from uat.c_inference where project = 'HMGY_roller_coaster' 
+        and state = 4 
+        and create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
         """.format(now_time_day,tomorrow_time_day )
 
-        expected_result = {'COUNT(id)': 76} #预期结果等待数据库返回
+        expected_result = {'COUNT(id)': 8}
         result = mysql_db.wait_for_result(sql_query,timeout=2,interval=3,expected_result=expected_result)
-        assert result and result[0].get('COUNT(id)') == 76 #断言
+        assert result and result[0].get('COUNT(id)') == 8
 
-    # @allure.title("过山车-云端推理")
-    # #从c_inference中获取数据进行断言
-    #
-    # @allure.title("过山车-云端识别")
-    #
-    #
-    # @allure.title("过山车-云端生成")
-    #
-    #
-    #
-    #
-    # @allure.story("海盗船")
-    # # def test_gsc(self,ssh_client):
+    @allure.story("过山车")
+    @allure.title("过山车-云端识别")
+    # 从c_inference中获取数据进行断言
+    def test_gsc_recognized(self):
+        sql_query = """
+        select count(id)
+        from uat.c_recognized where project = 'HMGY_roller_coaster' 
+        and create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
+        """.format(now_time_day,tomorrow_time_day )
+
+        expected_result = {'COUNT(id)': 2}
+        result = mysql_db.wait_for_result(sql_query,timeout=2,interval=3,expected_result=expected_result)
+        assert result and result[0].get('COUNT(id)') == 2
+
+    @allure.story("过山车")
+    @allure.title("过山车-生成")
+    # 从b_user_resource中获取数据进行断言
+    def test_gsc_resource(self):
+        allure.description("开启了一条测试故事线生成一条视频")
+        sql_query = """
+        select count(id)
+        from uat.b_user_resource where  status = 1 
+        and create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
+        """.format(now_time_day,tomorrow_time_day )
+
+        expected_result = {'COUNT(id)': 1}
+        result = mysql_db.wait_for_result(sql_query,timeout=2,interval=3,expected_result=expected_result)
+        assert result and result[0].get('COUNT(id)') == 1
+
+
+ # def test_gsc(self,ssh_client):
         #执行虎门公园大摆锤脚本
-        # copy_and_modify_files(src_dir_hdc, dst_dir_hdc,file_ext = "dat",minute_add = 10)
+        # copy_and_mod
+#   ify_files(src_dir_hdc, dst_dir_hdc,file_ext = "dat",minute_add = 10)
 
 
 

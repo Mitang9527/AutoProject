@@ -80,7 +80,7 @@ class MysqlDB:
                     if [expected_result] == result:
                             return result
                     else:
-                        WARNING.logger.warning("查询结果格式不符合预期: %s", result)
+                        WARNING.logger.warning("查询结果%s不符合预期:%s", expected_result,result)
 
                 time.sleep(interval)
 
