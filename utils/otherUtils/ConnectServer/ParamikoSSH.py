@@ -1,6 +1,5 @@
 import subprocess
 import sys
-
 import paramiko
 import yaml
 
@@ -47,7 +46,7 @@ class SSHClient:
         except Exception as e:
             ERROR.logger.error(f"无法连接至 {self.name} {self.hostname}: {e}")
 
-    import paramiko
+
 
     def execute_command(self, command, timeout=60):
         """
@@ -83,6 +82,40 @@ class SSHClient:
 
         else:
             raise Exception("未建立连接，请先检查服务器状态。")
+
+    def execute_python_script(self,script_path):
+        """
+            执行一个Python脚本并实时打印其标准输出和错误输出。
+            :param script_path: 要执行的Python脚本的路径。
+            """
+        try:
+            # 使用subprocess启动一个子进程来执行Python脚本
+            process = subprocess.Popen(
+                ['python3', script_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,  # 行缓冲
+                universal_newlines=True,  # 处理换行符
+                encoding='utf-8'  # 指定编码为utf-8
+            )
+
+            # 实时读取并打印标准输出
+            for line in iter(process.stdout.readline, ''):
+                print(f"STDOUT: {line.strip()}")
+
+            # 实时读取并打印错误输出
+            for line in iter(process.stderr.readline, ''):
+                print(f"STDERR: {line.strip()}")
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+        finally:
+            # 确保流和进程被正确关闭
+            process.stdout.close()
+            process.stderr.close()
+            process.wait()
 
     def close(self):
         """
