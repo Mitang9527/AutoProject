@@ -52,6 +52,8 @@ class GetYamlData:
         """
         return [{"name": k, "config": v} for k, v in data.items()]
 
+
+
 class GetCaseData(GetYamlData):
     """ 获取测试用例中的数据 """
 

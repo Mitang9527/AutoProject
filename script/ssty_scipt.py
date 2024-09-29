@@ -58,7 +58,7 @@ file_ext = "dat"  # 只处理.dat文件
 minute_add = 10  # 增加的分钟数
 
 #山水田园过山车
-copy_and_modify_files(src_dir, dst_dir, file_ext, minute_add)
+# copy_and_modify_files(src_dir, dst_dir, file_ext, minute_add)
 #山水田园海盗船
 # copy_and_modify_files(src_dir_hdc,dst_dir_hdc,file_ext,minute_add)
 #山水田园大摆锤

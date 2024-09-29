@@ -46,8 +46,6 @@ class SSHClient:
         except Exception as e:
             ERROR.logger.error(f"无法连接至 {self.name} {self.hostname}: {e}")
 
-
-
     def execute_command(self, command, timeout=60):
         """
         在 SSH 服务器上执行命令
@@ -69,7 +67,6 @@ class SSHClient:
                 stdout.channel.shutdown_read()
                 stderr.channel.shutdown_read()
 
-                # 处理可能的错误
                 if stderr_output:
                     print(f"错误信息: {stderr_output}")
 
@@ -148,44 +145,13 @@ clients_config = yaml_data.get('ConnectClient', [])
 clients = [SSHClient(config) for config in clients_config]
 
 # 遍历客户端列表筛选开关状态
-# for client in clients:
-#     if client.switch:
-#         client.connect()
-#
-#         stdout, stderr = client.execute_command('python3 /home/lzroot/yzssly_scipt.py')
-#         print("STDOUT:", stdout)
-#         print("STDERR:", stderr)
-#         client.close()
-#TODO 待定方案
-
-# for client in clients:
-#     if client.switch:
-#         client.connect()
-#         process = subprocess.Popen(
-#             ['python', r'.\script\hmgy_scipt.py'],
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.PIPE,
-#             text=True,
-#             bufsize=1,  # 行缓冲
-#             universal_newlines=True,  # 处理换行符
-#             encoding='utf-8' #指定编码utf8
-#         )
-#
-#         # 实时读取并打印 stdout 和 stderr
-#         try:
-#             for line in iter(process.stdout.readline, ''):
-#                 print(f"STDOUT: {line.strip()}")
-#             for line in iter(process.stderr.readline, ''):
-#                 print(f"STDERR: {line.strip()}")
-#         except Exception as e:
-#             print(f"Error: {e}")
-#
-#         finally:
-#             # 确保流和进程被正确关闭
-#             process.stdout.close()
-#             process.stderr.close()
-#             process.wait()
-#     client.close()
+for client in clients:
+    if client.switch:
+        client.connect()
+        stdout, stderr = client.execute_command('python3 /home/lzroot/hmgy_scipt.py')
+        print("STDOUT:", stdout)
+        print("STDERR:", stderr)
+        client.close()
 
 
 

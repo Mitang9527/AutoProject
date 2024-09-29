@@ -30,9 +30,9 @@ ding_talk:
 mysql_db:
   # 数据库开关
   switch: True
-  host: testwty.mysql.polardb.rds.aliyuncs.com
-  user: prod
-  password: 'Prod_Wty123^'
+  host: 192.168.31.13
+  user: sit
+  password: sit
   port: 3306
 
 
@@ -43,11 +43,7 @@ mirror_source: http://mirrors.aliyun.com/pypi/simple/
 wechat:
   webhook:
 
-
 ### 邮箱必填，需要全部都配置好，程序运行失败时，会发送邮件通知!!!!
-### 邮箱必填，需要全部都配置好，程序运行失败时，会发送邮件通知!!!!
-### 邮箱必填，需要全部都配置好，程序运行失败时，会发送邮件通知!!!!
-### 重要的事情说三遍
 email:
   send_user:
   email_host: smtp.qq.com
@@ -57,10 +53,9 @@ email:
   send_list:
 
 # 飞书通知
-lark:
-  webhook:
-  secret :
-
+#lark:
+#  webhook:
+#  secret :
 
 feishu:
   webhook: https://open.feishu.cn/open-apis/bot/v2/hook/69dc685f-3da3-4d47-9fd0-d018c5278ec5

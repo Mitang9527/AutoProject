@@ -74,6 +74,6 @@ def process_folder(root_folder):
         print(f"Error processing folder '{root_folder}': {e}")
 
 if __name__ == '__main__':
-    root_folder = input("将整个文件夹一起拉过来: ").strip()  # 用户手动输入根文件夹路径
+    root_folder = input("将整个文件夹一起拉过来: ").strip()  # 手动输入根文件夹路径
     process_folder(root_folder)
 

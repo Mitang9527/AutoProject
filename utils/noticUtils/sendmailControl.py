@@ -24,7 +24,7 @@ class SendEmail:
         @param content: 发送内容
         @return:
         """
-        user = "余少琪" + "<" + config.email.send_user + ">"
+        user = "username" + "<" + config.email.send_user + ">"
         message = MIMEText(content, _subtype='plain', _charset='utf-8')
         message['Subject'] = sub
         message['From'] = user
@@ -54,7 +54,7 @@ class SendEmail:
         :return:
         """
         email = config.email.send_list
-        user_list = email.split(',')  # 多个邮箱发送，yaml文件中直接添加  '806029174@qq.com'
+        user_list = email.split(',')  # 多个邮箱发送，yaml文件中直接添加  '邮箱@qq.com'
 
         sub = config.project_name + "接口自动化报告"
         content = f"""

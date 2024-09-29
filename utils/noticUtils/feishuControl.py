@@ -118,6 +118,7 @@ class FeiShuTalkChatBot:
                                     "content": "报告详情"
                                 },
                                 "type": "primary",
+                                #sit环境测试报告
                                 "url":"http://192.168.30.24:8034/"
                             }
                         ]

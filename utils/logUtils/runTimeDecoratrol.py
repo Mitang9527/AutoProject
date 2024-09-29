@@ -2,7 +2,7 @@
 统计请求运行时长装饰器，如请求响应时间超时
 程序中会输入红色日志，提示时间 http 请求超时，默认时长为 3000ms
 """
-from utils.logging_tool.log_control import ERROR
+from utils.logUtils.logControl import ERROR
 
 
 def execution_duration(number: int):

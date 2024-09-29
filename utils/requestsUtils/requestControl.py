@@ -388,7 +388,7 @@ class RequestControl:
         :param kwargs:
         :return:
         """
-        from utils.requests_tool.dependent_case import DependentCase
+        from utils.requestsUtils.dependent_case import DependentCase
         requests_type_mapping = {
             RequestType.JSON.value: self.request_type_for_json,
             RequestType.NONE.value: self.request_type_for_none,

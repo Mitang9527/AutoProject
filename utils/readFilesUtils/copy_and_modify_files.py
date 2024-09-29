@@ -31,6 +31,7 @@ def copy_and_modify_files(src_dirs, dst_dirs, file_ext="dat", minute_add=2):
         if not os.path.exists(dst_dir):
             os.makedirs(dst_dir, mode=0o777, exist_ok=True)
 
+
         filelist = []
         for filename in os.listdir(src_dir):
             if filename.endswith(file_ext):
@@ -74,7 +75,7 @@ def copy_and_modify_files(src_dirs, dst_dirs, file_ext="dat", minute_add=2):
                 shutil.copy(new_src_path, dst_path)
                 wlog(f"Copied {new_src_path} to {dst_path}")
 
-                # 可选：删除临时重命名的文件（如果需要）
+                # 删除临时重命名的文件
                 # os.remove(new_src_path)
 
                 # 暂停1秒
@@ -86,10 +87,4 @@ def copy_and_modify_files(src_dirs, dst_dirs, file_ext="dat", minute_add=2):
 
         wlog(f"Processed {src_dir} to {dst_dir}")
 
-
-
-
-# src_dirs = ["./source_dir1", "./source_dir2"]
-# dst_dirs = ["./destination_dir1", "./destination_dir2"]
-# copy_and_modify_files(src_dirs, dst_dirs)
 

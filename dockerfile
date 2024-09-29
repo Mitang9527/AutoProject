@@ -1,8 +1,8 @@
 FROM
 
-LABEL version="1.0.0" maintainer="test777"
+LABEL version="1.0.0" maintainer="MiTang"
 
-WORKDIR /proj
+WORKDIR /home/lzroot/Code
 
 COPY . .
 

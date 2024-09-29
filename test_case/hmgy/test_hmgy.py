@@ -1,13 +1,10 @@
 import allure
 import pytest
-
-from script.hmgy_scipt import src_dir,dst_dir,src_dir_hdc,dst_dir_hdc
+from script.hmgy_scipt import src_dir,dst_dir
 from utils.readFilesUtils.copy_and_modify_files import copy_and_modify_files
-from utils.otherUtils.ConnectServer.ParamikoSSH import clients
+from utils.ConnectServer.ParamikoSSH import clients
 from utils.mysqlUtils.mysqlControl import mysql_db
 from utils.timeUtils.time_control import now_time_day,tomorrow_time_day
-
-
 
 @pytest.fixture(scope="class")
 def ssh_client():
@@ -41,9 +38,8 @@ class Test_hmgy():
         with allure.step("执行虎门公园过山车脚本"):
             for client in self.ssh_client:
                 if client.switch:
-                    stdout, stderr = client.execute_command('python3 /home/lzroot/hmgy_scipt.py')
-                    print("STDOUT:", stdout)
-                    print("STDERR:", stderr)
+                    copy_and_modify_files(src_dir,dst_dir,file_ext="dat", minute_add=10)
+
 
     @allure.story("过山车")
     @allure.title("云端收集")
@@ -51,7 +47,7 @@ class Test_hmgy():
     def test_gsc_collect(self):
         sql_query = """
         SELECT COUNT(id)
-        FROM uat.c_video_collection
+        FROM sit.c_video_collection
         WHERE create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
         """.format(now_time_day,tomorrow_time_day)
 
@@ -65,7 +61,7 @@ class Test_hmgy():
     def test_gsc_record(self):
         sql_query = """
             select count(id)
-            from uat.c_project_record where project_name = 'HMGY_roller_coaster' 
+            from sit.c_project_record where project_name = 'HMGY_roller_coaster' 
             and is_push = 1
             and is_finish = 1 
             and create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
@@ -81,7 +77,7 @@ class Test_hmgy():
     def test_gsc_inference(self):
         sql_query = """
         select count(id)
-        from uat.c_inference where project = 'HMGY_roller_coaster' 
+        from sit.c_inference where project = 'HMGY_roller_coaster' 
         and state = 4 
         and create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
         """.format(now_time_day,tomorrow_time_day )
@@ -96,7 +92,7 @@ class Test_hmgy():
     def test_gsc_recognized(self):
         sql_query = """
         select count(id)
-        from uat.c_recognized where project = 'HMGY_roller_coaster' 
+        from sit.c_recognized where project = 'HMGY_roller_coaster' 
         and create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
         """.format(now_time_day,tomorrow_time_day )
 
@@ -111,7 +107,7 @@ class Test_hmgy():
         allure.description("开启了一条测试故事线生成一条视频")
         sql_query = """
         select count(id)
-        from uat.b_user_resource where  status = 1 
+        from sit.b_user_resource where  status = 1 
         and create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
         """.format(now_time_day,tomorrow_time_day )
 
@@ -123,7 +119,11 @@ class Test_hmgy():
  # def test_gsc(self,ssh_client):
         #执行虎门公园大摆锤脚本
         # copy_and_mod
-#   ify_files(src_dir_hdc, dst_dir_hdc,file_ext = "dat",minute_add = 10)
+
+if __name__ == '__main__':
+    pytest.main(['test_hmgy.py', '-s', '-W', 'ignore:Module already imported:pytest.PytestWarning'])
+
+
 
 
 

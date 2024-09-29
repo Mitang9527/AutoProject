@@ -133,7 +133,7 @@ def open_folder(root_folder):
 
 
 if __name__ == "__main__":
-    root_folder = input("将整个文件夹一起拉过来: ").strip()  # 用户手动输入根文件夹路径
+    root_folder = input("将整个文件夹一起拉过来: ").strip()  # 手动输入根文件夹路径
     # root_folder = r'C:\Users\EDY\Desktop\测试资源\视频物料\hmgy'
     list_folders_and_mp4_files(root_folder)
     open_folder(root_folder)

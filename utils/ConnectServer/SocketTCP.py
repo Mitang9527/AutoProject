@@ -53,9 +53,9 @@ class TCPClient:
             print(f"Connection to {self.host}:{self.port} closed")
 
 # 使用示例
-tcp_client = TCPClient(host='localhost', port=8080)
-tcp_client.connect()
-tcp_client.send("Hello, Server!")
-response = tcp_client.receive()
-print("Received:", response)
-tcp_client.close()
+# tcp_client = TCPClient(host='localhost', port=8080)
+# tcp_client.connect()
+# tcp_client.send("Hello, Server!")
+# response = tcp_client.receive()
+# print("Received:", response)
+# tcp_client.close()

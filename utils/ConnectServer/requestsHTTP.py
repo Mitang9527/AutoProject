@@ -43,6 +43,6 @@ class HTTPClient:
             return None
 
 # 使用示例
-http_client = HTTPClient(base_url='https://jsonplaceholder.typicode.com')
-response = http_client.get('posts')
-print(response)
+# http_client = HTTPClient(base_url='https://jsonplaceholder.typicode.com')
+# response = http_client.get('posts')
+# print(response)
