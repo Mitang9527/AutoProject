@@ -171,5 +171,4 @@ class FeiShuTalkChatBot:
 # 调用发送文本消息的方法示例
 # # msg = "自动化测试完成！"
 # # bot.send_text(msg)
-#
 # bot.post()
