@@ -9,15 +9,13 @@ class AdbTest:
         self.device_name = device
         self.local_pth = os.getcwd()
         self.case = case
-        self.package_name = self.filter_apk()
-        self.total_rmnet_up = 0
-        self.total_rmnet_down = 0
-        self.total_wifi_up = 0
-        self.total_wifi_down = 0
+        self.package_name = None
+        self.cached_flow_data = None
 
     def select_package(self):
-        package_name = str(self.package_name)
-        return package_name
+        if self.package_name is None:
+            self.package_name = str(self.filter_apk())
+        return self.package_name
 
     def get_screenshot(self):
         pic_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_screenshot.jpeg"
@@ -215,37 +213,42 @@ class AdbTest:
         except Exception as e:
             print("启动app发生错误:", str(e))
 
+#参考：https://www.cnblogs.com/liyuanhong/articles/11376302.html
     def flow_monitor(self):
-        package = self.select_package()
-        cmd = f'adb shell dumpsys package {package} | findstr userId'
-        out = os.popen(cmd).read()
-        try:
-            if out:
-                userId = out.split('userId=')[1]
-                cmd1 = f'adb shell cat /proc/net/xt_qtaguid/stats | findstr {userId}]'  # 通过uid区分app
-                rmnetup, rmnetdown, wifiup, wifidown = 0, 0, 0, 0
-                result = os.popen(cmd1).readlines()
-                for line in result:  # 可能有多行线程wifi或者移动网络值
-                    if 'rmnet0' in line and "0x0" in line:  # 蜂窝数据流量
-                        rmnetup = round(rmnetup + int(line.split(' ')[4]) / 1024, 2)
-                        rmnetdown = round(rmnetdown + int(line.split(' ')[5]) / 1024, 2)
+        if self.cached_flow_data is None:
 
-                    elif 'wlan' in line and "0x0" in line:  # wifi数据流量
-                        wifiup = round(wifiup + int(line.split(' ')[4])/1024, 2)
-                        wifidown = round(wifidown + int(line.split(' ')[5])/1024, 2)
-                        """
-                        参数说明
-                        rmnetup:  移动流量上行数据
-                        rmnetdown:  流量下行数据
-                        wifiup:  wifi上行数据
-                        wifidown:  wifi下行数据。
-                        """
-                return rmnetup, rmnetdown, wifiup, wifidown
-            else:
-                print('没有userId')
+            package = self.select_package()
+            cmd = f'adb shell dumpsys package {package} | findstr userId'
+            out = os.popen(cmd).read()
+            try:
+                if out:
+                    userId = out.split('userId=')[1]
+                    cmd1 = f'adb shell cat /proc/net/xt_qtaguid/stats | findstr {userId}]'  # 通过uid区分app
+                    rmnetup, rmnetdown, wifiup, wifidown = 0, 0, 0, 0
+                    result = os.popen(cmd1).readlines()
+                    for line in result:  # 可能有多行线程wifi或者移动网络值
+                        if 'rmnet' in line and "0x0" in line:  # 蜂窝数据流量
+                            rmnetup = round(rmnetup + int(line.split(' ')[5]) / 1024, 2)
+                            rmnetdown = round(rmnetdown + int(line.split(' ')[7]) / 1024, 2)
 
-        except Exception as e:
-            print(f'err:{e}')
+                        elif 'wlan' in line and "0x0" in line:  # wifi数据流量
+                            wifiup = round(wifiup + int(line.split(' ')[5])/1024, 2)
+                            wifidown = round(wifidown + int(line.split(' ')[7])/1024, 2)
+                            """
+                            参数说明
+                            rmnetup:  移动流量上行数据
+                            rmnetdown:  流量下行数据
+                            wifiup:  wifi上行数据
+                            wifidown:  wifi下行数据。
+                            """
+                    return rmnetup, rmnetdown, wifiup, wifidown
+                else:
+                    print('没有userId')
+
+            except Exception as e:
+                print("")
+        else:
+            return self.cached_flow_data
 
     def run_flow_monitor(self):
         # 获取初始流量数据
@@ -261,7 +264,7 @@ class AdbTest:
                 flow_res = self.flow_monitor()  # 获取当前流量数据
                 print(f'{datetime.now()}: 流量上行数据为 {flow_res[0]}Kb 流量下行数据为 {flow_res[1]}Kb | '
                       f'wifi上行数据为 {flow_res[2]}Kb wifi下行数据为 {flow_res[-1]}Kb')
-                time.sleep(2)
+                time.sleep(3)
         except KeyboardInterrupt:
             end_time = time.time()
             elapsed_time = end_time - start_time
@@ -286,7 +289,6 @@ class AdbTest:
             print(f"移动网络下行流量变化: {rmnet_down_change} Kb")
             print(f"WiFi上行流量变化: {wifi_up_change} Kb")
             print(f"WiFi下行流量变化: {wifi_down_change} Kb")
-
 
     def adb_monkey(self):
         """
@@ -333,12 +335,14 @@ class AdbTest:
         except Exception as e:
             print("发生错误", str(e))
 
+    def language_setting(self):
+        os.popen("adb shell am start -a android.settings.LOCALE_SETTINGS")
 
 def run(device_name):
     try:
         while True:
             print(f"\n当前选择的设备系统为：Android 设备为：{device_name}\n")
-            case = input("adb测试工具0.3：\n"
+            case = input("adb测试工具0.6：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
@@ -354,8 +358,9 @@ def run(device_name):
                          "rl kw kw1 kw2 该方式只要命中关键字就输出日志\n"
                          "----------------------***其他功能***--------------------\n"
                          "in：切换到AdbKeyboard键盘后可输入中英文，否则只能输入英文，单次只能输入一个中间不能有空格\n"
+                         "language: 切换系统语言设置\n"
                          "monkey: monkey测试\n"
-                         "flow: 流量监控\n"
+                         "flow: 流量监控\n"                                                  
                          "按下 Ctrl+C 退出\n").strip()
 
             test = AdbTest(device_name, case)
@@ -374,6 +379,9 @@ def run(device_name):
 
             elif case.startswith("in"):
                 test.input_text()
+
+            elif case.startswith("language"):
+                test.language_setting()
 
             elif case.startswith("uninstall"):
                 test.uninstall_pkg()
@@ -395,8 +403,6 @@ def run(device_name):
 
     except KeyboardInterrupt:
         pass
-
-
 
 
 def get_device():
