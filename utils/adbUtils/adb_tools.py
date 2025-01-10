@@ -101,7 +101,7 @@ class AdbTest:
     def clean_app(self):
         packname = self.select_package()
         try:
-            with os.popen(f'adb -s {self.device_name} shell pm clear {packname}') as cl_res:
+            with os.popen(f"adb -s {self.device_name} shell pm clear {packname}") as cl_res:
                 result = cl_res.read()
                 if "Success" not in result:
                     print(f'\033[0;31m\n清除数据失败，具体原因可参考以下排查方法：\n'
@@ -183,6 +183,7 @@ class AdbTest:
         ip_address = input("请输入登录环境:")
         context = input("请输入登录版本:")
         adb_cmd = " ".join(["adb",
+                            "-s", self.device_name,
                             "shell", "am", "broadcast",
                             "-a", "com.echat.config",
                             "--es", "account", account,
@@ -203,7 +204,7 @@ class AdbTest:
     def start_apk(self):
         packname = self.select_package()
         try:
-            res = os.popen("adb shell am start " + packname)
+            res = os.popen(f"adb -s {device_name} shell am start " + packname)
             result = res.read()
             if "Error" not in result:
                 print(f"{packname}启动成功")
@@ -213,17 +214,17 @@ class AdbTest:
         except Exception as e:
             print("启动app发生错误:", str(e))
 
-#参考：https://www.cnblogs.com/liyuanhong/articles/11376302.html
     def flow_monitor(self):
+        # 参考：https://www.cnblogs.com/liyuanhong/articles/11376302.html
         if self.cached_flow_data is None:
 
             package = self.select_package()
-            cmd = f'adb shell dumpsys package {package} | findstr userId'
+            cmd = f'adb -s {device_name} shell dumpsys package {package} | findstr userId'
             out = os.popen(cmd).read()
             try:
                 if out:
                     userId = out.split('userId=')[1]
-                    cmd1 = f'adb shell cat /proc/net/xt_qtaguid/stats | findstr {userId}]'  # 通过uid区分app
+                    cmd1 = f'adb -s {device_name} shell cat /proc/net/xt_qtaguid/stats | findstr {userId}]'  # 通过uid区分app
                     rmnetup, rmnetdown, wifiup, wifidown = 0, 0, 0, 0
                     result = os.popen(cmd1).readlines()
                     for line in result:  # 可能有多行线程wifi或者移动网络值
@@ -253,10 +254,10 @@ class AdbTest:
     def run_flow_monitor(self):
         # 获取初始流量数据
         initial_flow_res = self.flow_monitor()  # 获取初始流量数据
-        start_flow_res_0 = initial_flow_res[0]  # 初始移动网络上行流量
-        start_flow_res_1 = initial_flow_res[1]  # 初始移动网络下行流量
-        start_flow_res_2 = initial_flow_res[2]  # 初始WiFi上行流量
-        start_flow_res_3 = initial_flow_res[3]  # 初始WiFi下行流量
+        start_flow_res_0 = initial_flow_res[0]
+        start_flow_res_1 = initial_flow_res[1]
+        start_flow_res_2 = initial_flow_res[2]
+        start_flow_res_3 = initial_flow_res[3]
 
         start_time = time.time()
         try:
@@ -282,7 +283,6 @@ class AdbTest:
             wifi_up_change = round(end_flow_res_2 - start_flow_res_2, 2)
             wifi_down_change = round(end_flow_res_3 - start_flow_res_3, 2)
 
-            # 输出流量变化情况
             print("\n流量监控已停止。")
             print(f"总监控时间: {elapsed_time:.2f} 秒")
             print(f"移动网络上行流量变化: {rmnet_up_change} Kb")
@@ -313,10 +313,13 @@ class AdbTest:
         monitor_native_crashes = "--monitor-native-crashes"
         seed = input("设置随机数生成器的种子值:")
         events = input("指定 Monkey 运行的事件总数:")
+        device_name = self.device_name
         package_name = self.filter_apk()
 
         command = " ".join([
-            "adb", "shell", "monkey",
+            "adb",
+            "-s", device_name,
+            "shell", "monkey",
             "-p", str(package_name),
             "--throttle", throttle,
             verbose,
@@ -336,13 +339,13 @@ class AdbTest:
             print("发生错误", str(e))
 
     def language_setting(self):
-        os.popen("adb shell am start -a android.settings.LOCALE_SETTINGS")
+        os.popen(f"adb -s {device_name} shell am start -a android.settings.LOCALE_SETTINGS")
 
 def run(device_name):
     try:
         while True:
-            print(f"\n当前选择的设备系统为：Android 设备为：{device_name}\n")
-            case = input("adb测试工具0.6：\n"
+            print(f"\n当前选择的系统为:Android | 设备为：{device_name}\n")
+            case = input("adb测试工具V0.7：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
@@ -420,7 +423,7 @@ def get_device():
 
 def get_packname():
     packnames = []
-    adb_cmd = " adb shell pm list packages -3"
+    adb_cmd = f"adb -s {device_name} shell pm list packages -3"
     # adb_cmd = "adb shell pm list packages |findstr li"
     # adb_cmd = "adb shell pm list packages"
     adb_res = os.popen(adb_cmd).read()
@@ -437,7 +440,8 @@ if __name__ == '__main__':
         print(f'\033[0;31m\n当前没有设备连接，请检查！!\n\033[0m')
     else:
         if len(get_device()) == 1:
-            run(get_device()[0])
+            device_name = get_device()[0]
+            run(device_name)
         else:
             try:
                 for d in range(len(get_device())):
