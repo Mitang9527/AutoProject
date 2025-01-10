@@ -303,6 +303,7 @@ class AdbTest:
         --monitor-native-crashes: 监控并报告本地崩溃。
         -s <seed>: 设置随机数生成器的种子值。
         <event-count>: 指定 Monkey 运行的事件总数。
+        ">", 重定向日志输出
         """
         throttle = input("设置事件之间的延迟时间(毫秒):")
         verbose = "-v -v -v"
@@ -315,6 +316,8 @@ class AdbTest:
         events = input("指定 Monkey 运行的事件总数:")
         device_name = self.device_name
         package_name = self.filter_apk()
+        log_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_monkey.log"
+        path = os.path.join(self.local_pth,log_name)
 
         command = " ".join([
             "adb",
@@ -329,11 +332,13 @@ class AdbTest:
             ignore_native_crashes,
             monitor_native_crashes,
             "-s", seed,
-            events
+            events,
+            ">", path
         ])
 
         try:
             adb_res = os.popen(command).read()
+            print(f"日志已保存至{path}")
 
         except Exception as e:
             print("发生错误", str(e))
@@ -345,7 +350,7 @@ def run(device_name):
     try:
         while True:
             print(f"\n当前选择的系统为:Android | 设备为：{device_name}\n")
-            case = input("adb测试工具V0.7：\n"
+            case = input("adb测试工具V0.8：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
