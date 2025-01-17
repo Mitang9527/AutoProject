@@ -57,15 +57,22 @@ class AdbTest:
                 print(f'\033[0;31m\n输入错误，请检查序号，返回上一级!\n\033[0m')
 
     def record_log(self):
+        global log_path
         cs = self.case.split(" ")
         if len(cs) == 1:
             log_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_log.log"
             print("日志记录中，结束请按Control + C")
             try:
-                os.system(f'adb -s {self.device_name} logcat > {log_name}')
+                log_folder = os.path.join(self.local_pth, "log")
+                os.makedirs(log_folder, exist_ok=True)
+
+                log_path = os.path.join(log_folder, log_name)
+                os.system(f'adb -s {self.device_name} logcat > {log_path}')
             except KeyboardInterrupt:
                 pass
-            print(f"日志记录结束，日志存储地址为：{os.path.join(self.local_pth, log_name)}")
+
+            # 打印日志保存路径
+            print(f"日志记录结束，日志存储地址为: {log_path}")
         else:
             self.run_cmd(f"adb -s {self.device_name} logcat ")
 
@@ -227,7 +234,7 @@ class AdbTest:
                     cmd1 = f'adb -s {device_name} shell cat /proc/net/xt_qtaguid/stats | findstr {userId}]'  # 通过uid区分app
                     rmnetup, rmnetdown, wifiup, wifidown = 0, 0, 0, 0
                     result = os.popen(cmd1).readlines()
-                    for line in result:  # 可能有多行线程wifi或者移动网络值
+                    for line in result:  # 可能有多行进程wifi或者移动网络值
                         if 'rmnet' in line and "0x0" in line:  # 蜂窝数据流量
                             rmnetup = round(rmnetup + int(line.split(' ')[5]) / 1024, 2)
                             rmnetdown = round(rmnetdown + int(line.split(' ')[7]) / 1024, 2)
@@ -342,7 +349,9 @@ class AdbTest:
 
         try:
             adb_res = os.popen(command).read()
-            print(f"日志已保存至{path}")
+            print(
+                "Monkey执行结束\n"
+                f"日志已保存至{path}")
 
         except Exception as e:
             print("发生错误", str(e))
@@ -355,7 +364,7 @@ def run(device_name):
     try:
         while True:
             print(f"\n当前选择的系统为:Android | 设备为：{device_name}\n")
-            case = input("adb测试工具V0.9：\n"
+            case = input("adb测试工具V1.0：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
@@ -417,17 +426,18 @@ def run(device_name):
     except KeyboardInterrupt:
         pass
 
-
 def get_device():
     devices = []
     adb_cmd = "adb devices"
     adb_res = os.popen(adb_cmd).read()
-    if "" == adb_res:
-        print("adb_env_err")
-    else:
-        adb_arr = adb_res.strip().replace("List of devices attached\n", "").replace("\tdevice", "").split("\n")
-        for ad in adb_arr:
-            devices.append(ad)
+
+    adb_res = adb_res.strip()
+    if "List of devices attached" in adb_res:
+        adb_res = adb_res.replace("List of devices attached", "")
+
+    if adb_res.strip():
+        devices = [line.split()[0] for line in adb_res.split("\n") if "device" in line]
+
     return devices
 
 
@@ -447,7 +457,8 @@ def get_packname():
 
 if __name__ == '__main__':
     if len(get_device()) == 0:
-        print(f'\033[0;31m\n当前没有设备连接，请检查！!\n\033[0m')
+        print(f'\033[0;31m\n当前没有设备连接，请检查!!!\n\033[0m')
+        input("按任意键退出:")
     else:
         if len(get_device()) == 1:
             device_name = get_device()[0]
