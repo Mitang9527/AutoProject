@@ -209,7 +209,7 @@ class AdbTest:
             if "Error" not in result:
                 print(f"{packname}启动成功")
             else:
-                print(f"{packname}启动失败"+result)
+                print(f"{packname}启动失败" + result)
 
         except Exception as e:
             print("启动app发生错误:", str(e))
@@ -233,8 +233,8 @@ class AdbTest:
                             rmnetdown = round(rmnetdown + int(line.split(' ')[7]) / 1024, 2)
 
                         elif 'wlan' in line and "0x0" in line:  # wifi数据流量
-                            wifiup = round(wifiup + int(line.split(' ')[5])/1024, 2)
-                            wifidown = round(wifidown + int(line.split(' ')[7])/1024, 2)
+                            wifiup = round(wifiup + int(line.split(' ')[5]) / 1024, 2)
+                            wifidown = round(wifidown + int(line.split(' ')[7]) / 1024, 2)
                             """
                             参数说明
                             rmnetup:  移动流量上行数据
@@ -303,7 +303,6 @@ class AdbTest:
         --monitor-native-crashes: 监控并报告本地崩溃。
         -s <seed>: 设置随机数生成器的种子值。
         <event-count>: 指定 Monkey 运行的事件总数。
-        ">", 重定向日志输出
         """
         throttle = input("设置事件之间的延迟时间(毫秒):")
         verbose = "-v -v -v"
@@ -316,8 +315,13 @@ class AdbTest:
         events = input("指定 Monkey 运行的事件总数:")
         device_name = self.device_name
         package_name = self.filter_apk()
+
+        log_folder = os.path.join(self.local_pth, "log")
+        if not os.path.exists(log_folder):
+            os.makedirs(log_folder)
+
         log_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_monkey.log"
-        path = os.path.join(self.local_pth,log_name)
+        path = os.path.join(log_folder, log_name)
 
         command = " ".join([
             "adb",
@@ -346,11 +350,12 @@ class AdbTest:
     def language_setting(self):
         os.popen(f"adb -s {device_name} shell am start -a android.settings.LOCALE_SETTINGS")
 
+
 def run(device_name):
     try:
         while True:
             print(f"\n当前选择的系统为:Android | 设备为：{device_name}\n")
-            case = input("adb测试工具V0.8：\n"
+            case = input("adb测试工具V0.9：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
@@ -368,7 +373,7 @@ def run(device_name):
                          "in：切换到AdbKeyboard键盘后可输入中英文，否则只能输入英文，单次只能输入一个中间不能有空格\n"
                          "language: 切换系统语言设置\n"
                          "monkey: monkey测试\n"
-                         "flow: 流量监控\n"                                                  
+                         "flow: 流量监控\n"
                          "按下 Ctrl+C 退出\n").strip()
 
             test = AdbTest(device_name, case)
