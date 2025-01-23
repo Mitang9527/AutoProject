@@ -3,7 +3,7 @@ import typing
 from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Text, Dict, Callable, Union, Optional, List, Any
-from pydantic import BaseModel,Field
+from pydantic import BaseModel, Field
 
 
 class NotificationType(Enum):

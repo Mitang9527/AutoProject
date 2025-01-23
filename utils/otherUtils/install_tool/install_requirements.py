@@ -82,6 +82,10 @@ class InstallRequirements:
                       encoding=self.check_charset(self.requirements_path)) as file:
                 file.write(read_requirements)
 
-# pip freeze > requirements.txt
+# 1. pip freeze > requirements.txt
+# 2. pip install pipreqs
+#    pipreqs . --force
+
+
 if __name__ == '__main__':
     InstallRequirements().text_comparison()

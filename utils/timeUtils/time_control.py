@@ -1,5 +1,4 @@
 
-
 import time
 from typing import Text
 from datetime import datetime, timedelta
@@ -63,6 +62,14 @@ def now_time_day():
     """
     localtime = time.strftime("%Y-%m-%d", time.localtime())
     return localtime
+
+def datetime_strftime():
+    """
+        获取当前时间, 日期格式: 20250123_172225
+        :return:
+    """
+    datetime_strftime = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return datetime_strftime
 
 def tomorrow_time_day():
     """

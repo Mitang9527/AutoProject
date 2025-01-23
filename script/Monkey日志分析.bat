@@ -2,7 +2,8 @@
 setlocal enabledelayedexpansion
 
 :: 设置所有Monkey日志存放的目录(根据实际情况修改)
-set ff="C:\Users\Administrator\Desktop\log\*.log"
+:: set ff="C:\Users\Administrator\Desktop\log\*.log"
+set ff="D:\code\AutoProject\logs\*.log"
 
 :: 设置查询关键字
 set str=CRASH crash ANR died

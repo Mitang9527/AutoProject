@@ -73,6 +73,7 @@ class MysqlDB:
 
         def wait_for_result(self, sql_query, timeout=60, interval=5, expected_result=None):
             """等待结果，直到超时或匹配预期结果"""
+            global result
             start_time = time.time()
             while time.time() - start_time < timeout:
                 result = self.query(sql_query)

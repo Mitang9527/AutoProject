@@ -35,6 +35,13 @@ class LogHandler:
         format_str = logging.Formatter(fmt)
         # 设置日志级别
         self.logger.setLevel(self.level_relations.get(level))
+
+        # 创建日志文件夹（如果不存在）
+        log_folder = os.path.dirname(filename)  # 获取日志文件的文件夹路径
+        if not os.path.exists(log_folder):  # 如果文件夹不存在
+            os.makedirs(log_folder)  # 创建文件夹
+
+
         # 往屏幕上输出
         screen_output = logging.StreamHandler()
         # 设置屏幕上显示的格式
@@ -85,4 +92,4 @@ ERROR = LogHandler(ensure_path_sep(f"\\logs\\error-{now_time_day}.log"), level='
 WARNING = LogHandler(ensure_path_sep(f'\\logs\\warning-{now_time_day}.log'),level='warning')
 
 if __name__ == '__main__':
-    ERROR.logger.error("测试")
+    ERROR.logger.error('test')
