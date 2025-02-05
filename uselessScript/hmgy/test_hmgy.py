@@ -4,7 +4,7 @@ from script.hmgy_scipt import src_dir,dst_dir
 from utils.readFilesUtils.copy_and_modify_files import copy_and_modify_files
 from utils.ConnectServer.ParamikoSSH import clients
 from utils.mysqlUtils.mysqlControl import mysql_db
-from utils.timeUtils.time_control import now_time_day,tomorrow_time_day
+from utils.timeUtils.time_control import now_time_day, tomorrow_time_day
 
 @pytest.fixture(scope="class")
 def ssh_client():
@@ -115,10 +115,6 @@ class Test_hmgy():
         result = mysql_db.wait_for_result(sql_query,timeout=2,interval=3,expected_result=expected_result)
         assert result and result[0].get('COUNT(id)') == 1
 
-
- # def test_gsc(self,ssh_client):
-        #执行虎门公园大摆锤脚本
-        # copy_and_mod
 
 if __name__ == '__main__':
     pytest.main(['test_hmgy.py', '-s', '-W', 'ignore:Module already imported:pytest.PytestWarning'])
