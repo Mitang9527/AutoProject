@@ -2,12 +2,14 @@ import os
 import subprocess
 import time
 from datetime import datetime
+from utils.readFilesUtils.get_path import get_project_root
+from utils.timeUtils.time_control import datetime_strftime
 
 
 class AdbTest:
     def __init__(self, device, case):
         self.device_name = device
-        self.local_pth = os.getcwd()
+        self.local_pth = get_project_root()
         self.case = case
         self.package_name = None
         self.cached_flow_data = None
@@ -60,13 +62,15 @@ class AdbTest:
         global log_path
         cs = self.case.split(" ")
         if len(cs) == 1:
-            log_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_log.log"
+            log_name = "log_" + datetime_strftime + ".log"
             print("日志记录中，结束请按Control + C")
             try:
-                log_folder = os.path.join(self.local_pth, "log")
+                log_folder = os.path.join(self.local_pth, "logs")
                 os.makedirs(log_folder, exist_ok=True)
 
                 log_path = os.path.join(log_folder, log_name)
+                # 先清理日志，避免干扰
+                os.system(f"adb -s {self.device_name} logcat -c")
                 os.system(f'adb -s {self.device_name} logcat > {log_path}')
             except KeyboardInterrupt:
                 pass
@@ -323,11 +327,11 @@ class AdbTest:
         device_name = self.device_name
         package_name = self.filter_apk()
 
-        log_folder = os.path.join(self.local_pth, "log")
+        log_folder = os.path.join(self.local_pth, "logs")
         if not os.path.exists(log_folder):
             os.makedirs(log_folder)
 
-        log_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_monkey.log"
+        log_name = "monkey_" + datetime_strftime + ".log"
         path = os.path.join(log_folder, log_name)
 
         command = " ".join([
@@ -364,7 +368,7 @@ def run(device_name):
     try:
         while True:
             print(f"\n当前选择的系统为:Android | 设备为：{device_name}\n")
-            case = input("adb测试工具V1.0：\n"
+            case = input("adb测试工具V1.1：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
