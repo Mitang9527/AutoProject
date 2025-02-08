@@ -20,7 +20,7 @@ class AdbTest:
     def get_screenshot(self):
         pic_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_screenshot.jpeg"
         os.system(f"adb -s {self.device_name} exec-out screencap -p > {os.path.join(self.local_pth, pic_name)}")
-        print(f'Í¼Æ¬ÒÑ±£´æµ½£º{os.path.join(self.local_pth, pic_name)}')
+        print(f'å›¾ç‰‡å·²ä¿å­˜åˆ°ï¼š{os.path.join(self.local_pth, pic_name)}')
 
     def get_record(self, case):
         remote_pth = "/sdcard/Pictures/Screenshots"
@@ -42,26 +42,26 @@ class AdbTest:
                 video_num = case.split("-")[-1]
                 recv_cmd = f'adb -s {self.device_name} pull {os.path.join(remote_pth, mp4_pth[int(video_num)])} {self.local_pth}'
                 os.system(recv_cmd)
-                print(f'Â¼ÆÁ±£´æµØÖ·£º{self.local_pth}/{mp4_pth[int(video_num)]}')
+                print(f'å½•å±ä¿å­˜åœ°å€ï¼š{self.local_pth}/{mp4_pth[int(video_num)]}')
             except Exception:
-                print(f'\033[0;31m\nÊäÈë´íÎó£¬Çë¼ì²éĞòºÅ£¬·µ»ØÉÏÒ»¼¶!\n\033[0m')
+                print(f'\033[0;31m\nè¾“å…¥é”™è¯¯ï¼Œè¯·æ£€æŸ¥åºå·ï¼Œè¿”å›ä¸Šä¸€çº§!\n\033[0m')
         else:
             for t in range(len(mp4_pth)):
                 print(f'{t} {mp4_pth[t]}')
             try:
-                down_num = input("Ñ¡ÔñÄãÏëÏÂÔØµÄÂ¼ÆÁ£º")
+                down_num = input("é€‰æ‹©ä½ æƒ³ä¸‹è½½çš„å½•å±ï¼š")
                 recv_cmd = f'adb -s {self.device_name} pull {os.path.join(remote_pth, mp4_pth[int(down_num)])} {self.local_pth}'
                 os.system(recv_cmd)
-                print(f'Â¼ÆÁ±£´æµØÖ·£º{self.local_pth}/{mp4_pth[int(down_num)]}')
+                print(f'å½•å±ä¿å­˜åœ°å€ï¼š{self.local_pth}/{mp4_pth[int(down_num)]}')
             except Exception:
-                print(f'\033[0;31m\nÊäÈë´íÎó£¬Çë¼ì²éĞòºÅ£¬·µ»ØÉÏÒ»¼¶!\n\033[0m')
+                print(f'\033[0;31m\nè¾“å…¥é”™è¯¯ï¼Œè¯·æ£€æŸ¥åºå·ï¼Œè¿”å›ä¸Šä¸€çº§!\n\033[0m')
 
     def record_log(self):
         global log_path
         cs = self.case.split(" ")
         if len(cs) == 1:
             log_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_log.log"
-            print("ÈÕÖ¾¼ÇÂ¼ÖĞ£¬½áÊøÇë°´Control + C")
+            print("æ—¥å¿—è®°å½•ä¸­ï¼Œç»“æŸè¯·æŒ‰Control + C")
             try:
                 log_folder = os.path.join(self.local_pth, "log")
                 os.makedirs(log_folder, exist_ok=True)
@@ -71,8 +71,8 @@ class AdbTest:
             except KeyboardInterrupt:
                 pass
 
-            # ´òÓ¡ÈÕÖ¾±£´æÂ·¾¶
-            print(f"ÈÕÖ¾¼ÇÂ¼½áÊø£¬ÈÕÖ¾´æ´¢µØÖ·Îª: {log_path}")
+            # æ‰“å°æ—¥å¿—ä¿å­˜è·¯å¾„
+            print(f"æ—¥å¿—è®°å½•ç»“æŸï¼Œæ—¥å¿—å­˜å‚¨åœ°å€ä¸º: {log_path}")
         else:
             self.run_cmd(f"adb -s {self.device_name} logcat ")
 
@@ -111,13 +111,13 @@ class AdbTest:
             with os.popen(f"adb -s {self.device_name} shell pm clear {packname}") as cl_res:
                 result = cl_res.read()
                 if "Success" not in result:
-                    print(f'\033[0;31m\nÇå³ıÊı¾İÊ§°Ü£¬¾ßÌåÔ­Òò¿É²Î¿¼ÒÔÏÂÅÅ²é·½·¨£º\n'
-                          f'¼ì²éÉè±¸Á¬½ÓÊÇ·ñÕı³£¡¢Ó¦ÓÃÊÇ·ñ´æÔÚÒÔ¼°Ïà¹ØÈ¨ÏŞÉèÖÃµÈÇé¿ö\n\033[0m')
+                    print(f'\033[0;31m\næ¸…é™¤æ•°æ®å¤±è´¥ï¼Œå…·ä½“åŸå› å¯å‚è€ƒä»¥ä¸‹æ’æŸ¥æ–¹æ³•ï¼š\n'
+                          f'æ£€æŸ¥è®¾å¤‡è¿æ¥æ˜¯å¦æ­£å¸¸ã€åº”ç”¨æ˜¯å¦å­˜åœ¨ä»¥åŠç›¸å…³æƒé™è®¾ç½®ç­‰æƒ…å†µ\n\033[0m')
                 else:
-                    print(f'ÒÑÇå³ı{packname}µÄÊı¾İ')
+                    print(f'å·²æ¸…é™¤{packname}çš„æ•°æ®')
 
         except Exception as e:
-            print("Ö´ĞĞÇå³ıÓ¦ÓÃÊı¾İ²Ù×÷³öÏÖÒì³£:", str(e))
+            print("æ‰§è¡Œæ¸…é™¤åº”ç”¨æ•°æ®æ“ä½œå‡ºç°å¼‚å¸¸:", str(e))
 
     def kill_app(self):
         packname = self.select_package()
@@ -125,13 +125,13 @@ class AdbTest:
             with os.popen(f'adb -s {self.device_name} shell am force-stop {packname}') as cl_res:
                 result = cl_res.read()
                 if "" not in result:
-                    print(f'\033[0;31m\n½áÊø½ø³ÌÊ§°Ü£¬¾ßÌåÔ­Òò¿É²Î¿¼ÒÔÏÂÅÅ²é·½·¨£º\n'
-                          f'¼ì²éÉè±¸Á¬½ÓÊÇ·ñÕı³£¡¢Ó¦ÓÃÊÇ·ñ´æÔÚÒÔ¼°Ïà¹ØÈ¨ÏŞÉèÖÃµÈÇé¿ö\n\033[0m')
+                    print(f'\033[0;31m\nç»“æŸè¿›ç¨‹å¤±è´¥ï¼Œå…·ä½“åŸå› å¯å‚è€ƒä»¥ä¸‹æ’æŸ¥æ–¹æ³•ï¼š\n'
+                          f'æ£€æŸ¥è®¾å¤‡è¿æ¥æ˜¯å¦æ­£å¸¸ã€åº”ç”¨æ˜¯å¦å­˜åœ¨ä»¥åŠç›¸å…³æƒé™è®¾ç½®ç­‰æƒ…å†µ\n\033[0m')
                 else:
-                    print(f'ÒÑ½áÊø{packname}µÄ½ø³Ì')
+                    print(f'å·²ç»“æŸ{packname}çš„è¿›ç¨‹')
 
         except Exception as e:
-            print("Ö´ĞĞ²Ù×÷³öÏÖÒì³£:", str(e))
+            print("æ‰§è¡Œæ“ä½œå‡ºç°å¼‚å¸¸:", str(e))
 
     def input_text(self):
         text = self.case.split(" ")[1:]
@@ -139,14 +139,14 @@ class AdbTest:
         switch_input_method = "adb shell ime set com.android.adbkeyboard/.AdbIME"
         sw_res = os.popen(switch_input_method)
         if "selected" not in sw_res.read():
-            print(f'\033[0;31m\nÊäÈë·¨ÇĞ»»Ê§°Ü£¬Çë¼ì²éÊÇ·ñ°²×°adbkeyboard \n\033[0m')
+            print(f'\033[0;31m\nè¾“å…¥æ³•åˆ‡æ¢å¤±è´¥ï¼Œè¯·æ£€æŸ¥æ˜¯å¦å®‰è£…adbkeyboard \n\033[0m')
         else:
             os.system(input_cmd)
 
     def filter_apk(self):
         packname_list = get_packname()
         if not packname_list:
-            print("²éÑ¯°üÃû´íÎó")
+            print("æŸ¥è¯¢åŒ…åé”™è¯¯")
             return None
 
         for index, p_name in enumerate(packname_list, start=0):
@@ -154,22 +154,22 @@ class AdbTest:
 
         while True:
             try:
-                num = int(input("ÇëÑ¡ÔñÒª²Ù×÷µÄ°üÃû¶ÔÓ¦µÄĞòºÅ: \n"))
+                num = int(input("è¯·é€‰æ‹©è¦æ“ä½œçš„åŒ…åå¯¹åº”çš„åºå·: \n"))
                 if 0 <= num < len(packname_list):
                     packname = packname_list[num]
                     return packname
                 else:
-                    print("ÊäÈëµÄĞòºÅ³¬³ö·¶Î§£¬ÇëÖØĞÂÊäÈëºÏ·¨µÄĞòºÅ¡£")
+                    print("è¾“å…¥çš„åºå·è¶…å‡ºèŒƒå›´ï¼Œè¯·é‡æ–°è¾“å…¥åˆæ³•çš„åºå·ã€‚")
             except ValueError:
-                print("ÇëÊäÈëºÏ·¨µÄÊı×ÖĞòºÅ¡£")
+                print("è¯·è¾“å…¥åˆæ³•çš„æ•°å­—åºå·ã€‚")
 
     def install_pkg(self):
         r = os.popen(f"adb -s {self.device_name} install " + self.case)
         result = r.read()
         if "Success" not in result:
-            print(f'\033[0;31m\n°²×°Ê§°Ü {result} \n\033[0m')
+            print(f'\033[0;31m\nå®‰è£…å¤±è´¥ {result} \n\033[0m')
         else:
-            print("°²×°³É¹¦")
+            print("å®‰è£…æˆåŠŸ")
 
     def uninstall_pkg(self):
         packname = self.select_package()
@@ -177,18 +177,18 @@ class AdbTest:
             r = os.popen(f"adb -s {self.device_name} uninstall " + packname)
             result = r.read()
             if "Success" not in result:
-                print(f'\033[0;31m\nĞ¶ÔØÊ§°Ü {result} \n\033[0m')
+                print(f'\033[0;31m\nå¸è½½å¤±è´¥ {result} \n\033[0m')
             else:
-                print(f"ÒÑ½«{packname}³É¹¦Ğ¶ÔØ")
+                print(f"å·²å°†{packname}æˆåŠŸå¸è½½")
 
         except Exception as e:
-            print("Ö´ĞĞĞ¶ÔØÓ¦ÓÃÊı¾İ²Ù×÷³öÏÖÒì³£:", str(e))
+            print("æ‰§è¡Œå¸è½½åº”ç”¨æ•°æ®æ“ä½œå‡ºç°å¼‚å¸¸:", str(e))
 
     def change_pkg_env(self, ):
-        account = input("ÇëÊäÈëÕËºÅ:")
-        password = input("ÇëÊäÈëÃÜÂë:")
-        ip_address = input("ÇëÊäÈëµÇÂ¼»·¾³:")
-        context = input("ÇëÊäÈëµÇÂ¼°æ±¾:")
+        account = input("è¯·è¾“å…¥è´¦å·:")
+        password = input("è¯·è¾“å…¥å¯†ç :")
+        ip_address = input("è¯·è¾“å…¥ç™»å½•ç¯å¢ƒ:")
+        context = input("è¯·è¾“å…¥ç™»å½•ç‰ˆæœ¬:")
         adb_cmd = " ".join(["adb",
                             "-s", self.device_name,
                             "shell", "am", "broadcast",
@@ -200,13 +200,13 @@ class AdbTest:
         try:
             adb_res = os.popen(adb_cmd).read()
             if 'result=0' not in adb_res:
-                print("²ÎÊıĞ´Èë´íÎó")
+                print("å‚æ•°å†™å…¥é”™è¯¯")
 
             else:
-                print(f"ÒÑ¸ü¸Ä»·¾³²ÎÊıÎª{ip_address},°æ±¾Îª{context},ÕËºÅÎª{account}")
+                print(f"å·²æ›´æ”¹ç¯å¢ƒå‚æ•°ä¸º{ip_address},ç‰ˆæœ¬ä¸º{context},è´¦å·ä¸º{account}")
 
         except Exception as e:
-            print("·¢Éú´íÎó:", str(e))
+            print("å‘ç”Ÿé”™è¯¯:", str(e))
 
     def start_apk(self):
         packname = self.select_package()
@@ -214,15 +214,15 @@ class AdbTest:
             res = os.popen(f"adb -s {device_name} shell am start " + packname)
             result = res.read()
             if "Error" not in result:
-                print(f"{packname}Æô¶¯³É¹¦")
+                print(f"{packname}å¯åŠ¨æˆåŠŸ")
             else:
-                print(f"{packname}Æô¶¯Ê§°Ü" + result)
+                print(f"{packname}å¯åŠ¨å¤±è´¥" + result)
 
         except Exception as e:
-            print("Æô¶¯app·¢Éú´íÎó:", str(e))
+            print("å¯åŠ¨appå‘ç”Ÿé”™è¯¯:", str(e))
 
     def flow_monitor(self):
-        # ²Î¿¼£ºhttps://www.cnblogs.com/liyuanhong/articles/11376302.html
+        # å‚è€ƒï¼šhttps://www.cnblogs.com/liyuanhong/articles/11376302.html
         if self.cached_flow_data is None:
 
             package = self.select_package()
@@ -231,27 +231,27 @@ class AdbTest:
             try:
                 if out:
                     userId = out.split('userId=')[1]
-                    cmd1 = f'adb -s {device_name} shell cat /proc/net/xt_qtaguid/stats | findstr {userId}]'  # Í¨¹ıuidÇø·Öapp
+                    cmd1 = f'adb -s {device_name} shell cat /proc/net/xt_qtaguid/stats | findstr {userId}]'  # é€šè¿‡uidåŒºåˆ†app
                     rmnetup, rmnetdown, wifiup, wifidown = 0, 0, 0, 0
                     result = os.popen(cmd1).readlines()
-                    for line in result:  # ¿ÉÄÜÓĞ¶àĞĞ½ø³Ìwifi»òÕßÒÆ¶¯ÍøÂçÖµ
-                        if 'rmnet' in line and "0x0" in line:  # ·äÎÑÊı¾İÁ÷Á¿
+                    for line in result:  # å¯èƒ½æœ‰å¤šè¡Œè¿›ç¨‹wifiæˆ–è€…ç§»åŠ¨ç½‘ç»œå€¼
+                        if 'rmnet' in line and "0x0" in line:  # èœ‚çªæ•°æ®æµé‡
                             rmnetup = round(rmnetup + int(line.split(' ')[5]) / 1024, 2)
                             rmnetdown = round(rmnetdown + int(line.split(' ')[7]) / 1024, 2)
 
-                        elif 'wlan' in line and "0x0" in line:  # wifiÊı¾İÁ÷Á¿
+                        elif 'wlan' in line and "0x0" in line:  # wifiæ•°æ®æµé‡
                             wifiup = round(wifiup + int(line.split(' ')[5]) / 1024, 2)
                             wifidown = round(wifidown + int(line.split(' ')[7]) / 1024, 2)
                             """
-                            ²ÎÊıËµÃ÷
-                            rmnetup:  ÒÆ¶¯Á÷Á¿ÉÏĞĞÊı¾İ
-                            rmnetdown:  Á÷Á¿ÏÂĞĞÊı¾İ
-                            wifiup:  wifiÉÏĞĞÊı¾İ
-                            wifidown:  wifiÏÂĞĞÊı¾İ¡£
+                            å‚æ•°è¯´æ˜
+                            rmnetup:  ç§»åŠ¨æµé‡ä¸Šè¡Œæ•°æ®
+                            rmnetdown:  æµé‡ä¸‹è¡Œæ•°æ®
+                            wifiup:  wifiä¸Šè¡Œæ•°æ®
+                            wifidown:  wifiä¸‹è¡Œæ•°æ®ã€‚
                             """
                     return rmnetup, rmnetdown, wifiup, wifidown
                 else:
-                    print('Ã»ÓĞuserId')
+                    print('æ²¡æœ‰userId')
 
             except Exception as e:
                 print("")
@@ -259,8 +259,8 @@ class AdbTest:
             return self.cached_flow_data
 
     def run_flow_monitor(self):
-        # »ñÈ¡³õÊ¼Á÷Á¿Êı¾İ
-        initial_flow_res = self.flow_monitor()  # »ñÈ¡³õÊ¼Á÷Á¿Êı¾İ
+        # è·å–åˆå§‹æµé‡æ•°æ®
+        initial_flow_res = self.flow_monitor()  # è·å–åˆå§‹æµé‡æ•°æ®
         start_flow_res_0 = initial_flow_res[0]
         start_flow_res_1 = initial_flow_res[1]
         start_flow_res_2 = initial_flow_res[2]
@@ -269,57 +269,57 @@ class AdbTest:
         start_time = time.time()
         try:
             while True:
-                flow_res = self.flow_monitor()  # »ñÈ¡µ±Ç°Á÷Á¿Êı¾İ
-                print(f'{datetime.now()}: Á÷Á¿ÉÏĞĞÊı¾İÎª {flow_res[0]}Kb Á÷Á¿ÏÂĞĞÊı¾İÎª {flow_res[1]}Kb | '
-                      f'wifiÉÏĞĞÊı¾İÎª {flow_res[2]}Kb wifiÏÂĞĞÊı¾İÎª {flow_res[-1]}Kb')
+                flow_res = self.flow_monitor()  # è·å–å½“å‰æµé‡æ•°æ®
+                print(f'{datetime.now()}: æµé‡ä¸Šè¡Œæ•°æ®ä¸º {flow_res[0]}Kb æµé‡ä¸‹è¡Œæ•°æ®ä¸º {flow_res[1]}Kb | '
+                      f'wifiä¸Šè¡Œæ•°æ®ä¸º {flow_res[2]}Kb wifiä¸‹è¡Œæ•°æ®ä¸º {flow_res[-1]}Kb')
                 time.sleep(3)
         except KeyboardInterrupt:
             end_time = time.time()
             elapsed_time = end_time - start_time
 
-            # »ñÈ¡½áÊøÊ±µÄÁ÷Á¿Êı¾İ
+            # è·å–ç»“æŸæ—¶çš„æµé‡æ•°æ®
             end_flow_res = self.flow_monitor()
-            end_flow_res_0 = end_flow_res[0]  # ½áÊøÊ±µÄÒÆ¶¯ÍøÂçÉÏĞĞÁ÷Á¿
-            end_flow_res_1 = end_flow_res[1]  # ½áÊøÊ±µÄÒÆ¶¯ÍøÂçÏÂĞĞÁ÷Á¿
-            end_flow_res_2 = end_flow_res[2]  # ½áÊøÊ±µÄWiFiÉÏĞĞÁ÷Á¿
-            end_flow_res_3 = end_flow_res[3]  # ½áÊøÊ±µÄWiFiÏÂĞĞÁ÷Á¿
+            end_flow_res_0 = end_flow_res[0]  # ç»“æŸæ—¶çš„ç§»åŠ¨ç½‘ç»œä¸Šè¡Œæµé‡
+            end_flow_res_1 = end_flow_res[1]  # ç»“æŸæ—¶çš„ç§»åŠ¨ç½‘ç»œä¸‹è¡Œæµé‡
+            end_flow_res_2 = end_flow_res[2]  # ç»“æŸæ—¶çš„WiFiä¸Šè¡Œæµé‡
+            end_flow_res_3 = end_flow_res[3]  # ç»“æŸæ—¶çš„WiFiä¸‹è¡Œæµé‡
 
-            # ¼ÆËãÁ÷Á¿±ä»¯
+            # è®¡ç®—æµé‡å˜åŒ–
             rmnet_up_change = round(end_flow_res_0 - start_flow_res_0, 2)
             rmnet_down_change = round(end_flow_res_1 - start_flow_res_1, 2)
             wifi_up_change = round(end_flow_res_2 - start_flow_res_2, 2)
             wifi_down_change = round(end_flow_res_3 - start_flow_res_3, 2)
 
-            print("\nÁ÷Á¿¼à¿ØÒÑÍ£Ö¹¡£")
-            print(f"×Ü¼à¿ØÊ±¼ä: {elapsed_time:.2f} Ãë")
-            print(f"ÒÆ¶¯ÍøÂçÉÏĞĞÁ÷Á¿±ä»¯: {rmnet_up_change} Kb")
-            print(f"ÒÆ¶¯ÍøÂçÏÂĞĞÁ÷Á¿±ä»¯: {rmnet_down_change} Kb")
-            print(f"WiFiÉÏĞĞÁ÷Á¿±ä»¯: {wifi_up_change} Kb")
-            print(f"WiFiÏÂĞĞÁ÷Á¿±ä»¯: {wifi_down_change} Kb")
+            print("\næµé‡ç›‘æ§å·²åœæ­¢ã€‚")
+            print(f"æ€»ç›‘æ§æ—¶é—´: {elapsed_time:.2f} ç§’")
+            print(f"ç§»åŠ¨ç½‘ç»œä¸Šè¡Œæµé‡å˜åŒ–: {rmnet_up_change} Kb")
+            print(f"ç§»åŠ¨ç½‘ç»œä¸‹è¡Œæµé‡å˜åŒ–: {rmnet_down_change} Kb")
+            print(f"WiFiä¸Šè¡Œæµé‡å˜åŒ–: {wifi_up_change} Kb")
+            print(f"WiFiä¸‹è¡Œæµé‡å˜åŒ–: {wifi_down_change} Kb")
 
     def adb_monkey(self):
         """
-        ²ÎÊıËµÃ÷£º
-        -p <your-package-name>: Ö¸¶¨Ó¦ÓÃµÄ°üÃû¡£
-        --throttle <milliseconds>: ÉèÖÃÊÂ¼şÖ®¼äµÄÑÓ³ÙÊ±¼ä£¨ºÁÃë£©¡£
-        -v -v: ÉèÖÃÈÕÖ¾¼¶±ğ£¬-v Ô½¶à£¬ÈÕÖ¾Ô½ÏêÏ¸¡£
-        --ignore-crashes: ºöÂÔ±ÀÀ£ÊÂ¼ş¡£
-        --ignore-timeouts: ºöÂÔ³¬Ê±ÊÂ¼ş¡£
-        --ignore-security-exceptions: ºöÂÔ°²È«Òì³£¡£
-        --ignore-native-crashes: ºöÂÔ±¾µØ±ÀÀ£¡£
-        --monitor-native-crashes: ¼à¿Ø²¢±¨¸æ±¾µØ±ÀÀ£¡£
-        -s <seed>: ÉèÖÃËæ»úÊıÉú³ÉÆ÷µÄÖÖ×ÓÖµ¡£
-        <event-count>: Ö¸¶¨ Monkey ÔËĞĞµÄÊÂ¼ş×ÜÊı¡£
+        å‚æ•°è¯´æ˜ï¼š
+        -p <your-package-name>: æŒ‡å®šåº”ç”¨çš„åŒ…åã€‚
+        --throttle <milliseconds>: è®¾ç½®äº‹ä»¶ä¹‹é—´çš„å»¶è¿Ÿæ—¶é—´ï¼ˆæ¯«ç§’ï¼‰ã€‚
+        -v -v: è®¾ç½®æ—¥å¿—çº§åˆ«ï¼Œ-v è¶Šå¤šï¼Œæ—¥å¿—è¶Šè¯¦ç»†ã€‚
+        --ignore-crashes: å¿½ç•¥å´©æºƒäº‹ä»¶ã€‚
+        --ignore-timeouts: å¿½ç•¥è¶…æ—¶äº‹ä»¶ã€‚
+        --ignore-security-exceptions: å¿½ç•¥å®‰å…¨å¼‚å¸¸ã€‚
+        --ignore-native-crashes: å¿½ç•¥æœ¬åœ°å´©æºƒã€‚
+        --monitor-native-crashes: ç›‘æ§å¹¶æŠ¥å‘Šæœ¬åœ°å´©æºƒã€‚
+        -s <seed>: è®¾ç½®éšæœºæ•°ç”Ÿæˆå™¨çš„ç§å­å€¼ã€‚
+        <event-count>: æŒ‡å®š Monkey è¿è¡Œçš„äº‹ä»¶æ€»æ•°ã€‚
         """
-        throttle = input("ÉèÖÃÊÂ¼şÖ®¼äµÄÑÓ³ÙÊ±¼ä(ºÁÃë):")
+        throttle = input("è®¾ç½®äº‹ä»¶ä¹‹é—´çš„å»¶è¿Ÿæ—¶é—´(æ¯«ç§’):")
         verbose = "-v -v -v"
         ignore_crashes = "--ignore-crashes"
         ignore_timeouts = "--ignore-timeouts"
         ignore_security_exceptions = "--ignore-security-exceptions"
         ignore_native_crashes = "--ignore-native-crashes"
         monitor_native_crashes = "--monitor-native-crashes"
-        seed = input("ÉèÖÃËæ»úÊıÉú³ÉÆ÷µÄÖÖ×ÓÖµ:")
-        events = input("Ö¸¶¨ Monkey ÔËĞĞµÄÊÂ¼ş×ÜÊı:")
+        seed = input("è®¾ç½®éšæœºæ•°ç”Ÿæˆå™¨çš„ç§å­å€¼:")
+        events = input("æŒ‡å®š Monkey è¿è¡Œçš„äº‹ä»¶æ€»æ•°:")
         device_name = self.device_name
         package_name = self.filter_apk()
 
@@ -350,11 +350,11 @@ class AdbTest:
         try:
             adb_res = os.popen(command).read()
             print(
-                "MonkeyÖ´ĞĞ½áÊø\n"
-                f"ÈÕÖ¾ÒÑ±£´æÖÁ{path}")
+                "Monkeyæ‰§è¡Œç»“æŸ\n"
+                f"æ—¥å¿—å·²ä¿å­˜è‡³{path}")
 
         except Exception as e:
-            print("·¢Éú´íÎó", str(e))
+            print("å‘ç”Ÿé”™è¯¯", str(e))
 
     def language_setting(self):
         os.popen(f"adb -s {device_name} shell am start -a android.settings.LOCALE_SETTINGS")
@@ -363,27 +363,27 @@ class AdbTest:
 def run(device_name):
     try:
         while True:
-            print(f"\nµ±Ç°Ñ¡ÔñµÄÏµÍ³Îª:Android | Éè±¸Îª£º{device_name}\n")
-            case = input("adb²âÊÔ¹¤¾ßV1.0£º\n"
-                         "----------------------***½ØÍ¼¹¦ÄÜ***--------------------\n"
-                         "gs£º»ñÈ¡Éè±¸½ØÍ¼µ½±¾µØ\n"
-                         "----------------------***³£ÓÃ¹¦ÄÜ***--------------------\n"
-                         "Ö±½ÓÍÏ×§°²×°°üµ½ÃüÁîĞĞ£¬°´ÏÂ»Ø³µ¼´¿É°²×°\n"
-                         "uninstall£ºĞ¶ÔØÓ¦ÓÃ\n"
-                         "clean£ºÇå³ıÓ¦ÓÃÊı¾İ\n"
-                         "kill£º½áÊøÓ¦ÓÃ½ø³Ì\n"
-                         "change:¸ü¸Ä»·¾³ºÍĞ´ÈëÕËºÅ\n"
-                         "start:Æô¶¯app\n"
-                         "----------------------***²é¿´ÈÕÖ¾***--------------------\n"
-                         "log£º½«È«Á¿ÈÕÖ¾Êä³öµ½ÎÄ¼şÖĞ\n"
-                         "rl tag:kw tag:¹Ø¼ü×Ö·½Ê½»ñÈ¡tagºÍ¹Ø¼ü×ÖµÄ½»¼¯£¬½öÊä³ötagºÍ¹Ø¼ü×ÖÍ¬Ê±´æÔÚµÄÈÕÖ¾\n"
-                         "rl kw kw1 kw2 ¸Ã·½Ê½Ö»ÒªÃüÖĞ¹Ø¼ü×Ö¾ÍÊä³öÈÕÖ¾\n"
-                         "----------------------***ÆäËû¹¦ÄÜ***--------------------\n"
-                         "in£ºÇĞ»»µ½AdbKeyboard¼üÅÌºó¿ÉÊäÈëÖĞÓ¢ÎÄ£¬·ñÔòÖ»ÄÜÊäÈëÓ¢ÎÄ£¬µ¥´ÎÖ»ÄÜÊäÈëÒ»¸öÖĞ¼ä²»ÄÜÓĞ¿Õ¸ñ\n"
-                         "language: ÇĞ»»ÏµÍ³ÓïÑÔÉèÖÃ\n"
-                         "monkey: monkey²âÊÔ\n"
-                         "flow: Á÷Á¿¼à¿Ø\n"
-                         "°´ÏÂ Ctrl+C ÍË³ö\n").strip()
+            print(f"\nå½“å‰é€‰æ‹©çš„ç³»ç»Ÿä¸º:Android | è®¾å¤‡ä¸ºï¼š{device_name}\n")
+            case = input("adbæµ‹è¯•å·¥å…·V1.0ï¼š\n"
+                         "----------------------***æˆªå›¾åŠŸèƒ½***--------------------\n"
+                         "gsï¼šè·å–è®¾å¤‡æˆªå›¾åˆ°æœ¬åœ°\n"
+                         "----------------------***å¸¸ç”¨åŠŸèƒ½***--------------------\n"
+                         "ç›´æ¥æ‹–æ‹½å®‰è£…åŒ…åˆ°å‘½ä»¤è¡Œï¼ŒæŒ‰ä¸‹å›è½¦å³å¯å®‰è£…\n"
+                         "uninstallï¼šå¸è½½åº”ç”¨\n"
+                         "cleanï¼šæ¸…é™¤åº”ç”¨æ•°æ®\n"
+                         "killï¼šç»“æŸåº”ç”¨è¿›ç¨‹\n"
+                         "change:æ›´æ”¹ç¯å¢ƒå’Œå†™å…¥è´¦å·\n"
+                         "start:å¯åŠ¨app\n"
+                         "----------------------***æŸ¥çœ‹æ—¥å¿—***--------------------\n"
+                         "logï¼šå°†å…¨é‡æ—¥å¿—è¾“å‡ºåˆ°æ–‡ä»¶ä¸­\n"
+                         "rl tag:kw tag:å…³é”®å­—æ–¹å¼è·å–tagå’Œå…³é”®å­—çš„äº¤é›†ï¼Œä»…è¾“å‡ºtagå’Œå…³é”®å­—åŒæ—¶å­˜åœ¨çš„æ—¥å¿—\n"
+                         "rl kw kw1 kw2 è¯¥æ–¹å¼åªè¦å‘½ä¸­å…³é”®å­—å°±è¾“å‡ºæ—¥å¿—\n"
+                         "----------------------***å…¶ä»–åŠŸèƒ½***--------------------\n"
+                         "inï¼šåˆ‡æ¢åˆ°AdbKeyboardé”®ç›˜åå¯è¾“å…¥ä¸­è‹±æ–‡ï¼Œå¦åˆ™åªèƒ½è¾“å…¥è‹±æ–‡ï¼Œå•æ¬¡åªèƒ½è¾“å…¥ä¸€ä¸ªä¸­é—´ä¸èƒ½æœ‰ç©ºæ ¼\n"
+                         "language: åˆ‡æ¢ç³»ç»Ÿè¯­è¨€è®¾ç½®\n"
+                         "monkey: monkeyæµ‹è¯•\n"
+                         "flow: æµé‡ç›‘æ§\n"
+                         "æŒ‰ä¸‹ Ctrl+C é€€å‡º\n").strip()
 
             test = AdbTest(device_name, case)
 
@@ -457,8 +457,8 @@ def get_packname():
 
 if __name__ == '__main__':
     if len(get_device()) == 0:
-        print(f'\033[0;31m\nµ±Ç°Ã»ÓĞÉè±¸Á¬½Ó£¬Çë¼ì²é!!!\n\033[0m')
-        input("°´ÈÎÒâ¼üÍË³ö:")
+        print(f'\033[0;31m\nå½“å‰æ²¡æœ‰è®¾å¤‡è¿æ¥ï¼Œè¯·æ£€æŸ¥!!!\n\033[0m')
+        input("æŒ‰ä»»æ„é”®é€€å‡º:")
     else:
         if len(get_device()) == 1:
             device_name = get_device()[0]
@@ -467,8 +467,8 @@ if __name__ == '__main__':
             try:
                 for d in range(len(get_device())):
                     print(d, get_device()[d])
-                ch = input("ÇëÑ¡ÔñÒª²Ù×÷µÄÉè±¸ĞòºÅ£º\n")
+                ch = input("è¯·é€‰æ‹©è¦æ“ä½œçš„è®¾å¤‡åºå·ï¼š\n")
                 device_name = get_device()[int(ch)]
                 run(device_name)
             except Exception as e:
-                print(f'\033[0;31m\nÇëÑ¡ÔñÕıÈ·ĞòºÅ!\n\033[0m')
+                print(f'\033[0;31m\nè¯·é€‰æ‹©æ­£ç¡®åºå·!\n\033[0m')

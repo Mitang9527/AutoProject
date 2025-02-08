@@ -77,7 +77,7 @@ class LogHandler:
         )
         return formatter
 
-    def setup_logging(self,logfile=""):
+    def setup_logging(self, logfile=""):
         log_dir = self.log_path
         if not os.path.exists(log_dir):
             os.makedirs(log_dir, mode=0o777, exist_ok=True)

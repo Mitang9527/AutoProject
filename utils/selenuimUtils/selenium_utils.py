@@ -1,3 +1,5 @@
+import time
+
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains  # 处理鼠标事件(高级操作)
 from selenium.webdriver.support import expected_conditions as EC
@@ -193,6 +195,20 @@ class Browser(object):
         el = self.get_element(css)
         ActionChains(self.driver).double_click(el).perform()
 
+    def long_click(self, css, duration=2):
+        """
+        长按元素
+        用法：
+        driver.long_click('class=>speak-btn')
+        :param css: 元素的CSS选择器
+        :param duration: 按住的时间，默认2秒
+        :return:
+        """
+        el = self.get_element(css)
+        ActionChains(self.driver).click_and_hold(el).perform()
+        time.sleep(duration)
+        ActionChains(self.driver).release().perform()
+
     def drag_and_drop(self, el_css, ta_css):
         """
         把一个元素拖到一定的距离，然后把它放下.
@@ -387,17 +403,17 @@ class Browser(object):
         Select(el).select_by_value(value)
 
 
-if __name__ == '__main__':
-    driver = Browser()
-    ocr = OcrRecognition()
-    driver.open("https://manage.pocstar.com/login.action?locale=zh_CN#reloaded")
-    driver.max_window()
-    driver.get_element('id=>username').send_keys('tiantian')
-    driver.get_element('id=>password').send_keys('a123456')
-    element = driver.get_element('id=>jcaptchaImage')
-    png_data = element.screenshot_as_png
-    Code = ocr.ocr_recognition(png_data)
-    print(f"验证码为: {Code}")
-    driver.get_element('id=>jcaptchaCode').send_keys(Code)
-
-    driver.get_element('id=>loginsubmit').click()
+# if __name__ == '__main__':
+#     driver = Browser()
+#     ocr = OcrRecognition()
+#     driver.open("https://manage.pocstar.com/login.action?locale=zh_CN#reloaded")
+#     driver.max_window()
+#     driver.get_element('id=>username').send_keys('tiantian')
+#     driver.get_element('id=>password').send_keys('a123456')
+#     element = driver.get_element('id=>jcaptchaImage')
+#     png_data = element.screenshot_as_png
+#     Code = ocr.ocr_recognition(png_data)
+#     print(f"验证码为: {Code}")
+#     driver.get_element('id=>jcaptchaCode').send_keys(Code)
+#
+#     driver.get_element('id=>loginsubmit').click()
