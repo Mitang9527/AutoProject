@@ -21,8 +21,10 @@ class AdbTest:
 
     def get_screenshot(self):
         pic_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_screenshot.jpeg"
-        os.system(f"adb -s {self.device_name} exec-out screencap -p > {os.path.join(self.local_pth, pic_name)}")
-        print(f'图片已保存到：{os.path.join(self.local_pth, pic_name)}')
+        png_folder_path = self.local_pth / 'png'
+        png_folder_path.mkdir(parents=True, exist_ok=True)
+        os.system(f"adb -s {self.device_name} exec-out screencap -p > {os.path.join(png_folder_path, pic_name)}")
+        print(f'图片已保存到：{os.path.join(png_folder_path, pic_name)}')
 
     def get_record(self, case):
         remote_pth = "/sdcard/Pictures/Screenshots"
@@ -62,7 +64,7 @@ class AdbTest:
         global log_path
         cs = self.case.split(" ")
         if len(cs) == 1:
-            log_name = "log_" + datetime_strftime + ".log"
+            log_name = "log_" + datetime_strftime() + ".log"
             print("日志记录中，结束请按Control + C")
             try:
                 log_folder = os.path.join(self.local_pth, "logs")
@@ -78,9 +80,10 @@ class AdbTest:
             # 打印日志保存路径
             print(f"日志记录结束，日志存储地址为: {log_path}")
         else:
-            self.run_cmd(f"adb -s {self.device_name} logcat ")
+            f"adb -s {self.device_name} logcat "
+            self.run_cmd()
 
-    def run_cmd(self, cmd):
+    def run_linux(self, cmd):
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
         cases = self.analyze_params()
         while True:
@@ -94,6 +97,12 @@ class AdbTest:
                             print(stdout_line)
                     elif t in stdout_line:
                         print(stdout_line)
+
+    def run_cmd(self):
+        cmd = input("输入cmd命令：")
+        res = os.popen(cmd).read()
+        print(res)
+
 
     def analyze_params(self):
         cs = self.case.split(" ")
@@ -168,6 +177,7 @@ class AdbTest:
                 print("请输入合法的数字序号。")
 
     def install_pkg(self):
+        print("正在安装中...")
         r = os.popen(f"adb -s {self.device_name} install " + self.case)
         result = r.read()
         if "Success" not in result:
@@ -331,7 +341,7 @@ class AdbTest:
         if not os.path.exists(log_folder):
             os.makedirs(log_folder)
 
-        log_name = "monkey_" + datetime_strftime + ".log"
+        log_name = "monkey_" + datetime_strftime() + ".log"
         path = os.path.join(log_folder, log_name)
 
         command = " ".join([
@@ -360,15 +370,37 @@ class AdbTest:
         except Exception as e:
             print("发生错误", str(e))
 
-    def language_setting(self):
-        os.popen(f"adb -s {device_name} shell am start -a android.settings.LOCALE_SETTINGS")
+    def language_setting(self) -> bool:
+
+        try:
+            cmd = ["adb", "-s", self.device_name, "shell", "am", "start",
+                   "-a", "android.settings.LOCALE_SETTINGS"]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+
+            warning_msg = "intent has been delivered to currently running top-most instance"
+            if warning_msg in result.stderr:
+                print("语言设置界面已处于前台")
+                return True
+
+            return "Error" not in result.stderr
+
+        except subprocess.CalledProcessError as e:
+            print(f"执行失败: {e.stderr.splitlines()[-1]}")
+            return False
+
 
 
 def run(device_name):
     try:
         while True:
-            print(f"\n当前选择的系统为:Android | 设备为：{device_name}\n")
-            case = input("adb测试工具V1.1：\n"
+            print(f"\n当前选择的系统为:Android | 设备为：{device_name} | 型号为: {ViewModel()}\n")
+            case = input("adb测试工具V1.3：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
@@ -386,6 +418,7 @@ def run(device_name):
                          "in：切换到AdbKeyboard键盘后可输入中英文，否则只能输入英文，单次只能输入一个中间不能有空格\n"
                          "language: 切换系统语言设置\n"
                          "monkey: monkey测试\n"
+                         "cmd: cmd命令\n"
                          "flow: 流量监控\n"
                          "按下 Ctrl+C 退出\n").strip()
 
@@ -393,6 +426,9 @@ def run(device_name):
 
             if case == "gs":
                 test.get_screenshot()
+
+            elif case == "cmd":
+                test.run_cmd()
 
             elif case.startswith("log"):
                 test.record_log()
@@ -444,6 +480,9 @@ def get_device():
 
     return devices
 
+def ViewModel():
+    txt = os.popen(f"adb -s {device_name} shell getprop ro.product.model").read()
+    return txt
 
 def get_packname():
     packnames = []
@@ -457,7 +496,6 @@ def get_packname():
         lines = adb_res.strip().split('\n')
         packnames = list(map(lambda x: x[len("package:"):], lines))
     return packnames
-
 
 if __name__ == '__main__':
     if len(get_device()) == 0:

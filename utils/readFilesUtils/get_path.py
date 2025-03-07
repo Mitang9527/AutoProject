@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 def get_script_root() -> Path:
@@ -27,5 +28,18 @@ def get_project_root() -> Path:
         current_path = current_path.parent  # 向上一级目录移动
 
     return current_path
+
+def get_absolute_path(path):
+    """
+        返回文件的绝对路径
+        如果路径包含起点（例如Unix '/'），则使用指定的起点
+        而不是当前工作目录。文件路径的起点是
+        允许以波浪号“~”开头，它将被用户的主目录替换。
+    """
+    fp, fn = os.path.split(path)
+    if not fp:
+        fp = os.getcwd()
+    fp = os.path.abspath(os.path.expanduser(fp))
+    return os.path.join(fp, fn)
 
 

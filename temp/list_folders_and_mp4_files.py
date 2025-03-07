@@ -95,6 +95,7 @@ def list_folders_and_mp4_files(root_folder):
     参数：
     - root_folder: str，开始搜索的根文件夹的路径。
     """
+    global mp4_files
     folders_with_mp4 = find_folders_with_mp4(root_folder)
 
     if folders_with_mp4:

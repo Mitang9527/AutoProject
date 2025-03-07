@@ -1,7 +1,4 @@
-
-
 import socket
-
 
 def get_host_ip():
     """

@@ -3,8 +3,8 @@ from utils.OcRUtils.OcrRecognition import OcrRecognition
 
 driver = Browser()
 Ocr = OcrRecognition()
-driver.open("https://manage.pocstar.com/login.action?locale=zh_CN#reloaded")
-driver.element_wait('id', 'username').send_keys('tiantian')
+driver.open("http://60.165.151.162:6130/login.action?locale=zh_CN#reloaded")
+driver.element_wait('id', 'username').send_keys('shanli2017')
 driver.element_wait('id', 'password').send_keys('a123456')
 element = driver.element_wait('id', 'jcaptchaImage')
 png_data = element.screenshot_as_png
@@ -19,7 +19,7 @@ driver.max_window()
 # else:
 #     print("登录成功")
 
-driver.element_wait('xpath', '//*[@id="menu-system"]/dt[3]').click()
+driver.element_wait('xpath', '//*[@id="menu-system"]/dt[5]').click()
 driver.element_wait('link_text', 'Company List').click()
 
 
