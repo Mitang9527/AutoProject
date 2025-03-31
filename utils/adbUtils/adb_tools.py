@@ -177,13 +177,34 @@ class AdbTest:
                 print("请输入合法的数字序号。")
 
     def install_pkg(self):
+        start_packname_list = []
+        start_packname_list.extend(get_packname())
         print("正在安装中...")
+
         r = os.popen(f"adb -s {self.device_name} install " + self.case)
         result = r.read()
         if "Success" not in result:
             print(f'\033[0;31m\n安装失败 {result} \n\033[0m')
         else:
-            print("安装成功")
+            print("安装成功\n"
+                  "正在启动....")
+
+        last_packname_list = []
+        last_packname_list.extend(get_packname())
+
+        common_list = list(set(last_packname_list)-set(start_packname_list))
+        start_packname = common_list[0]
+        try:
+            res = os.popen(f"adb -s {device_name} shell am start " + start_packname)
+            result = res.read()
+            if "Error" not in result:
+                print(f"{start_packname}启动成功")
+            else:
+                print(f"{start_packname}启动失败" + result)
+
+        except Exception as e:
+            print("启动app发生错误:", str(e))
+
 
     def uninstall_pkg(self):
         packname = self.select_package()
@@ -210,7 +231,8 @@ class AdbTest:
                             "--es", "account", account,
                             "--es", "pwd", password,
                             "--es", "dns", ip_address,
-                            "--es", "context", context])
+                            "--es", "context", context,
+                            "--ez", "restart_app true"])
         try:
             adb_res = os.popen(adb_cmd).read()
             if 'result=0' not in adb_res:
@@ -396,11 +418,12 @@ class AdbTest:
 
 
 
+
 def run(device_name):
     try:
         while True:
             print(f"\n当前选择的系统为:Android | 设备为：{device_name} | 型号为: {ViewModel()}\n")
-            case = input("adb测试工具V1.3：\n"
+            case = input("adb测试工具V1.4：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
@@ -491,11 +514,13 @@ def get_packname():
     # adb_cmd = "adb shell pm list packages"
     adb_res = os.popen(adb_cmd).read()
     if "" == adb_res:
-        print("adb_packname_err")
+        print("没有第三方包名")
     else:
         lines = adb_res.strip().split('\n')
         packnames = list(map(lambda x: x[len("package:"):], lines))
     return packnames
+
+
 
 if __name__ == '__main__':
     if len(get_device()) == 0:
