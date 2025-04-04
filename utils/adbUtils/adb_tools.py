@@ -60,11 +60,11 @@ class AdbTest:
             except Exception:
                 print(f'\033[0;31m\n输入错误，请检查序号，返回上一级!\n\033[0m')
 
-    def record_log(self):
+    def record_log(self, keyword=None):
         global log_path
         cs = self.case.split(" ")
         if len(cs) == 1:
-            log_name = "log_" + datetime_strftime() + ".log"
+            log_name = "Android_log_" + datetime_strftime() + ".log"
             print("日志记录中，结束请按Control + C")
             try:
                 log_folder = os.path.join(self.local_pth, "logs")
@@ -73,6 +73,11 @@ class AdbTest:
                 log_path = os.path.join(log_folder, log_name)
                 # 先清理日志，避免干扰
                 os.system(f"adb -s {self.device_name} logcat -c")
+
+                if keyword:
+                    os.system(f'adb -s {self.device_name} logcat -e "{keyword}" > {log_path}')
+                else:
+                    os.system(f'adb -s {self.device_name} logcat > {log_path}')
                 os.system(f'adb -s {self.device_name} logcat > {log_path}')
             except KeyboardInterrupt:
                 pass
@@ -83,40 +88,40 @@ class AdbTest:
             f"adb -s {self.device_name} logcat "
             self.run_cmd()
 
-    def run_linux(self, cmd):
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
-        cases = self.analyze_params()
-        while True:
-            stdout_line = process.stdout.readline()
-            if not stdout_line:
-                break
+    def analyze_params(self):
+        cs = self.case.split(" ")
+        logs_tag = []
+
+        for c in range(len(cs)):
+
+            if ":" in cs[c]:
+                tag = cs[c].split(":")[0]
+                kw = ":".join(cs[c].split(":")[1:])
+                logs_tag.append({tag: kw})
             else:
-                for t in cases:
-                    if type(t) is dict:
-                        if f'{list(t.keys())[0]}:' and t[list(t.keys())[0]] in stdout_line:
-                            print(stdout_line)
-                    elif t in stdout_line:
-                        print(stdout_line)
+                logs_tag.append(cs[c])
+
+            self.handle_logs(logs_tag)
+
+    def handle_logs(self, logs_tag):
+        """
+        处理日志标签，根据解析结果调用 record_log。
+        """
+        if logs_tag:
+
+            for item in logs_tag:
+                if isinstance(item, dict) and 'log' in item:
+                    self.record_log(keyword=item['log'])
+
+            self.record_log()
+        else:
+            self.record_log()
 
     def run_cmd(self):
         cmd = input("输入cmd命令：")
         res = os.popen(cmd).read()
         print(res)
 
-
-    def analyze_params(self):
-        cs = self.case.split(" ")
-        logs_tag = []
-        for c in range(len(cs)):
-            if c == 0:
-                pass
-            elif ":" in cs[c]:
-                tag = cs[c].split(":")[0]
-                kw = ":".join(cs[c].split(":")[1:])
-                logs_tag.append({tag: kw})
-            else:
-                logs_tag.append(cs[c])
-        return logs_tag
 
     def clean_app(self):
         packname = self.select_package()
@@ -192,7 +197,7 @@ class AdbTest:
         last_packname_list = []
         last_packname_list.extend(get_packname())
 
-        common_list = list(set(last_packname_list)-set(start_packname_list))
+        common_list = list(set(last_packname_list) - set(start_packname_list))
         start_packname = common_list[0]
         try:
             res = os.popen(f"adb -s {device_name} shell am start " + start_packname)
@@ -204,7 +209,6 @@ class AdbTest:
 
         except Exception as e:
             print("启动app发生错误:", str(e))
-
 
     def uninstall_pkg(self):
         packname = self.select_package()
@@ -417,13 +421,11 @@ class AdbTest:
             return False
 
 
-
-
 def run(device_name):
     try:
         while True:
-            print(f"\n当前选择的系统为:Android | 设备为：{device_name} | 型号为: {ViewModel()}\n")
-            case = input("adb测试工具V1.4：\n"
+            print(f"\n当前终端系统版本为:Android{androidversion()} | 设备为:{device_name} | 型号为:{ViewModel()}")
+            case = input("adb测试工具V1.5：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
@@ -434,9 +436,8 @@ def run(device_name):
                          "change:更改环境和写入账号\n"
                          "start:启动app\n"
                          "----------------------***查看日志***--------------------\n"
-                         "log：将全量日志输出到文件中\n"
-                         "rl tag:kw tag:关键字方式获取tag和关键字的交集，仅输出tag和关键字同时存在的日志\n"
-                         "rl kw kw1 kw2 该方式只要命中关键字就输出日志\n"
+                         "log  将全量日志输出到文件中\n"
+                         "log:keyword 将命中关键词日志输出到文件中 例如 log:slclient\n"
                          "----------------------***其他功能***--------------------\n"
                          "in：切换到AdbKeyboard键盘后可输入中英文，否则只能输入英文，单次只能输入一个中间不能有空格\n"
                          "language: 切换系统语言设置\n"
@@ -454,7 +455,7 @@ def run(device_name):
                 test.run_cmd()
 
             elif case.startswith("log"):
-                test.record_log()
+                test.analyze_params()
 
             elif case == "clean":
                 test.clean_app()
@@ -489,6 +490,7 @@ def run(device_name):
     except KeyboardInterrupt:
         pass
 
+
 def get_device():
     devices = []
     adb_cmd = "adb devices"
@@ -503,9 +505,16 @@ def get_device():
 
     return devices
 
+
 def ViewModel():
     txt = os.popen(f"adb -s {device_name} shell getprop ro.product.model").read()
     return txt
+
+
+def androidversion():
+    txxt = os.popen(f"adb -s {device_name} shell getprop ro.build.version.release").read()
+    return txxt.replace('\n', '')
+
 
 def get_packname():
     packnames = []
@@ -519,7 +528,6 @@ def get_packname():
         lines = adb_res.strip().split('\n')
         packnames = list(map(lambda x: x[len("package:"):], lines))
     return packnames
-
 
 
 if __name__ == '__main__':
@@ -539,3 +547,4 @@ if __name__ == '__main__':
                 run(device_name)
             except Exception as e:
                 print(f'\033[0;31m\n请选择正确序号!\n\033[0m')
+
