@@ -1,4 +1,3 @@
-
 import datetime
 import os
 
@@ -38,12 +37,11 @@ def write_testcase_file(*, allure_epic, allure_feature, class_title,
 
 import allure
 import pytest
-from utils.read_files_tools.get_yaml_data_analysis import GetTestCase
+from utils.readFilesUtils.Getyamldataanalysis import GetTestCase
 from utils.assertion.assert_control import Assert
-from utils.requests_tool.request_control import RequestControl
-from utils.read_files_tools.regular_control import regular
-from utils.requests_tool.teardown_control import TearDownHandler
-
+from utils.requestsUtils.requestControl import RequestControl
+from utils.readFilesUtils.regularControl import regular
+from utils.requestsUtils.teardown_control import TearDownHandler
 
 case_id = {case_ids}
 TestData = GetTestCase.case_data(case_id)

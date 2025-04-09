@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 def get_script_root() -> Path:
@@ -12,6 +13,13 @@ def get_script_root() -> Path:
 
     # 返回当前脚本所在的目录的上级目录
     return script_path.parent
+
+def get_project() -> Path:
+    """
+    :return: 当前脚本路径
+    """
+    current_path = Path(os.getcwd())
+    return current_path
 
 def get_project_root() -> Path:
     """
@@ -41,5 +49,17 @@ def get_absolute_path(path):
         fp = os.getcwd()
     fp = os.path.abspath(os.path.expanduser(fp))
     return os.path.join(fp, fn)
+
+
+def get_program_directory():
+    """ 获取程序运行所在目录 """
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的可执行文件
+        base_path = sys._MEIPASS  # 获取打包后的临时路径
+    else:
+        # 如果是开发中的脚本
+        base_path = os.path.dirname(os.path.realpath(__file__))  # 获取当前脚本的目录
+
+    return base_path
 
 

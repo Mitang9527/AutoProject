@@ -1,15 +1,17 @@
 import os
 import subprocess
 import time
+from pathlib import Path
 from datetime import datetime
-from utils.readFilesUtils.get_path import get_project_root
+
+from utils.readFilesUtils.get_path import get_project
 from utils.timeUtils.time_control import datetime_strftime
 
 
 class AdbTest:
     def __init__(self, device, case):
         self.device_name = device
-        self.local_pth = get_project_root()
+        self.local_pth = get_project()
         self.case = case
         self.package_name = None
         self.cached_flow_data = None
@@ -21,7 +23,7 @@ class AdbTest:
 
     def get_screenshot(self):
         pic_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_screenshot.jpeg"
-        png_folder_path = self.local_pth / 'png'
+        png_folder_path = Path(self.local_pth) / 'png'
         png_folder_path.mkdir(parents=True, exist_ok=True)
         os.system(f"adb -s {self.device_name} exec-out screencap -p > {os.path.join(png_folder_path, pic_name)}")
         print(f'图片已保存到：{os.path.join(png_folder_path, pic_name)}')
@@ -65,24 +67,29 @@ class AdbTest:
         cs = self.case.split(" ")
         if len(cs) == 1:
             log_name = "Android_log_" + datetime_strftime() + ".log"
-            print("日志记录中，结束请按Control + C")
+
             try:
                 log_folder = os.path.join(self.local_pth, "logs")
                 os.makedirs(log_folder, exist_ok=True)
-
                 log_path = os.path.join(log_folder, log_name)
-                # 先清理日志，避免干扰
-                os.system(f"adb -s {self.device_name} logcat -c")
+
+                choice = input("输入1以清理日志，输入2跳过清理日志: ")
+                if choice == "1":
+                    os.system(f"adb -s {self.device_name} logcat -c")
+                    print("日志已清理")
+                elif choice == "2":
+                    print("跳过清理日志")
 
                 if keyword:
+                    print("日志记录中，结束请按Control + C")
                     os.system(f'adb -s {self.device_name} logcat -e "{keyword}" > {log_path}')
+
                 else:
+                    print("日志记录中，结束请按Control + C")
                     os.system(f'adb -s {self.device_name} logcat > {log_path}')
-                os.system(f'adb -s {self.device_name} logcat > {log_path}')
             except KeyboardInterrupt:
                 pass
 
-            # 打印日志保存路径
             print(f"日志记录结束，日志存储地址为: {log_path}")
         else:
             f"adb -s {self.device_name} logcat "
@@ -121,7 +128,6 @@ class AdbTest:
         cmd = input("输入cmd命令：")
         res = os.popen(cmd).read()
         print(res)
-
 
     def clean_app(self):
         packname = self.select_package()
@@ -222,6 +228,20 @@ class AdbTest:
 
         except Exception as e:
             print("执行卸载应用数据操作出现异常:", str(e))
+
+    def Export_apk(self):
+        packname = self.select_package()
+
+        try:
+            # apk_folder = os.path.join(self.local_pth, "apk")
+            # if not os.path.exists(apk_folder):
+            #     os.makedirs(apk_folder)
+            apk_path = os.popen(f"adb -s {self.device_name} shell pm path " + packname).read().split(":")[1].replace('\n', '')
+            os.popen(f"adb -s {self.device_name} pull {apk_path} {self.local_pth} ")
+
+        except Exception as e:
+            print("找不到该apk地址:", str(e))
+
 
     def change_pkg_env(self, ):
         account = input("请输入账号:")
@@ -425,19 +445,20 @@ def run(device_name):
     try:
         while True:
             print(f"\n当前终端系统版本为:Android{androidversion()} | 设备为:{device_name} | 型号为:{ViewModel()}")
-            case = input("adb测试工具V1.5：\n"
+            case = input("adb测试工具V1.7：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
                          "直接拖拽安装包到命令行，按下回车即可安装\n"
                          "uninstall：卸载应用\n"
+                         "export：导出apk包\n"
                          "clean：清除应用数据\n"
                          "kill：结束应用进程\n"
                          "change:更改环境和写入账号\n"
                          "start:启动app\n"
                          "----------------------***查看日志***--------------------\n"
                          "log  将全量日志输出到文件中\n"
-                         "log:keyword 将命中关键词日志输出到文件中 例如 log:slclient\n"
+                         "log:keyword 将命中关键词日志输出到文件中 如 log:slclient\n"
                          "----------------------***其他功能***--------------------\n"
                          "in：切换到AdbKeyboard键盘后可输入中英文，否则只能输入英文，单次只能输入一个中间不能有空格\n"
                          "language: 切换系统语言设置\n"
@@ -471,6 +492,9 @@ def run(device_name):
 
             elif case.startswith("uninstall"):
                 test.uninstall_pkg()
+
+            elif case.startswith("export"):
+                test.Export_apk()
 
             elif case.startswith("change"):
                 test.change_pkg_env()
@@ -547,4 +571,3 @@ if __name__ == '__main__':
                 run(device_name)
             except Exception as e:
                 print(f'\033[0;31m\n请选择正确序号!\n\033[0m')
-
