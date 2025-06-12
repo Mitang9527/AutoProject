@@ -114,12 +114,11 @@ class AdbTest:
         """
         处理日志标签，根据解析结果调用 record_log。
         """
-        if logs_tag:
-
+        if isinstance(logs_tag, list):
             for item in logs_tag:
                 if isinstance(item, dict) and 'log' in item:
                     self.record_log(keyword=item['log'])
-
+                    return
             self.record_log()
         else:
             self.record_log()
@@ -168,7 +167,7 @@ class AdbTest:
             os.system(input_cmd)
 
     def filter_apk(self):
-        packname_list = get_packname()
+        packname_list = get_packname(device_name)
         if not packname_list:
             print("查询包名错误")
             return None
@@ -189,7 +188,7 @@ class AdbTest:
 
     def install_pkg(self):
         start_packname_list = []
-        start_packname_list.extend(get_packname())
+        start_packname_list.extend(get_packname(device_name))
         print("正在安装中...")
 
         r = os.popen(f"adb -s {self.device_name} install " + self.case)
@@ -201,7 +200,7 @@ class AdbTest:
                   "正在启动....")
 
         last_packname_list = []
-        last_packname_list.extend(get_packname())
+        last_packname_list.extend(get_packname(device_name))
 
         common_list = list(set(last_packname_list) - set(start_packname_list))
         start_packname = common_list[0]
@@ -444,8 +443,8 @@ class AdbTest:
 def run(device_name):
     try:
         while True:
-            print(f"\n当前终端系统版本为:Android{androidversion()} | 设备为:{device_name} | 型号为:{ViewModel()}")
-            case = input("adb测试工具V1.7：\n"
+            print(f"\n当前终端系统版本为:Android{androidversion(device_name)} | 设备为:{device_name} | 型号为:{ViewModel(device_name)}")
+            case = input("adb测试工具V1.8：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
@@ -530,17 +529,17 @@ def get_device():
     return devices
 
 
-def ViewModel():
+def ViewModel(device_name):
     txt = os.popen(f"adb -s {device_name} shell getprop ro.product.model").read()
     return txt
 
 
-def androidversion():
+def androidversion(device_name):
     txxt = os.popen(f"adb -s {device_name} shell getprop ro.build.version.release").read()
     return txxt.replace('\n', '')
 
 
-def get_packname():
+def get_packname(device_name):
     packnames = []
     adb_cmd = f"adb -s {device_name} shell pm list packages -3"
     # adb_cmd = "adb shell pm list packages |findstr li"
