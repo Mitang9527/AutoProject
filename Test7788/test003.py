@@ -9,7 +9,7 @@ Ocr = OcrRecognition()
 
 driver.open("https://web-dispatch-sg.sre.shanlitech.com/#/login")
 driver.max_window()
-driver.element_wait('class', 'el-input__inner').send_keys('dp1@addad.sdb')
+driver.element_wait('class', 'el-input__inner').send_keys('dp2@assad.sdb')
 driver.element_wait('css', '[placeholder="Password：abcdef"]').send_keys('a123456')
 element = driver.element_wait('class', 'code-img')
 

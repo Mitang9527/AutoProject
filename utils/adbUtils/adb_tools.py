@@ -531,7 +531,7 @@ def get_device():
 
 def ViewModel(device_name):
     txt = os.popen(f"adb -s {device_name} shell getprop ro.product.model").read()
-    return txt
+    return txt.replace('\n', '')
 
 
 def androidversion(device_name):
@@ -563,8 +563,9 @@ if __name__ == '__main__':
             run(device_name)
         else:
             try:
-                for d in range(len(get_device())):
-                    print(d, get_device()[d])
+                for index, device in enumerate(get_device()):
+                    vm_str = ViewModel(device)
+                    print(index, device, vm_str)
                 ch = input("请选择要操作的设备序号：\n")
                 device_name = get_device()[int(ch)]
                 run(device_name)

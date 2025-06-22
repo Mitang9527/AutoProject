@@ -49,7 +49,7 @@ class Test_hmgy():
         SELECT COUNT(id)
         FROM sit.c_video_collection
         WHERE create_time BETWEEN '{} 00:00:00' AND '{} 00:00:00';
-        """.format(now_time_day,tomorrow_time_day)
+        """.format(now_time_day, tomorrow_time_day)
 
         expected_result = {'COUNT(id)': 5}
         result = mysql_db.wait_for_result(sql_query,timeout=6,interval=5,expected_result=expected_result)
