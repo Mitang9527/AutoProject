@@ -204,16 +204,11 @@ class AdbTest:
 
         common_list = list(set(last_packname_list) - set(start_packname_list))
         start_packname = common_list[0]
-        try:
-            res = os.popen(f"adb -s {device_name} shell am start " + start_packname)
-            result = res.read()
-            if "Error" not in result:
-                print(f"{start_packname}启动成功")
-            else:
-                print(f"{start_packname}启动失败" + result)
 
-        except Exception as e:
-            print("启动app发生错误:", str(e))
+        if start_packname:
+            self.start_apk(start_packname)
+        else:
+            print("未检测到新安装包")
 
     def uninstall_pkg(self):
         packname = self.select_package()
@@ -267,8 +262,8 @@ class AdbTest:
         except Exception as e:
             print("发生错误:", str(e))
 
-    def start_apk(self):
-        packname = self.select_package()
+    def start_apk(self, packname):
+
         try:
             res = os.popen(f"adb -s {device_name} shell am start " + packname)
             result = res.read()
@@ -279,6 +274,10 @@ class AdbTest:
 
         except Exception as e:
             print("启动app发生错误:", str(e))
+
+    def start_select_apk(self):
+        packname = self.select_package()
+        self.start_apk(packname)
 
     def flow_monitor(self):
         # 参考：https://www.cnblogs.com/liyuanhong/articles/11376302.html
@@ -444,7 +443,7 @@ def run(device_name):
     try:
         while True:
             print(f"\n当前终端系统版本为:Android{androidversion(device_name)} | 设备为:{device_name} | 型号为:{ViewModel(device_name)}")
-            case = input("adb测试工具V1.8：\n"
+            case = input("adb测试工具V1.9：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
@@ -481,7 +480,7 @@ def run(device_name):
                 test.clean_app()
 
             elif case == "start":
-                test.start_apk()
+                test.start_select_apk()
 
             elif case.startswith("in"):
                 test.input_text()
@@ -563,7 +562,7 @@ if __name__ == '__main__':
             run(device_name)
         else:
             try:
-                for index, device in enumerate(get_device()):
+                for index, device in enumerate(get_device(), start=0):
                     vm_str = ViewModel(device)
                     print(index, device, vm_str)
                 ch = input("请选择要操作的设备序号：\n")

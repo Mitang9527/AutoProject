@@ -1,5 +1,4 @@
 import types
-import typing
 from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Text, Dict, Callable, Union, Optional, List, Any
@@ -208,7 +207,7 @@ class Config(BaseModel):
     feishu: "Webhook"
     real_time_update_test_cases: bool = False
     host: Text
-    ConnectClient: typing.List[SSHClient]  #Python 3.8以下使用typing,List
+    ConnectClient: list[SSHClient]  #Python 3.8以下使用typing.List
     app_host: Union[Text, None]
 
 
