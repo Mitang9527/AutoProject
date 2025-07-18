@@ -42,6 +42,7 @@ mirror_source: http://mirrors.aliyun.com/pypi/simple/
 # 企业微信通知的相关配置
 wechat:
   webhook:
+  secret:
 
 ### 邮箱必填，需要全部都配置好，程序运行失败时，会发送邮件通知!!!!
 email:

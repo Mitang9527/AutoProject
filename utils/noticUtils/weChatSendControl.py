@@ -6,7 +6,7 @@ import requests
 from utils.logUtils.logControl import ERROR
 from utils.otherUtils.allureDate.allure_report_data import TestMetrics, AllureFileClean
 from utils.timeUtils.time_control import now_time
-from utils.otherUtils.get_local_ip import get_host_ip
+from utils.otherUtils.get_system_config import get_host_ip
 from utils.otherUtils.exceptions import SendMessageError, ValueTypeError
 from utils import config
 
