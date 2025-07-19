@@ -230,18 +230,33 @@ class AdbTest:
             # apk_folder = os.path.join(self.local_pth, "apk")
             # if not os.path.exists(apk_folder):
             #     os.makedirs(apk_folder)
-            apk_path = os.popen(f"adb -s {self.device_name} shell pm path " + packname).read().split(":")[1].replace('\n', '')
+            apk_path = os.popen(f"adb -s {self.device_name} shell pm path " + packname).read().split(":")[1].replace(
+                '\n', '')
             os.popen(f"adb -s {self.device_name} pull {apk_path} {self.local_pth} ")
 
         except Exception as e:
             print("找不到该apk地址:", str(e))
 
-
     def change_pkg_env(self, ):
+
+        ENV_CONF = {
+            '1': {'ip_address': 'cndns.shanliptt.com:10200', 'context': 'show'},
+            '2': {'ip_address': 'sgdns.shanlipoc.com:10200', 'context': 'pocstar'}
+        }
+
         account = input("请输入账号:")
         password = input("请输入密码:")
-        ip_address = input("请输入登录环境:")
-        context = input("请输入登录版本:")
+        choice = input("选择环境:1:国内2.0  2:海外环境 3:自定义\n")
+
+        if choice not in ENV_CONF:
+            ip_address = input("请输入登录环境:")
+            context = input("请输入登录版本:")
+
+        else:
+            config = ENV_CONF[choice]
+            ip_address = config['ip_address']
+            context = config['context']
+
         adb_cmd = " ".join(["adb",
                             "-s", self.device_name,
                             "shell", "am", "broadcast",
@@ -442,8 +457,9 @@ class AdbTest:
 def run(device_name):
     try:
         while True:
-            print(f"\n当前终端系统版本为:Android{androidversion(device_name)} | 设备为:{device_name} | 型号为:{ViewModel(device_name)}")
-            case = input("adb测试工具V1.9：\n"
+            print(
+                f"\n当前终端系统版本为:Android{androidversion(device_name)} | 设备为:{device_name} | 型号为:{ViewModel(device_name)}")
+            case = input("adb测试工具V2.0：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"
