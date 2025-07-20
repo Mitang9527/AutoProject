@@ -9,7 +9,7 @@ import time
 import urllib.parse
 from typing import Any, Text
 from dingtalkchatbot.chatbot import DingtalkChatbot, FeedLink
-from utils.otherUtils.get_system_config import get_host_ip
+from utils.otherUtils.get_system_config import get_local_ip
 from utils.otherUtils.allureDate.allure_report_data import AllureFileClean, TestMetrics
 from utils import config
 
@@ -139,7 +139,7 @@ class DingTalkSendMsg:
                f" ![screenshot](" \
                f"https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png" \
                f")\n" \
-               f" > ###### 测试报告 [详情](http://{get_host_ip()}:9999/index.html) \n"
+               f" > ###### 测试报告 [详情](http://{get_local_ip()}:9999/index.html) \n"
         DingTalkSendMsg(AllureFileClean().get_case_count()).send_markdown(
             title="【接口自动化通知】",
             msg=text,

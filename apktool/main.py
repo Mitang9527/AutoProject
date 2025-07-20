@@ -1,14 +1,14 @@
-import logging
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, scrolledtext
 import os
 import threading
 
-from apk_utils import decompile_apk, build_and_sign_big_apk
+from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk
 from utils.logUtils.logControl import INFO, ERROR
 
 TEMP_DIR = "app_out"
 DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
+
 
 # === 初始化主窗口 ===
 root = tk.Tk()
@@ -23,7 +23,7 @@ log_box.pack(fill='both', padx=10, pady=10)
 INFO.add_tkinter_handler(log_box)
 ERROR.add_tkinter_handler(log_box)
 
-# === 选择 APK 并反编译 ===
+# === 选择 APK并反编译 ===
 def choose_apk():
     apk_path = filedialog.askopenfilename(title="请选择解压APK文件夹",filetypes=[("APK 文件", "*.apk")])
     if not apk_path:
@@ -55,7 +55,6 @@ def choose_template_apk():
 
     threading.Thread(target=task, daemon=True).start()
 
-
 # === 构建新 APK ===
 def build_new_apk():
     output_path = "app.apk"
@@ -63,13 +62,8 @@ def build_new_apk():
     def task():
         try:
             INFO.logger.info("正在打包 APK ...")
-            build_and_sign_big_apk(TEMP_DIR, output_path)
-            if os.path.exists(output_path):
-                INFO.logger.info(f"打包完成：{output_path}")
-                # messagebox.showinfo("成功", f"APK 已打包：{output_path}")
+            build_and_sign_apk(TEMP_DIR, output_path)
 
-            else:
-                ERROR.logger.error("打包失败，请查看日志")
         except Exception as e:
             ERROR.logger.error(f"异常：{e}")
 

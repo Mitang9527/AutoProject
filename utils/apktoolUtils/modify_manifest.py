@@ -23,7 +23,6 @@ def write_pretty_xml(tree, file_path):
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(pretty_xml)
 
-
 def modify_manifest(manifest_path):
     if not os.path.exists(manifest_path):
         ERROR.logger.error(" 找不到 AndroidManifest.xml，路径错误")
@@ -77,4 +76,4 @@ def modify_manifest(manifest_path):
     except Exception as e:
         ERROR.logger.error(f" 修改 AndroidManifest.xml 出错：{e}")
 
-modify_manifest(r"D:\Code\AutoProject\apktool\app_out\AndroidManifest.xml")
+

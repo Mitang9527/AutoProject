@@ -6,20 +6,33 @@ import time
 import requests
 from tqdm import tqdm
 
-
+from utils.apktoolUtils.getData import get_json_field
+from utils.apktoolUtils.increment_version_info import update_version_info, build_newname
 from utils.logUtils.logControl import INFO, ERROR
 from utils.readFilesUtils.get_path import get_project
 
-# === 配置日志，让INFO和ERROR同时输出到log_box和控制台 ===
-
+# === apktool依赖 ===
 APKTOOL_URL = "https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar"
 APKTOOL_JAR = "apktool.jar"
 
 
-project_path = get_project()  # 获取当前项目路径
-keystore_big_path = project_path / 'cert' / 'shanli.jks'
-keystore_small_path = project_path / 'cert' / 'shanlitech.keystore'
 
+# ===  签名文件配置  ===
+project_path = get_project()# 获取当前项目路径
+keystore_big_path = project_path / 'cert' / 'shanli.jks' #大中屏签名文件
+keystore_small_path = project_path / 'cert' / 'shanlitech.keystore'   #小屏签名文件
+
+keystore_config = {
+        'large': {'path': keystore_big_path, 'password': '123456'},
+        'small': {'path': keystore_small_path, 'password': 'Lgsj829517'}
+    }
+
+# ===   slclient配置路径   ====
+file_path = project_path / 'app_out' / 'assets' / 'slclient.json'
+launcherModule = ['ui', 'launcherModule']
+
+# ===   apktool配置路径   ====
+yml_path = project_path / 'app_out' / 'apktool.yml'
 
 def is_java_installed():
     try:
@@ -34,7 +47,7 @@ def prompt_java_installation():
     print(" 官方下载地址：https://www.oracle.com/java/technologies/javase-downloads.html")
     sys.exit(1)
 
-def download_with_tqdm(url, filename):
+def download_apktool(url, filename):
     response = requests.get(url, stream=True)
     total_size = int(response.headers.get('content-length', 0))
     chunk_size = 1024
@@ -55,13 +68,13 @@ def ensure_apktool_installed(jar_path=APKTOOL_JAR):
     if not os.path.exists(jar_path):
         INFO.logger.info(f"准备下载 apktool.jar 到：{jar_path}")
         try:
-            download_with_tqdm(APKTOOL_URL, jar_path)
+            download_apktool(APKTOOL_URL, jar_path)
             INFO.logger.info(" apktool.jar 下载完成。")
         except Exception as e:
             INFO.logger.info(" 下载失败：", e)
             sys.exit(1)
     else:
-        INFO.logger.info(" apktool.jar 已存在。")
+        INFO.logger.info(" apktool.jar 已存在,正在解压。")
 
 def run_with_live_output(command):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -96,8 +109,30 @@ def decompile_apk(apk_path, output_dir="app_out"):
         ERROR.logger.error(" 失败：apktool 或 Java 问题")
         return False
 
-def build_and_sign_big_apk(project_dir='app_out', output_apk='app.apk', keystore_path=keystore_big_path,
-                       keystore_password='123456'):
+def rename_file(output_path, new_name):
+    """
+    将指定文件重命名
+
+    参数:
+        old_path: 原文件完整路径
+        new_name: 新文件名
+
+    返回:
+        新文件完整路径
+    """
+    dir_path = os.path.dirname(output_path)
+    new_path = os.path.join(dir_path, new_name)
+
+    if not os.path.exists(output_path):
+        raise FileNotFoundError(f"文件不存在：{output_path}")
+
+    os.rename(output_path, new_path)
+    return new_path
+
+def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
+
+    update_version_info(yml_path)
+
     try:
         INFO.logger.info("正在使用 apktool 反编译并构建 APK...")
         apktool_cmd = ["java", "-jar", APKTOOL_JAR, "b", project_dir, "-o", "app-unsigned-unaligned.apk"]
@@ -119,7 +154,13 @@ def build_and_sign_big_apk(project_dir='app_out', output_apk='app.apk', keystore
 
         INFO.logger.info("APK 打包成功，正在进行 APK 签名...")
 
-        # Step 3: 使用 apksigner 对 APK 文件进行签名
+        # 使用 apksigner 对 APK 文件进行签名
+        value = get_json_field(file_path, launcherModule)
+
+        keystore_path = keystore_config[value]['path']
+        keystore_password = keystore_config[value]['password']
+        INFO.logger.info(f"launcherModule 的值是{value},正在调用{keystore_path}文件进行签名")
+
         apksigner_cmd = [
             "apksigner.bat", "sign", "--ks", keystore_path, "--ks-pass", f"pass:{keystore_password}",
             "--out", output_apk, "app-unsigned.apk"
@@ -132,51 +173,18 @@ def build_and_sign_big_apk(project_dir='app_out', output_apk='app.apk', keystore
         # 删除未签名的 APK 文件
         os.remove("app-unsigned.apk")
 
-        INFO.logger.info(f"APK 文件已成功构建并签名：{output_apk}")
+        #重命名操作
+        new_name = build_newname(file_path, launcherModule, yml_path)
+        rename_file(output_apk, new_name)
+        INFO.logger.info(f"APK 文件已成功打包并签名：{new_name}")
 
     except Exception as e:
         ERROR.logger.error(f"发生错误: {e}")
 
-def build_and_sign_small_apk_(project_dir='app_out', output_apk='SSAPP_app.apk', keystore_path=keystore_small_path,
-                          keystore_password='Lgsj829517'):
-    try:
-        INFO.logger.info("正在使用 apktool 反编译并构建 APK...")
-        apktool_cmd = ["apktool.bat", "b", "--use-aapt2", "-o", "app-unsigned-unaligned.apk", project_dir]
-        returncode = run_with_live_output(apktool_cmd)
-        if returncode != 0:
-            ERROR.logger.error("打包失败，请检查资源修改是否正确")
-            return
-
-        INFO.logger.info("打包成功，正在进行 APK 对齐...")
-
-        zipalign_cmd = ["zipalign.exe", "-v", "-p", "4", "app-unsigned-unaligned.apk", "app-unsigned.apk"]
-        returncode = run_with_live_output(zipalign_cmd)
-        if returncode != 0:
-            ERROR.logger.error("APK 对齐失败")
-            return
 
 
-        os.remove("app-unsigned-unaligned.apk")
 
-        INFO.logger.info("APK 对齐成功，正在进行 APK 签名...")
 
-        # Step 3: 使用 apksigner 对 APK 文件进行签名
-        apksigner_cmd = [
-            "apksigner.bat", "sign", "--ks", keystore_path, "--ks-pass", f"pass:{keystore_password}",
-            "--out", output_apk, "app-unsigned.apk"
-        ]
-        returncode = run_with_live_output(apksigner_cmd)
-        if returncode != 0:
-            ERROR.logger.error("APK 签名失败")
-            return
-
-        # 删除未签名的 APK 文件
-        os.remove("app-unsigned.apk")
-
-        INFO.logger.info(f"APK 文件已成功构建并签名：{output_apk}")
-
-    except Exception as e:
-        ERROR.logger.error(f"发生错误: {e}")
 
 
 
