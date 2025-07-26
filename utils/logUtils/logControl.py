@@ -25,24 +25,24 @@ class LogHandler:
                  fmt: Text = "%(levelname)-8s %(asctime)s %(name)s:%(filename)s:%(lineno)d %(message)s"):
         self.logger = logging.getLogger(filename)  # 获取logger
 
-        if not self.logger.handlers:  # 如果没有设置过处理器，才进行配置
-            # 设置日志的颜色和格式
+        if not self.logger.handlers:
+
             formatter = self.log_color()  # 用colorlog配置带颜色的日志格式
             format_str = logging.Formatter(fmt)  # 设置普通日志格式
 
             # 设置日志级别
             self.logger.setLevel(self.level_relations.get(level.lower(), logging.INFO))
 
-            log_folder = os.path.dirname(filename)  # 获取日志文件夹路径
-            if not os.path.exists(log_folder):  # 如果文件夹不存在，创建文件夹
+            log_folder = os.path.dirname(filename)
+            if not os.path.exists(log_folder):
                 os.makedirs(log_folder)
 
             # 设置控制台输出处理器
             screen_output = logging.StreamHandler()
-            screen_output.setFormatter(formatter)  # 控制台日志输出的格式
+            screen_output.setFormatter(formatter)
             self.logger.addHandler(screen_output)
 
-            # 设置文件输出处理器，使用按时间滚动的文件处理器
+
             time_rotating = handlers.TimedRotatingFileHandler(
                 filename=filename, when=when, backupCount=3, encoding='utf-8'
             )

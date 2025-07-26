@@ -12,7 +12,7 @@ DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
 
 # === 初始化主窗口 ===
 root = tk.Tk()
-root.title("APKTool")
+root.title("APKToolV1.0")
 root.geometry("1000x700")
 
 # === 日志显示框 ===

@@ -24,15 +24,22 @@ keystore_small_path = project_path / 'cert' / 'shanlitech.keystore'   #小屏签
 
 keystore_config = {
         'large': {'path': keystore_big_path, 'password': '123456'},
+        'middle': {'path': keystore_big_path, 'password': '123456'},
         'small': {'path': keystore_small_path, 'password': 'Lgsj829517'}
     }
+
+# ===   zipalign配置路径   ====
+Zipalign_JAR = project_path / 'win' / 'zipalign.exe'
+
+# ===   apksigner配置路径   ====
+APKsigner_JAR = project_path / 'win' / 'apksigner.bat'
+
+# ===   apktool.yml配置路径   ====
+yml_path = project_path / 'app_out' / 'apktool.yml'
 
 # ===   slclient配置路径   ====
 file_path = project_path / 'app_out' / 'assets' / 'slclient.json'
 launcherModule = ['ui', 'launcherModule']
-
-# ===   apktool配置路径   ====
-yml_path = project_path / 'app_out' / 'apktool.yml'
 
 def is_java_installed():
     try:
@@ -131,6 +138,7 @@ def rename_file(output_path, new_name):
 
 def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
 
+    start_time = time.time()
     update_version_info(yml_path)
 
     try:
@@ -143,7 +151,7 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
 
         INFO.logger.info("打包成功")
 
-        zipalign_cmd = ["zipalign.exe", "-v", "-p", "4", "app-unsigned-unaligned.apk", "app-unsigned.apk"]
+        zipalign_cmd = [Zipalign_JAR, "-v", "-p", "4", "app-unsigned-unaligned.apk", "app-unsigned.apk"]
         returncode = run_with_live_output(zipalign_cmd)
         if returncode != 0:
             ERROR.logger.error("APK 对齐失败")
@@ -162,21 +170,21 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
         INFO.logger.info(f"launcherModule 的值是{value},正在调用{keystore_path}文件进行签名")
 
         apksigner_cmd = [
-            "apksigner.bat", "sign", "--ks", keystore_path, "--ks-pass", f"pass:{keystore_password}",
+            APKsigner_JAR, "sign", "--ks", keystore_path, "--ks-pass", f"pass:{keystore_password}",
             "--out", output_apk, "app-unsigned.apk"
         ]
         returncode = run_with_live_output(apksigner_cmd)
         if returncode != 0:
             ERROR.logger.error("APK 签名失败")
             return
-
         # 删除未签名的 APK 文件
         os.remove("app-unsigned.apk")
 
         #重命名操作
         new_name = build_newname(file_path, launcherModule, yml_path)
         rename_file(output_apk, new_name)
-        INFO.logger.info(f"APK 文件已成功打包并签名：{new_name}")
+        elapsed = time.time() - start_time
+        INFO.logger.info(f"APK 文件已成功打包并签名：{new_name},耗时 {elapsed:.1f} 秒")
 
     except Exception as e:
         ERROR.logger.error(f"发生错误: {e}")

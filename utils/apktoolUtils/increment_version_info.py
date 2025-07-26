@@ -114,7 +114,7 @@ def update_version_info(yml_path):
     with open(yml_path, "w", encoding="utf-8") as f:
         yaml.dump(data, f)
 
-    INFO.logger.info(f"版本名称更新为{new_version_name},版本号更新为{new_version_code}！")
+    INFO.logger.info(f"版本名称更新:{new_version_name},版本号更新:{new_version_code}!")
     return new_version_code, new_version_name
 
 def build_newname(file_path, field_path, yml_path):
