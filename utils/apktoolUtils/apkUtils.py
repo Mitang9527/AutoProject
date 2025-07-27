@@ -9,16 +9,16 @@ from tqdm import tqdm
 from utils.apktoolUtils.getData import get_json_field
 from utils.apktoolUtils.increment_version_info import update_version_info, build_newname
 from utils.logUtils.logControl import INFO, ERROR
-from utils.readFilesUtils.get_path import get_project
+from utils.readFilesUtils.get_path import get_project_root
 
 # === apktool依赖 ===
 APKTOOL_URL = "https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar"
 APKTOOL_JAR = "apktool.jar"
 
 # ===  签名文件配置  ===
-project_path = get_project()# 获取当前项目路径
-keystore_big_path = project_path / 'cert' / 'shanli.jks' #大中屏签名文件
-keystore_small_path = project_path / 'cert' / 'shanlitech.keystore'   #小屏签名文件
+project_path = get_project_root()# 获取当前项目路径
+keystore_big_path = project_path / 'apktool' / 'cert' / 'shanli.jks' #大中屏签名文件
+keystore_small_path = project_path / 'apktool' / 'cert' / 'shanlitech.keystore'   #小屏签名文件
 
 keystore_config = {
         'large': {'path': keystore_big_path, 'password': '123456'},
@@ -27,16 +27,16 @@ keystore_config = {
     }
 
 # ===   zipalign配置路径   ====
-Zipalign_JAR = project_path / 'win' / 'zipalign.exe'
+Zipalign_JAR = project_path / 'apktool' / 'win' / 'zipalign.exe'
 
 # ===   apksigner配置路径   ====
-APKsigner_JAR = project_path / 'win' / 'apksigner.bat'
+APKsigner_JAR = project_path / 'apktool' / 'win' / 'apksigner.bat'
 
 # ===   apktool.yml配置路径   ====
-yml_path = project_path / 'app_out' / 'apktool.yml'
+yml_path = project_path / 'apktool' / 'app_out' / 'apktool.yml'
 
 # ===   slclient配置路径   ====
-file_path = project_path / 'app_out' / 'assets' / 'slclient.json'
+file_path = project_path / 'apktool' / 'app_out' / 'assets' / 'slclient.json'
 launcherModule = ['ui', 'launcherModule']
 
 def is_java_installed():
@@ -117,11 +117,9 @@ def decompile_apk(apk_path, output_dir="app_out"):
 def rename_file(output_path, new_name):
     """
     将指定文件重命名
-
     参数:
         old_path: 原文件完整路径
         new_name: 新文件名
-
     返回:
         新文件完整路径
     """

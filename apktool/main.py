@@ -13,7 +13,7 @@ DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
 # === 初始化主窗口 ===
 root = customtkinterUtil()
 root.title("APKTool")
-root.geometry("1000x900")
+root.geometry("1200x800")
 
 # === 日志显示框 ===
 log_box = ctk.CTkTextbox(root.main_content, height=200, font=("Courier", 12))
