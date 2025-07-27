@@ -1,23 +1,23 @@
-import tkinter as tk
-from tkinter import filedialog, scrolledtext
+import customtkinter as ctk
+from tkinter import filedialog
 import os
 import threading
 
 from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk
 from utils.logUtils.logControl import INFO, ERROR
+from utils.customtkinterUtils.theme_selector import customtkinterUtil
 
 TEMP_DIR = "app_out"
 DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
 
-
 # === 初始化主窗口 ===
-root = tk.Tk()
-root.title("APKToolV1.0")
-root.geometry("1000x700")
+root = customtkinterUtil()
+root.title("APKTool")
+root.geometry("1000x900")
 
 # === 日志显示框 ===
-log_box = scrolledtext.ScrolledText(root, height=15, font=("Courier", 10), state='disabled')
-log_box.pack(fill='both', padx=10, pady=10)
+log_box = ctk.CTkTextbox(root.main_content, height=200, font=("Courier", 12))
+log_box.pack(side="bottom", fill="x", padx=10, pady=10)
 
 # === 配置日志，让INFO和ERROR同时输出到log_box和控制台 ===
 INFO.add_tkinter_handler(log_box)
@@ -70,12 +70,11 @@ def build_new_apk():
     threading.Thread(target=task, daemon=True).start()
 
 # === 顶部按钮 ===
-btn_frame = tk.Frame(root)
+btn_frame = ctk.CTkFrame(root.left_sidebar)
 btn_frame.pack(side="top", pady=10)
-tk.Button(btn_frame, text="解压 APK", font=("Arial", 12), command=choose_apk).pack(side="left", padx=20)
-tk.Button(btn_frame, text="解压 资源APK", font=("Arial", 12), command=choose_template_apk).pack(side="left", padx=20)
-tk.Button(btn_frame, text="打包 APK", font=("Arial", 12), command=build_new_apk).pack(side="left", padx=20)
-
-log_box.pack(side="bottom", fill="x", padx=10, pady=5)
+ctk.CTkButton(btn_frame, text="解压 APK", font=("Arial", 12), command=choose_apk).pack(side="top", fill="x", pady=5)
+ctk.CTkButton(btn_frame, text="解压 资源APK", font=("Arial", 12), command=choose_template_apk).pack(side="top", fill="x", pady=5)
+ctk.CTkButton(btn_frame, text="打包 APK", font=("Arial", 12), command=build_new_apk).pack(side="top", fill="x", pady=5)
+log_box.pack(side="bottom", fill="x", padx=10, pady=20)
 
 root.mainloop()

@@ -15,8 +15,6 @@ from utils.readFilesUtils.get_path import get_project
 APKTOOL_URL = "https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar"
 APKTOOL_JAR = "apktool.jar"
 
-
-
 # ===  签名文件配置  ===
 project_path = get_project()# 获取当前项目路径
 keystore_big_path = project_path / 'cert' / 'shanli.jks' #大中屏签名文件
@@ -167,7 +165,7 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
 
         keystore_path = keystore_config[value]['path']
         keystore_password = keystore_config[value]['password']
-        INFO.logger.info(f"launcherModule 的值是{value},正在调用{keystore_path}文件进行签名")
+        INFO.logger.info(f"launcherModule: {value},正在调用{keystore_path}文件进行签名")
 
         apksigner_cmd = [
             APKsigner_JAR, "sign", "--ks", keystore_path, "--ks-pass", f"pass:{keystore_password}",
