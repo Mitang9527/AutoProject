@@ -2,6 +2,8 @@ from tkinter import filedialog
 import os
 import threading
 from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk
+from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, update_colors_in_target_xml, \
+    source_color_file, target_color_file, replace_app_name
 from utils.customtkinterUtils.customtkinterUtils import CustomApp
 from utils.logUtils.logControl import INFO, ERROR
 
@@ -65,8 +67,21 @@ def build_new_apk():
 
     threading.Thread(target=task, daemon=True).start()
 
+def change_skin():
+
+    try:
+        exchange_res(source_dir, target_dir)
+        update_colors_in_target_xml(source_color_file, target_color_file)
+        replace_app_name(source_dir, target_dir)
+        build_new_apk()
+
+    except Exception as e:
+        ERROR.logger.error(f"异常：{e}")
+
+
 # === 顶部按钮 ===
 root.sidebar_button_1.configure(text="解压APK", command=choose_apk)
 root.sidebar_button_2.configure(text="解压资源APK", command=choose_template_apk)
 root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk,state="normal")
+root.sidebar_button_4.configure(text="一键换肤", command=change_skin)
 root.mainloop()
