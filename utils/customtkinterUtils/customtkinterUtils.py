@@ -18,7 +18,7 @@ class CustomApp(customtkinter.CTk):
         # 创建侧边栏
         self.sidebar_frame = customtkinter.CTkFrame(self, width=200, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        self.sidebar_frame.grid_rowconfigure(20, weight=1)
 
         # 侧边栏控件
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="CustomTkinter",
@@ -35,23 +35,20 @@ class CustomApp(customtkinter.CTk):
         self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
         self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
 
-        self.sidebar_button_4 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
-        self.sidebar_button_4.grid(row=4, column=0, padx=20, pady=10)
-
         # 全局颜色模式
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
+        self.appearance_mode_label.grid(row=21, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
+        self.appearance_mode_optionemenu.grid(row=22, column=0, padx=20, pady=(10, 10))
 
         #全局缩放
         self.scaling_label = customtkinter.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
-        self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
+        self.scaling_label.grid(row=23, column=0, padx=20, pady=(10, 0))
         self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame,
                                                                values=["80%", "90%", "100%", "110%", "120%"],
                                                                command=self.change_scaling_event)
-        self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
+        self.scaling_optionemenu.grid(row=24, column=0, padx=20, pady=(10, 20))
 
         # 日志窗口
         self.textbox = customtkinter.CTkTextbox(self, width=0 ,font=("Courier", 12))
@@ -62,9 +59,12 @@ class CustomApp(customtkinter.CTk):
         self.scaling_optionemenu.set("100%")  # 设置 UI 缩放比例为 100%
         self.sidebar_button_3.configure(state="disabled", text="CTkButton")  # 按钮 3 不可点击
 
-    def creat_sidebar_button_(self):
-        self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
-        self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
+    def create_sidebar_button(self, text, row, command, padx, pady):
+        customtkinter.CTkButton(
+            self.sidebar_frame,
+            text=text,
+            command=command
+        ).grid(row=row, column=0, padx=padx, pady=pady)
 
     def sidebar_button_event(self):
         pass

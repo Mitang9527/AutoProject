@@ -83,5 +83,5 @@ def change_skin():
 root.sidebar_button_1.configure(text="解压APK", command=choose_apk)
 root.sidebar_button_2.configure(text="解压资源APK", command=choose_template_apk)
 root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk,state="normal")
-root.sidebar_button_4.configure(text="一键换肤", command=change_skin)
+root.create_sidebar_button(text="一键换肤", row=4, command=change_skin,padx=20, pady=10)
 root.mainloop()
