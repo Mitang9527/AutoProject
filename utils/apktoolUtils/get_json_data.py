@@ -1,5 +1,5 @@
 import json
-from utils.logUtils.logControl import ERROR
+from utils.logUtils.logControl import ERROR, INFO
 
 
 def load_json(file_path: str):
@@ -10,11 +10,20 @@ def load_json(file_path: str):
         return pretty_json
 
     except Exception as e:
-        ERROR.logger.error("打开失败", f"无法读取 JSON 文件：\n{e}")
+        ERROR.logger.error("打开失败", f"无法读取 JSON 文件:{e}")
         return False
 
-def save_json(file_path: str):
-    pass
+
+def save_json(file_path, json_str):
+    try:
+        data = json.loads(json_str)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        INFO.logger.info("保存成功", "JSON 文件已成功保存")
+    except json.JSONDecodeError as e:
+        ERROR.logger.error("格式错误", f"JSON 格式错误：\n{e}")
+    except Exception as e:
+        ERROR.logger.error("保存错误", f"无法保存 JSON 文件：\n{e}")
 
 
 def get_json_field(file_path, field_path):
@@ -26,13 +35,10 @@ def get_json_field(file_path, field_path):
     :return: 字段值
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
+        data = load_json(file_path)
         temp_data = data
         for key in field_path:
             temp_data = temp_data[key]
-
         return temp_data
 
     except KeyError as e:

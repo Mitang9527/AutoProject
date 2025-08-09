@@ -1,9 +1,11 @@
 from tkinter import filedialog
 import os
 import threading
-from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk
+from functools import partial
+from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk, file_path
 from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, update_colors_in_target_xml, \
     source_color_file, target_color_file, replace_app_name
+from utils.apktoolUtils.get_json_data import load_json
 from utils.customtkinterUtils.customtkinterUtils import CustomApp
 from utils.logUtils.logControl import INFO, ERROR
 
@@ -16,6 +18,9 @@ root.title("APKTool")
 
 # === 日志显示框 ===
 log_box = root.textbox
+
+# === json文件显示框 ===
+json_box = root.json_textbox
 
 # === 配置日志，让INFO和ERROR同时输出到log_box和控制台 ===
 INFO.add_tkinter_handler(log_box)
@@ -53,6 +58,12 @@ def choose_template_apk():
 
     threading.Thread(target=task, daemon=True).start()
 
+# === 选择slcilent.json ===
+def open_slcilent_json(file_path):
+    data = load_json(file_path)
+    json_box.delete("1.0", "end")
+    json_box.insert("1.0", data)
+
 # === 构建新 APK ===
 def build_new_apk():
     output_path = "app.apk"
@@ -83,5 +94,6 @@ def change_skin():
 root.sidebar_button_1.configure(text="解压APK", command=choose_apk)
 root.sidebar_button_2.configure(text="解压资源APK", command=choose_template_apk)
 root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk, state="normal")
-root.create_sidebar_button(text="一键换肤", row=4, command=change_skin,)
+root.create_sidebar_button(text="一键换肤", row=4, command=change_skin)
+root.create_sidebar_button(text="slcilent_json", row=5, command=partial(open_slcilent_json, file_path))
 root.mainloop()

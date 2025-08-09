@@ -1,31 +1,30 @@
 import customtkinter
+import tkinter as tk
 
-customtkinter.set_appearance_mode("Light")  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+customtkinter.set_appearance_mode("Light")
+customtkinter.set_default_color_theme("blue")
 
 class CustomApp(customtkinter.CTk):
     def __init__(self):
         super().__init__()
-        # configure window
         self.title("CustomTkinter complex_example.py")
         self.geometry(f"{1100}x{580}")
 
-        # 网格布局配置 (4x4)
+        # 网格布局配置
         self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure((2, 3), weight=0)
-        self.grid_rowconfigure((0, 1, 2), weight=1)
+        self.grid_columnconfigure(2, weight=0)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
 
-        # 创建侧边栏
+        # === 创建侧边栏 ===
         self.sidebar_frame = customtkinter.CTkFrame(self, width=200, corner_radius=0)
-        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
+        self.sidebar_frame.grid(row=0, column=0, rowspan=5, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(20, weight=1)
 
-        # 侧边栏控件
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="CustomTkinter",
                                                  font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=25, pady=(20, 10))
 
-        # 侧边按钮
         self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
         self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
 
@@ -35,36 +34,58 @@ class CustomApp(customtkinter.CTk):
         self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
         self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
 
-        # 全局颜色模式
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=21, column=0, padx=20, pady=(10, 0))
-        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
-                                                                       command=self.change_appearance_mode_event)
+
+        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(
+            self.sidebar_frame, values=["Light", "Dark", "System"],
+            command=self.change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=22, column=0, padx=20, pady=(10, 10))
 
-        #全局缩放
         self.scaling_label = customtkinter.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
         self.scaling_label.grid(row=23, column=0, padx=20, pady=(10, 0))
-        self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame,
-                                                               values=["80%", "90%", "100%", "110%", "120%"],
-                                                               command=self.change_scaling_event)
+
+        self.scaling_optionemenu = customtkinter.CTkOptionMenu(
+            self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
+            command=self.change_scaling_event)
         self.scaling_optionemenu.grid(row=24, column=0, padx=20, pady=(10, 20))
 
-        # json显示窗口
-        self.json_textbox = customtkinter.CTkTextbox(self, width=150, height=320, font=("Courier", 12))
-        self.json_textbox.grid(row=0, column=1, rowspan=1, padx=(20, 20), pady=(20, 10), sticky="nsew")
+        # === 搜索框 ===
+        self.search_entry = customtkinter.CTkEntry(self, placeholder_text="搜索关键词")
+        self.search_entry.grid(row=0, column=1, columnspan=1, padx=(20, 5), pady=(10, 0), sticky="ew")
+        self.search_entry.bind("<KeyRelease>", self.on_search_entry_change)
 
-        # 日志窗口
-        self.textbox = customtkinter.CTkTextbox(self, width=0, font=("Courier", 12))
-        self.textbox.grid(row=3, column=1, rowspan=1, padx=(20, 20), pady=(20, 10), sticky="nsew")
+        # === 搜索按钮区域 ===
+        self.search_button_frame = customtkinter.CTkFrame(self)
+        self.search_button_frame.grid(row=0, column=2, padx=(0, 20), pady=(10, 0), sticky="e")
 
-        # 默认布局
-        self.appearance_mode_optionemenu.set("Light")  # 设置外观模式为 Dark
-        self.scaling_optionemenu.set("100%")  # 设置 UI 缩放比例为 100%
-        self.sidebar_button_3.configure(state="disabled", text="CTkButton")  # 按钮 3 不可点击
+        self.search_prev_button = customtkinter.CTkButton(
+            self.search_button_frame, text="↑", width=40, command=self.search_previous
+        )
+        self.search_prev_button.pack(side="left", padx=2)
+
+        self.search_next_button = customtkinter.CTkButton(
+            self.search_button_frame, text="↓", width=40, command=self.search_next
+        )
+        self.search_next_button.pack(side="left", padx=2)
+
+        # === JSON 显示窗口 ===
+        self.json_textbox = customtkinter.CTkTextbox(self, font=("Courier", 12))
+        self.json_textbox.grid(row=1, column=1, columnspan=2, padx=(20, 20), pady=(10, 0), sticky="nsew")
+
+        # === 日志窗口 ===
+        self.textbox = customtkinter.CTkTextbox(self, font=("Courier", 12))
+        self.textbox.grid(row=2, column=1, columnspan=2, padx=(20, 20), pady=(10, 20), sticky="nsew")
         self.textbox.configure(state="disabled")
 
-    def create_sidebar_button(self, text, row, command,):
+        # 默认设置
+        self.appearance_mode_optionemenu.set("Light")
+        self.scaling_optionemenu.set("100%")
+        self.sidebar_button_3.configure(state="disabled", text="CTkButton")
+
+        self.last_search_index = "1.0"  # 初始化搜索索引
+
+    def create_sidebar_button(self, text, row, command):
         customtkinter.CTkButton(
             self.sidebar_frame,
             text=text,
@@ -81,3 +102,69 @@ class CustomApp(customtkinter.CTk):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
 
+    def search_previous(self):
+        self.search_term = self.search_entry.get()
+        if not self.search_term:
+            return
+
+        current_index = self.json_textbox.index(self.last_search_index)
+        text_before = self.json_textbox.get("1.0", current_index)
+
+        idx = text_before.lower().rfind(self.search_term.lower())
+        if idx != -1:
+            line = text_before.count("\n", 0, idx) + 1
+            col = idx - text_before.rfind("\n", 0, idx) - 1 if "\n" in text_before[:idx] else idx
+            pos = f"{line}.{col}"
+            end_pos = f"{pos}+{len(self.search_term)}c"
+            self.clear_highlight()
+            self.json_textbox.tag_add("highlight", pos, end_pos)
+            self.json_textbox.tag_config("highlight", background="yellow", foreground="black")
+            self.json_textbox.mark_set(tk.INSERT, pos)
+            self.json_textbox.see(pos)
+            self.last_search_index = pos
+        else:
+            self.last_search_index = tk.END
+
+    def search_next(self):
+        self.search_term = self.search_entry.get()
+        if not self.search_term:
+            return
+
+        pos = self.json_textbox.search(self.search_term, self.last_search_index, stopindex=tk.END, nocase=True)
+        if pos:
+            end_pos = f"{pos}+{len(self.search_term)}c"
+            self.clear_highlight()
+            self.json_textbox.tag_add("highlight", pos, end_pos)
+            self.json_textbox.tag_config("highlight", background="yellow", foreground="black")
+            self.json_textbox.mark_set(tk.INSERT, end_pos)
+            self.json_textbox.see(pos)
+            self.last_search_index = end_pos
+        else:
+            self.last_search_index = "1.0"
+
+    def on_search_entry_change(self, event=None):
+        self.last_search_index = "1.0"
+        self.highlight_all_matches()
+
+    def highlight_all_matches(self):
+        self.clear_highlight()
+        keyword = self.search_entry.get()
+        if not keyword:
+            return
+        start = "1.0"
+        while True:
+            start = self.json_textbox.search(keyword, start, stopindex=tk.END, nocase=True)
+            if not start:
+                break
+            end = f"{start}+{len(keyword)}c"
+            self.json_textbox.tag_add("highlight", start, end)
+            self.json_textbox.tag_config("highlight", background="yellow", foreground="black")
+            start = end
+
+    def clear_highlight(self):
+        self.json_textbox.tag_delete("highlight")
+
+
+if __name__ == '__main__':
+    app = CustomApp()
+    app.mainloop()
