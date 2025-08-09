@@ -23,7 +23,7 @@ ERROR.add_tkinter_handler(log_box)
 
 # === 选择 APK并反编译 ===
 def choose_apk():
-    apk_path = filedialog.askopenfilename(title="请选择解压APK文件夹",filetypes=[("APK 文件", "*.apk")])
+    apk_path = filedialog.askopenfilename(title="请选择解压APK文件夹", filetypes=[("APK 文件", "*.apk")])
     if not apk_path:
         return
     INFO.logger.info(f"选择了 APK 文件：{apk_path}")
@@ -38,7 +38,7 @@ def choose_apk():
     threading.Thread(target=task, daemon=True).start()
 
 def choose_template_apk():
-    apk_path = filedialog.askopenfilename(title="请选择资源APK文件夹",filetypes=[("APK 文件", "*.apk")])
+    apk_path = filedialog.askopenfilename(title="请选择资源APK文件夹", filetypes=[("APK 文件", "*.apk")])
 
     if not apk_path:
         return
@@ -82,6 +82,6 @@ def change_skin():
 # === 顶部按钮 ===
 root.sidebar_button_1.configure(text="解压APK", command=choose_apk)
 root.sidebar_button_2.configure(text="解压资源APK", command=choose_template_apk)
-root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk,state="normal")
-root.create_sidebar_button(text="一键换肤", row=4, command=change_skin,padx=20, pady=10)
+root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk, state="normal")
+root.create_sidebar_button(text="一键换肤", row=4, command=change_skin,)
 root.mainloop()

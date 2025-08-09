@@ -50,21 +50,26 @@ class CustomApp(customtkinter.CTk):
                                                                command=self.change_scaling_event)
         self.scaling_optionemenu.grid(row=24, column=0, padx=20, pady=(10, 20))
 
+        # json显示窗口
+        self.json_textbox = customtkinter.CTkTextbox(self, width=150, height=320, font=("Courier", 12))
+        self.json_textbox.grid(row=0, column=1, rowspan=1, padx=(20, 20), pady=(20, 10), sticky="nsew")
+
         # 日志窗口
-        self.textbox = customtkinter.CTkTextbox(self, width=0 ,font=("Courier", 12))
-        self.textbox.grid(row=3, column=1,rowspan=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        self.textbox = customtkinter.CTkTextbox(self, width=0, font=("Courier", 12))
+        self.textbox.grid(row=3, column=1, rowspan=1, padx=(20, 20), pady=(20, 10), sticky="nsew")
 
         # 默认布局
         self.appearance_mode_optionemenu.set("Light")  # 设置外观模式为 Dark
         self.scaling_optionemenu.set("100%")  # 设置 UI 缩放比例为 100%
         self.sidebar_button_3.configure(state="disabled", text="CTkButton")  # 按钮 3 不可点击
+        self.textbox.configure(state="disabled")
 
-    def create_sidebar_button(self, text, row, command, padx, pady):
+    def create_sidebar_button(self, text, row, command,):
         customtkinter.CTkButton(
             self.sidebar_frame,
             text=text,
             command=command
-        ).grid(row=row, column=0, padx=padx, pady=pady)
+        ).grid(row=row, column=0, padx=20, pady=10)
 
     def sidebar_button_event(self):
         pass
@@ -75,3 +80,4 @@ class CustomApp(customtkinter.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
+

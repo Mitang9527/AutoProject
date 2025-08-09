@@ -6,7 +6,7 @@ import time
 import requests
 from tqdm import tqdm
 
-from utils.apktoolUtils.getData import get_json_field
+from utils.apktoolUtils.get_json_data import get_json_field
 from utils.apktoolUtils.increment_version_info import update_version_info, build_newname
 from utils.logUtils.logControl import INFO, ERROR
 from utils.readFilesUtils.get_path import get_project_root

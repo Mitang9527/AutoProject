@@ -66,7 +66,7 @@ class AdbTest:
         global log_path
         cs = self.case.split(" ")
         if len(cs) == 1:
-            log_name = "Android_log_" + datetime_strftime() + ".log"
+            log_name = "Android_" + datetime_strftime() + ".log"
 
             try:
                 log_folder = os.path.join(self.local_pth, "logs")

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-from ruamel.yaml import YAML, CommentedMap
+from ruamel.yaml import YAML
 from ruamel.yaml.constructor import ConstructorError
 
-from utils.apktoolUtils.getData import get_json_field
+from utils.apktoolUtils.get_json_data import get_json_field
 from utils.logUtils.logControl import INFO, ERROR
 
 
@@ -77,7 +77,6 @@ def increment_version_name(version_name):
 def update_version_info(yml_path):
     """更新版本信息：自增 versionCode 和 versionName"""
 
-    # 先读取整个YML内容
     yaml = YAML()
 
     # 设置：强制写出 None
@@ -101,14 +100,13 @@ def update_version_info(yml_path):
         ERROR.logger.error("无法获取 versionCode 或 versionName，跳过版本更新")
         return
 
-    # 版本自增函数，示例
+    # 版本自增函数
     new_version_code = increment_version_code(version_code)
     new_version_name = increment_version_name(version_name)
 
     # 更新版本信息
     versionInfo["versionCode"] = new_version_code
     versionInfo["versionName"] = new_version_name
-
 
     # 写回文件
     with open(yml_path, "w", encoding="utf-8") as f:
@@ -118,7 +116,7 @@ def update_version_info(yml_path):
     return new_version_code, new_version_name
 
 def build_newname(file_path, field_path, yml_path):
-    launcher_module = get_json_field(file_path,field_path)
+    launcher_module = get_json_field(file_path, field_path)
     new_version_name = get_version_info(yml_path)[1]
 
     try:

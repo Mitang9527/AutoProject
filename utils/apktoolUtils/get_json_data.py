@@ -1,6 +1,20 @@
 import json
-
 from utils.logUtils.logControl import ERROR
+
+
+def load_json(file_path: str):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        pretty_json = json.dumps(data, indent=4, ensure_ascii=False)
+        return pretty_json
+
+    except Exception as e:
+        ERROR.logger.error("打开失败", f"无法读取 JSON 文件：\n{e}")
+        return False
+
+def save_json(file_path: str):
+    pass
 
 
 def get_json_field(file_path, field_path):
@@ -12,11 +26,9 @@ def get_json_field(file_path, field_path):
     :return: 字段值
     """
     try:
-        # 读取 JSON 文件
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        # 获取 field_path 对应的字段值
         temp_data = data
         for key in field_path:
             temp_data = temp_data[key]
