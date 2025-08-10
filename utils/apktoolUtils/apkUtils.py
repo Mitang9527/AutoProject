@@ -39,6 +39,15 @@ yml_path = project_path / 'apktool' / 'app_out' / 'apktool.yml'
 file_path = project_path / 'apktool' / 'app_out' / 'assets' / 'slclient.json'
 launcherModule = ['ui', 'launcherModule']
 
+# ===   Led配置路径   ====
+Led_json = project_path / 'apktool' / 'app_out' / 'assets' /'slclient'/ 'led.json'
+
+# ===   input配置路径   ====
+input_json = project_path / 'apktool' / 'app_out' / 'assets' /'slclient'/ 'input.json'
+
+# ===   reaction配置路径   ====
+reaction_json = project_path / 'apktool' / 'app_out' / 'assets' /'slclient'/ 'reaction.json'
+
 def is_java_installed():
     try:
         result = subprocess.run(["java", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)

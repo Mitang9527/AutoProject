@@ -2,10 +2,11 @@ from tkinter import filedialog
 import os
 import threading
 from functools import partial
-from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk, file_path
+from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk, file_path, Led_json, input_json, \
+    reaction_json
 from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, update_colors_in_target_xml, \
     source_color_file, target_color_file, replace_app_name
-from utils.apktoolUtils.get_json_data import load_json
+from utils.apktoolUtils.get_json_data import load_json, save_json
 from utils.customtkinterUtils.customtkinterUtils import CustomApp
 from utils.logUtils.logControl import INFO, ERROR
 
@@ -59,10 +60,33 @@ def choose_template_apk():
     threading.Thread(target=task, daemon=True).start()
 
 # === 选择slcilent.json ===
-def open_slcilent_json(file_path):
+current_json_file_path = None
+
+def open_cilent_json(file_path):
+    global current_json_file_path
+    current_json_file_path = file_path
     data = load_json(file_path)
     json_box.delete("1.0", "end")
     json_box.insert("1.0", data)
+
+# === 定义路径 ===
+json_paths = {
+    "slcilent_json": file_path,
+    "LED_json": Led_json,
+    "input_json": input_json,
+    "reaction_json": reaction_json,
+}
+def optionmenu_callback(selection):
+    path = json_paths.get(selection)
+    if path:
+        open_cilent_json(path)
+
+# === 保存按钮 ===
+def save_json_button():
+    global current_json_file_path
+    json_str = json_box.get("1.0", "end").strip()
+    save_json(current_json_file_path, json_str)
+    open_cilent_json(current_json_file_path)
 
 # === 构建新 APK ===
 def build_new_apk():
@@ -95,5 +119,8 @@ root.sidebar_button_1.configure(text="解压APK", command=choose_apk)
 root.sidebar_button_2.configure(text="解压资源APK", command=choose_template_apk)
 root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk, state="normal")
 root.create_sidebar_button(text="一键换肤", row=4, command=change_skin)
-root.create_sidebar_button(text="slcilent_json", row=5, command=partial(open_slcilent_json, file_path))
+root.create_optionmenu(values = ["slcilent_json", "input_json", "reaction_json", "LED_json"],
+                       row=5,command=optionmenu_callback)
+
+root.save_json_button.configure(command=partial(save_json_button))
 root.mainloop()

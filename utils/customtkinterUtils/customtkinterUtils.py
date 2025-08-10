@@ -1,6 +1,5 @@
 import customtkinter
 import tkinter as tk
-
 customtkinter.set_appearance_mode("Light")
 customtkinter.set_default_color_theme("blue")
 
@@ -34,6 +33,12 @@ class CustomApp(customtkinter.CTk):
         self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
         self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
 
+        self.ctk_optionmenu = customtkinter.CTkOptionMenu(
+            self.sidebar_frame,
+            values=["选项1", "选项2", "选项3"],
+            command=self.optionmenu_callback)
+        self.ctk_optionmenu.grid(row=4, column=0, padx=20, pady=10)
+
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=21, column=0, padx=20, pady=(10, 0))
 
@@ -52,26 +57,32 @@ class CustomApp(customtkinter.CTk):
 
         # === 搜索框 ===
         self.search_entry = customtkinter.CTkEntry(self, placeholder_text="搜索关键词")
-        self.search_entry.grid(row=0, column=1, columnspan=1, padx=(20, 5), pady=(10, 0), sticky="ew")
+        self.search_entry.grid(row=0, column=1, padx=(20, 5), pady=(10, 0), sticky="ew")
         self.search_entry.bind("<KeyRelease>", self.on_search_entry_change)
 
         # === 搜索按钮区域 ===
         self.search_button_frame = customtkinter.CTkFrame(self)
-        self.search_button_frame.grid(row=0, column=2, padx=(0, 20), pady=(10, 0), sticky="e")
+        self.search_button_frame.grid(row=0, column=2, padx=(5, 20), pady=(10, 0), sticky="w")
 
         self.search_prev_button = customtkinter.CTkButton(
-            self.search_button_frame, text="↑", width=40, command=self.search_previous
+            self.search_button_frame, text="↑", width=25, command=self.search_previous
         )
-        self.search_prev_button.pack(side="left", padx=2)
+        self.search_prev_button.pack(side="left", padx=5)
 
         self.search_next_button = customtkinter.CTkButton(
-            self.search_button_frame, text="↓", width=40, command=self.search_next
+            self.search_button_frame, text="↓", width=25, command=self.search_next
         )
-        self.search_next_button.pack(side="left", padx=2)
+        self.search_next_button.pack(side="left", padx=5)
 
         # === JSON 显示窗口 ===
         self.json_textbox = customtkinter.CTkTextbox(self, font=("Courier", 12))
-        self.json_textbox.grid(row=1, column=1, columnspan=2, padx=(20, 20), pady=(10, 0), sticky="nsew")
+        self.json_textbox.grid(row=1, column=1, padx=(20, 5), pady=(10, 0), sticky="nsew")
+
+        # === JSON 保存按钮 ===
+        self.save_json_button = customtkinter.CTkButton(
+            self, text="保存", width=68, command=self.sidebar_button_event
+        )
+        self.save_json_button.grid(row=1, column=2, padx=(8, 20), pady=(10, 0), sticky="n")
 
         # === 日志窗口 ===
         self.textbox = customtkinter.CTkTextbox(self, font=("Courier", 12))
@@ -82,7 +93,7 @@ class CustomApp(customtkinter.CTk):
         self.appearance_mode_optionemenu.set("Light")
         self.scaling_optionemenu.set("100%")
         self.sidebar_button_3.configure(state="disabled", text="CTkButton")
-
+        self.ctk_optionmenu.set("选项1")
         self.last_search_index = "1.0"  # 初始化搜索索引
 
     def create_sidebar_button(self, text, row, command):
@@ -91,6 +102,14 @@ class CustomApp(customtkinter.CTk):
             text=text,
             command=command
         ).grid(row=row, column=0, padx=20, pady=10)
+
+    def create_optionmenu(self, values, row,command):
+        self.ctk_optionmenu = customtkinter.CTkOptionMenu(
+            self.sidebar_frame,
+            values=values,
+            command=command
+        )
+        self.ctk_optionmenu.grid(row=row, column=0, padx=20, pady=10)
 
     def sidebar_button_event(self):
         pass
@@ -101,6 +120,9 @@ class CustomApp(customtkinter.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
+
+    def optionmenu_callback(self, choice):
+        pass
 
     def search_previous(self):
         self.search_term = self.search_entry.get()
@@ -164,7 +186,6 @@ class CustomApp(customtkinter.CTk):
     def clear_highlight(self):
         self.json_textbox.tag_delete("highlight")
 
-
 if __name__ == '__main__':
-    app = CustomApp()
+    app =CustomApp()
     app.mainloop()
