@@ -9,7 +9,6 @@ def load_json(file_path: str):
     except Exception as e:
         ERROR.logger.error(f'发生错误{e}')
 
-
 def save_json(file_path, json_str) -> bool:
     """
     保存 JSON 字符串到文件，先校验格式。

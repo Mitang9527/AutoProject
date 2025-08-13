@@ -7,15 +7,12 @@ from ruamel.yaml.constructor import ConstructorError
 from utils.apktoolUtils.get_json_data import get_json_field
 from utils.logUtils.logControl import INFO, ERROR
 
-
-def get_field_value_from_yml(yml_path, field_name):
-    """从 apktool.yml 文件中获取指定字段的值"""
+def load_yml(yml_path):
     if not os.path.exists(yml_path):
-        ERROR.logger.error("apktool.yml 文件不存在，跳过版本处理")
-        return None, None
+        ERROR.logger.error("apktool.yml 文件不存在")
+        return None
 
     yaml = YAML()
-
     try:
         with open(yml_path, "r", encoding="utf-8") as f:
             data = yaml.load(f)
@@ -32,8 +29,13 @@ def get_field_value_from_yml(yml_path, field_name):
 
     if data is None:
         ERROR.logger.error("apktool.yml 内容为空或解析失败")
-        return None, None
+        return None
 
+    return data
+
+def get_field_value_from_yml(yml_path, field_name):
+    """从 apktool.yml 文件中获取指定字段的值"""
+    data = load_yml(yml_path)
     field_value = data.get(field_name, {})
     if not field_value:
         ERROR.logger.error(f"apktool.yml中没有{field_name}]")
@@ -79,17 +81,12 @@ def update_version_info(yml_path):
 
     yaml = YAML()
 
-    # 设置：强制写出 None
+    # 强制写出 None
     def represent_none(self, data):
         return self.represent_scalar('tag:yaml.org,2002:null', 'null')
     yaml.representer.add_representer(type(None), represent_none)
 
-    with open(yml_path, "r", encoding="utf-8") as f:
-        data = yaml.load(f)
-
-    if data is None:
-        ERROR.logger.error("apktool.yml 内容为空或解析失败")
-        return
+    data = load_yml(yml_path)
 
     # 获取旧版本信息
     versionInfo = data.get("versionInfo", {})

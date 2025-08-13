@@ -114,7 +114,7 @@ def change_skin():
         ERROR.logger.error(f"异常：{e}")
 
 
-# === 顶部按钮 ===
+# === 按钮分布 ===
 root.sidebar_button_1.configure(text="解压APK", command=choose_apk)
 root.sidebar_button_2.configure(text="解压资源APK", command=choose_template_apk)
 root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk, state="normal")
