@@ -3,7 +3,7 @@ import os
 import threading
 from functools import partial
 from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk, file_path, Led_json, input_json, \
-    reaction_json, open_folder
+    reaction_json, open_folder, folder_path
 from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, update_colors_in_target_xml, \
     source_color_file, target_color_file, replace_app_name
 from utils.apktoolUtils.get_json_data import load_json, save_json
@@ -12,7 +12,6 @@ from utils.logUtils.logControl import INFO, ERROR
 
 TEMP_DIR = "app_out"
 DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
-
 # === 初始化主窗口 ===
 root = CustomApp()
 root.title("APKTool2.1")
@@ -129,6 +128,6 @@ root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk, state=
 root.create_sidebar_button(text="一键换肤", row=4, command=change_skin)
 root.create_optionmenu(values=["slcilent_json", "input_json", "reaction_json", "LED_json"],
                        row=5, command=optionmenu_callback)
-root.create_sidebar_button(text="打开文件夹", row=6, command=open_folder)
+root.create_sidebar_button(text="打开文件夹", row=6, command=lambda: open_folder(folder_path))
 root.save_json_button.configure(command=partial(save_json_button))
 root.mainloop()

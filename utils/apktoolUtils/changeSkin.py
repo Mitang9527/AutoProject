@@ -2,21 +2,19 @@ import os
 import shutil
 from pathlib import Path
 from utils.logUtils.logControl import INFO, ERROR
-from utils.readFilesUtils.get_path import  get_project_root
+from utils.readFilesUtils.get_path import get_project_root
 import xml.etree.ElementTree as ET
-
 
 # ===  皮肤资源文件路径&Values资源路径  ===
 project_path = get_project_root()
-target_dir = project_path /'apktool' / 'app_out' / 'res'  # 目标文件夹
-source_dir = project_path /'apktool' / 'app_out1' / 'res'  # 资源文件夹
-
+target_dir = project_path / 'apktool' / 'app_out' / 'res'  # 目标文件夹
+source_dir = project_path / 'apktool' / 'app_out1' / 'res'  # 资源文件夹
 
 folders_to_cover = ["mipmap", "mipmap-hdpi", "mipmap-ldpi", "mipmap-mdpi", "mipmap-xhdpi", "mipmap-xxhdpi"]
 
 # ===  皮肤颜色资源路径  ===
-target_color_file = project_path /'apktool' / 'app_out' / 'res' / 'values' / 'colors.xml'  # 目标文件夹
-source_color_file = project_path /'apktool' / 'app_out1' / 'res' / 'values' / 'colors.xml'  # 资源文件夹
+target_color_file = project_path / 'apktool' / 'app_out' / 'res' / 'values' / 'colors.xml'  # 目标文件夹
+source_color_file = project_path / 'apktool' / 'app_out1' / 'res' / 'values' / 'colors.xml'  # 资源文件夹
 
 
 def exchange_res(source_dir, target_dir):
@@ -38,6 +36,7 @@ def exchange_res(source_dir, target_dir):
     else:
         ERROR.logger.error("资源文件夹不存在")
 
+
 def get_color_value_from_xml(file_path, color_name):
     """从 XML 文件中获取指定 color 的值"""
     tree = ET.parse(file_path)
@@ -48,6 +47,7 @@ def get_color_value_from_xml(file_path, color_name):
             return color.text
 
     return None
+
 
 def update_colors_in_target_xml(source_color_file, target_color_file):
     # 获取源文件中的两个颜色值
@@ -76,8 +76,8 @@ def update_colors_in_target_xml(source_color_file, target_color_file):
     target_tree.write(target_color_file, encoding="UTF-8", xml_declaration=True)
     INFO.logger.info(f"Successfully updated the colors in {target_color_file}")
 
-def replace_app_name(source_dir, target_dir):
 
+def replace_app_name(source_dir, target_dir):
     for root, dirs, files in os.walk(source_dir):
         for file in files:
             if file == "strings.xml":

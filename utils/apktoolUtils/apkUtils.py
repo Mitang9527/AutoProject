@@ -27,7 +27,7 @@ keystore_config = {
     }
 
 # ===   app_out路径文件夹   ====
-folder_path = project_path / 'apktool' / 'app_out'
+folder_path = project_path / 'app_out'
 
 # ===   zipalign配置路径   ====
 Zipalign_JAR = project_path / 'win' / 'zipalign.exe'
@@ -197,11 +197,14 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
     except Exception as e:
         ERROR.logger.error(f"发生错误: {e}")
 
-def open_folder():
+def open_folder(folder_path):
     if os.path.exists(folder_path):
         os.startfile(folder_path)
     else:
-        ERROR.logger.error("路径不存在:", folder_path)
+        ERROR.logger.error(f"路径不存在:{folder_path}")
+
+
+
 
 
 
