@@ -9,16 +9,16 @@ from tqdm import tqdm
 from utils.apktoolUtils.get_json_data import get_json_field
 from utils.apktoolUtils.increment_version_info import update_version_info, build_newname
 from utils.logUtils.logControl import INFO, ERROR
-from utils.readFilesUtils.get_path import get_project_root
+from utils.readFilesUtils.get_path import get_project
 
 # === apktool依赖 ===
 APKTOOL_URL = "https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar"
 APKTOOL_JAR = "apktool.jar"
 
 # ===  签名文件配置  ===
-project_path = get_project_root()# 获取当前项目路径
-keystore_big_path = project_path / 'apktool' / 'cert' / 'shanli.jks' #大中屏签名文件
-keystore_small_path = project_path / 'apktool' / 'cert' / 'shanlitech.keystore'   #小屏签名文件
+project_path = get_project()# 获取当前项目路径
+keystore_big_path = project_path  / 'cert' / 'shanli.jks' #大中屏签名文件
+keystore_small_path = project_path / 'cert' / 'shanlitech.keystore'   #小屏签名文件
 
 keystore_config = {
         'large': {'path': keystore_big_path, 'password': '123456'},
@@ -30,30 +30,30 @@ keystore_config = {
 folder_path = project_path / 'apktool' / 'app_out'
 
 # ===   zipalign配置路径   ====
-Zipalign_JAR = project_path / 'apktool' / 'win' / 'zipalign.exe'
+Zipalign_JAR = project_path / 'win' / 'zipalign.exe'
 
 # ===   apksigner配置路径   ====
-APKsigner_JAR = project_path / 'apktool' / 'win' / 'apksigner.bat'
+APKsigner_JAR = project_path / 'win' / 'apksigner.bat'
 
 # ===   apktool.yml配置路径   ====
-yml_path = project_path / 'apktool' / 'app_out' / 'apktool.yml'
+yml_path = project_path / 'app_out' / 'apktool.yml'
 
 # ===   slclient配置路径   ====
-file_path = project_path / 'apktool' / 'app_out' / 'assets' / 'slclient.json'
+file_path = project_path / 'app_out' / 'assets' / 'slclient.json'
 launcherModule = ['ui', 'launcherModule']
 
 # ===   Led配置路径   ====
-Led_json = project_path / 'apktool' / 'app_out' / 'assets' /'slclient'/ 'led.json'
+Led_json = project_path / 'app_out' / 'assets' /'slclient'/ 'led.json'
 
 # ===   input配置路径   ====
-input_json = project_path / 'apktool' / 'app_out' / 'assets' /'slclient'/ 'input.json'
+input_json = project_path / 'app_out' / 'assets' /'slclient'/ 'input.json'
 
 # ===   reaction配置路径   ====
-reaction_json = project_path / 'apktool' / 'app_out' / 'assets' /'slclient'/ 'reaction.json'
+reaction_json = project_path / 'app_out' / 'assets' /'slclient'/ 'reaction.json'
 
 def is_java_installed():
     try:
-        result = subprocess.run(["java", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(["java", "-version"], creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return result.returncode == 0
     except FileNotFoundError:
         return False
@@ -94,7 +94,7 @@ def ensure_apktool_installed(jar_path=APKTOOL_JAR):
         INFO.logger.info(" apktool.jar 已存在,正在解压。")
 
 def run_with_live_output(command):
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     while True:
         line = process.stdout.readline()
         if not line and process.poll() is not None:
