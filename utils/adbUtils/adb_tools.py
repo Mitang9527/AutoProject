@@ -193,22 +193,25 @@ class AdbTest:
 
         r = os.popen(f"adb -s {self.device_name} install " + self.case)
         result = r.read()
-        if "Success" not in result:
-            print(f'\033[0;31m\n安装失败 {result} \n\033[0m')
-        else:
-            print("安装成功\n"
-                  "正在启动....")
+        try:
+            if "Success" not in result:
+                print(f'\033[0;31m\n安装失败 {result} \n\033[0m')
+            else:
+                print("安装成功\n"
+                      "正在启动....")
 
-        last_packname_list = []
-        last_packname_list.extend(get_packname(device_name))
+            last_packname_list = []
+            last_packname_list.extend(get_packname(device_name))
 
-        common_list = list(set(last_packname_list) - set(start_packname_list))
-        start_packname = common_list[0]
+            common_list = list(set(last_packname_list) - set(start_packname_list))
+            start_packname = common_list[0]
 
-        if start_packname:
-            self.start_apk(start_packname)
-        else:
-            print("未检测到新安装包")
+            if start_packname:
+                self.start_apk(start_packname)
+            else:
+                print("未检测到新安装包")
+        except Exception as e:
+            print(f"异常:{e}")
 
     def uninstall_pkg(self):
         packname = self.select_package()
@@ -459,7 +462,7 @@ def run(device_name):
         while True:
             print(
                 f"\n当前终端系统版本为:Android{androidversion(device_name)} | 设备为:{device_name} | 型号为:{ViewModel(device_name)}")
-            case = input("adb测试工具V2.0：\n"
+            case = input("adb测试工具V2.1：\n"
                          "----------------------***截图功能***--------------------\n"
                          "gs：获取设备截图到本地\n"
                          "----------------------***常用功能***--------------------\n"

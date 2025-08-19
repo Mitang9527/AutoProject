@@ -3,7 +3,7 @@ import os
 import threading
 from functools import partial
 from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk, file_path, Led_json, input_json, \
-    reaction_json
+    reaction_json, open_folder
 from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, update_colors_in_target_xml, \
     source_color_file, target_color_file, replace_app_name
 from utils.apktoolUtils.get_json_data import load_json, save_json
@@ -15,7 +15,7 @@ DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
 
 # === 初始化主窗口 ===
 root = CustomApp()
-root.title("APKTool")
+root.title("APKTool2.1")
 
 # === 日志显示框 ===
 log_box = root.textbox
@@ -26,6 +26,7 @@ json_box = root.json_textbox
 # === 配置日志，让INFO和ERROR同时输出到log_box和控制台 ===
 INFO.add_tkinter_handler(log_box)
 ERROR.add_tkinter_handler(log_box)
+
 
 # === 选择 APK并反编译 ===
 def choose_apk():
@@ -43,6 +44,7 @@ def choose_apk():
 
     threading.Thread(target=task, daemon=True).start()
 
+
 def choose_template_apk():
     apk_path = filedialog.askopenfilename(title="请选择资源APK文件夹", filetypes=[("APK 文件", "*.apk")])
 
@@ -51,7 +53,7 @@ def choose_template_apk():
     INFO.logger.info(f"选择了 资源APK 文件：{apk_path}")
 
     def task():
-        success = decompile_apk(apk_path, output_dir = "app_out1")
+        success = decompile_apk(apk_path, output_dir="app_out1")
         if success:
             INFO.logger.info("APK 解包完成")
         else:
@@ -59,8 +61,10 @@ def choose_template_apk():
 
     threading.Thread(target=task, daemon=True).start()
 
+
 # === 选择slcilent.json ===
 current_json_file_path = None
+
 
 def open_cilent_json(file_path):
     global current_json_file_path
@@ -69,6 +73,7 @@ def open_cilent_json(file_path):
     json_box.delete("1.0", "end")
     json_box.insert("1.0", data)
 
+
 # === 定义路径 ===
 json_paths = {
     "slcilent_json": file_path,
@@ -76,10 +81,13 @@ json_paths = {
     "input_json": input_json,
     "reaction_json": reaction_json,
 }
+
+
 def optionmenu_callback(selection):
     path = json_paths.get(selection)
     if path:
         open_cilent_json(path)
+
 
 # === 保存按钮 ===
 def save_json_button():
@@ -87,6 +95,7 @@ def save_json_button():
     json_str = json_box.get("1.0", "end").strip()
     save_json(current_json_file_path, json_str)
     open_cilent_json(current_json_file_path)
+
 
 # === 构建新 APK ===
 def build_new_apk():
@@ -102,8 +111,8 @@ def build_new_apk():
 
     threading.Thread(target=task, daemon=True).start()
 
-def change_skin():
 
+def change_skin():
     try:
         exchange_res(source_dir, target_dir)
         update_colors_in_target_xml(source_color_file, target_color_file)
@@ -113,14 +122,13 @@ def change_skin():
     except Exception as e:
         ERROR.logger.error(f"异常：{e}")
 
-
 # === 按钮分布 ===
 root.sidebar_button_1.configure(text="解压APK", command=choose_apk)
 root.sidebar_button_2.configure(text="解压资源APK", command=choose_template_apk)
 root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk, state="normal")
 root.create_sidebar_button(text="一键换肤", row=4, command=change_skin)
-root.create_optionmenu(values = ["slcilent_json", "input_json", "reaction_json", "LED_json"],
-                       row=5,command=optionmenu_callback)
-
+root.create_optionmenu(values=["slcilent_json", "input_json", "reaction_json", "LED_json"],
+                       row=5, command=optionmenu_callback)
+root.create_sidebar_button(text="打开文件夹", row=6, command=open_folder)
 root.save_json_button.configure(command=partial(save_json_button))
 root.mainloop()

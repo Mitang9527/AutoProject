@@ -1,4 +1,3 @@
-
 import time
 from typing import Text
 from datetime import datetime, timedelta
@@ -63,6 +62,7 @@ def now_time_day():
     localtime = time.strftime("%Y-%m-%d", time.localtime())
     return localtime
 
+
 def datetime_strftime():
     """
         获取当前时间, 日期格式: 20250123_172225
@@ -70,6 +70,7 @@ def datetime_strftime():
     """
     datetime_strftime = datetime.now().strftime("%Y%m%d_%H%M%S")
     return datetime_strftime
+
 
 def tomorrow_time_day():
     """
@@ -99,6 +100,18 @@ def get_now_time() -> int:
     @return: 当前时间戳
     """
     return int(time.time()) * 1000
+
+
+def timeit(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        endtime = time.time()
+        print(f"{func.__name__} 耗时:{endtime - start_time:4f}秒")
+        return result
+
+    return wrapper()
+
 
 now_time_day = now_time_day()
 tomorrow_time_day = tomorrow_time_day()
