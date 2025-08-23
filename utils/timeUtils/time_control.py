@@ -13,7 +13,6 @@ def count_milliseconds():
     access_delta = (access_end - access_start).seconds * 1000
     return access_delta
 
-
 def timestamp_conversion(time_str: Text) -> int:
     """
     时间戳转换，将日期格式转换成时间戳
@@ -31,7 +30,6 @@ def timestamp_conversion(time_str: Text) -> int:
     except ValueError as exc:
         raise ValueError('日期格式错误, 需要传入得格式为 "%Y-%m-%d %H:%M:%S" ') from exc
 
-
 def time_conversion(time_num: int):
     """
     时间戳转换成日期
@@ -44,7 +42,6 @@ def time_conversion(time_num: int):
         other_style_time = time.strftime("%Y-%m-%d %H:%M:%S", time_array)
         return other_style_time
 
-
 def now_time():
     """
     获取当前时间, 日期格式: 2021-12-11 12:39:25
@@ -52,7 +49,6 @@ def now_time():
     """
     localtime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     return localtime
-
 
 def now_time_day():
     """
@@ -84,7 +80,6 @@ def tomorrow_time_day():
     # 格式化日期
     return tomorrow.strftime("%Y-%m-%d")
 
-
 def get_time_for_min(minute: int) -> int:
     """
     获取几分钟后的时间戳
@@ -92,7 +87,6 @@ def get_time_for_min(minute: int) -> int:
     @return: N分钟后的时间戳
     """
     return int(time.time() + 60 * minute) * 1000
-
 
 def get_now_time() -> int:
     """
@@ -113,5 +107,13 @@ def timeit(func):
     return wrapper()
 
 
-now_time_day = now_time_day()
-tomorrow_time_day = tomorrow_time_day()
+def timeit(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"{func.__name__}耗时: {end_time - start_time}.3f")
+        return result
+    return wrapper
+
+

@@ -2,19 +2,19 @@ import os
 import shutil
 from pathlib import Path
 from utils.logUtils.logControl import INFO, ERROR
-from utils.readFilesUtils.get_path import get_project_root
+from utils.readFilesUtils.get_path import get_project
 import xml.etree.ElementTree as ET
 
 # ===  皮肤资源文件路径&Values资源路径  ===
-project_path = get_project_root()
-target_dir = project_path / 'apktool' / 'app_out' / 'res'  # 目标文件夹
-source_dir = project_path / 'apktool' / 'app_out1' / 'res'  # 资源文件夹
+project_path = get_project()
+target_dir = project_path / 'app_out' / 'res'  # 目标文件夹
+source_dir = project_path / 'app_out1' / 'res'  # 资源文件夹
 
 folders_to_cover = ["mipmap", "mipmap-hdpi", "mipmap-ldpi", "mipmap-mdpi", "mipmap-xhdpi", "mipmap-xxhdpi"]
 
 # ===  皮肤颜色资源路径  ===
-target_color_file = project_path / 'apktool' / 'app_out' / 'res' / 'values' / 'colors.xml'  # 目标文件夹
-source_color_file = project_path / 'apktool' / 'app_out1' / 'res' / 'values' / 'colors.xml'  # 资源文件夹
+target_color_file = project_path / 'app_out' / 'res' / 'values' / 'colors.xml'  # 目标文件夹
+source_color_file = project_path / 'app_out1' / 'res' / 'values' / 'colors.xml'  # 资源文件夹
 
 
 def exchange_res(source_dir, target_dir):

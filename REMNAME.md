@@ -52,8 +52,10 @@
     ├── Readme.md                       // help
     ├── pytest.ini                  
     ├── run.py                           // 运行入口  
-    
-
+ 
+   
+##
+pyinstaller -F --noconsole --icon="D:\\code\\AutoProject\\png\\icons\\cg-7bgzn-001.ico" --add-data "D:/code/AutoProject/common/config.yaml;common" main.py
 ## 依赖库
 
 
