@@ -55,7 +55,7 @@ def now_time_day():
     获取当前时间, 日期格式: 2021-12-11
     :return:
     """
-    localtime = time.strftime("%Y-%m-%d", time.localtime())
+    localtime = time.strftime("%Y_%m_%d", time.localtime())
     return localtime
 
 
@@ -94,17 +94,6 @@ def get_now_time() -> int:
     @return: 当前时间戳
     """
     return int(time.time()) * 1000
-
-
-def timeit(func):
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        endtime = time.time()
-        print(f"{func.__name__} 耗时:{endtime - start_time:4f}秒")
-        return result
-
-    return wrapper()
 
 
 def timeit(func):
