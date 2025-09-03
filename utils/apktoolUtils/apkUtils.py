@@ -12,19 +12,21 @@ from utils.logUtils.logControl import INFO, ERROR
 from utils.readFilesUtils.get_path import get_project
 
 # === apktool依赖 ===
+from utils.timeUtils.time_control import now_time_day
+
 APKTOOL_URL = "https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar"
 APKTOOL_JAR = "apktool.jar"
 
 # ===  签名文件配置  ===
-project_path = get_project()# 获取当前项目路径
-keystore_big_path = project_path  / 'cert' / 'shanli.jks' #大中屏签名文件
-keystore_small_path = project_path / 'cert' / 'shanlitech.keystore'   #小屏签名文件
+project_path = get_project()  # 获取当前项目路径
+keystore_big_path = project_path / 'cert' / 'shanli.jks'  # 大中屏签名文件
+keystore_small_path = project_path / 'cert' / 'shanlitech.keystore'  # 小屏签名文件
 
 keystore_config = {
-        'large': {'path': keystore_big_path, 'password': '123456'},
-        'middle': {'path': keystore_big_path, 'password': '123456'},
-        'small': {'path': keystore_small_path, 'password': 'Lgsj829517'}
-    }
+    'large': {'path': keystore_big_path, 'password': '123456'},
+    'middle': {'path': keystore_big_path, 'password': '123456'},
+    'small': {'path': keystore_small_path, 'password': 'Lgsj829517'}
+}
 
 # ===   app_out路径文件夹   ====
 folder_path = project_path / 'app_out'
@@ -43,20 +45,23 @@ file_path = project_path / 'app_out' / 'assets' / 'slclient.json'
 launcherModule = ['ui', 'launcherModule']
 
 # ===   Led配置路径   ====
-Led_json = project_path / 'app_out' / 'assets' /'slclient'/ 'led.json'
+Led_json = project_path / 'app_out' / 'assets' / 'slclient' / 'led.json'
 
 # ===   input配置路径   ====
-input_json = project_path / 'app_out' / 'assets' /'slclient'/ 'input.json'
+input_json = project_path / 'app_out' / 'assets' / 'slclient' / 'input.json'
 
 # ===   reaction配置路径   ====
-reaction_json = project_path / 'app_out' / 'assets' /'slclient'/ 'reaction.json'
+reaction_json = project_path / 'app_out' / 'assets' / 'slclient' / 'reaction.json'
+
 
 def is_java_installed():
     try:
-        result = subprocess.run(["java", "-version"], creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(["java", "-version"], creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
         return result.returncode == 0
     except FileNotFoundError:
         return False
+
 
 def prompt_java_installation():
     print(" 未检测到 Java 安装。")
@@ -64,22 +69,24 @@ def prompt_java_installation():
     print(" 官方下载地址：https://www.oracle.com/java/technologies/javase-downloads.html")
     sys.exit(1)
 
+
 def download_apktool(url, filename):
     response = requests.get(url, stream=True)
     total_size = int(response.headers.get('content-length', 0))
     chunk_size = 1024
 
     with open(filename, "wb") as f, tqdm(
-        desc=f"正在下载 {filename}",
-        total=total_size,
-        unit='B',
-        unit_scale=True,
-        unit_divisor=1024
+            desc=f"正在下载 {filename}",
+            total=total_size,
+            unit='B',
+            unit_scale=True,
+            unit_divisor=1024
     ) as bar:
         for chunk in response.iter_content(chunk_size=chunk_size):
             if chunk:
                 f.write(chunk)
                 bar.update(len(chunk))
+
 
 def ensure_apktool_installed(jar_path=APKTOOL_JAR):
     if not os.path.exists(jar_path):
@@ -93,8 +100,10 @@ def ensure_apktool_installed(jar_path=APKTOOL_JAR):
     else:
         INFO.logger.info(" apktool.jar 已存在,正在解压。")
 
+
 def run_with_live_output(command):
-    process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, text=True)
     while True:
         line = process.stdout.readline()
         if not line and process.poll() is not None:
@@ -102,6 +111,7 @@ def run_with_live_output(command):
         if line:
             INFO.logger.info(f" {line.strip()}")
     return process.returncode
+
 
 def decompile_apk(apk_path, output_dir="app_out"):
     if not is_java_installed():
@@ -126,6 +136,7 @@ def decompile_apk(apk_path, output_dir="app_out"):
         ERROR.logger.error(" 失败：apktool 或 Java 问题")
         return False
 
+
 def rename_file(output_path, new_name):
     """
     将指定文件重命名
@@ -144,8 +155,8 @@ def rename_file(output_path, new_name):
     os.rename(output_path, new_path)
     return new_path
 
-def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
 
+def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
     start_time = time.time()
     update_version_info(yml_path)
 
@@ -175,11 +186,17 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
 
         keystore_path = keystore_config[value]['path']
         keystore_password = keystore_config[value]['password']
-        INFO.logger.info(f"launcherModule: {value},正在调用{keystore_path}文件进行签名")
+        INFO.logger.info(f"launcherModule: {value},正在进行签名")
+
+        date_str = now_time_day()
+        output_dir = os.path.join(project_path, date_str)
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_apk_path = os.path.join(output_dir, output_apk)
 
         apksigner_cmd = [
             APKsigner_JAR, "sign", "--ks", keystore_path, "--ks-pass", f"pass:{keystore_password}",
-            "--out", output_apk, "app-unsigned.apk"
+            "--out", output_apk_path, "app-unsigned.apk"
         ]
         returncode = run_with_live_output(apksigner_cmd)
         if returncode != 0:
@@ -188,27 +205,18 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
         # 删除未签名的 APK 文件
         os.remove("app-unsigned.apk")
 
-        #重命名操作
+        # 重命名操作
         new_name = build_newname(file_path, launcherModule, yml_path)
-        rename_file(output_apk, new_name)
+        rename_file(output_apk_path, new_name)
         elapsed = time.time() - start_time
-        INFO.logger.info(f"APK 文件已成功打包并签名：{new_name},耗时 {elapsed:.1f} 秒")
+        INFO.logger.info(f"APK 文件已成功打包并签名：{new_name},地址:{output_apk_path},耗时 {elapsed:.1f} 秒,")
 
     except Exception as e:
         ERROR.logger.error(f"发生错误: {e}")
+
 
 def open_folder(folder_path):
     if os.path.exists(folder_path):
         os.startfile(folder_path)
     else:
         ERROR.logger.error(f"路径不存在:{folder_path}")
-
-
-
-
-
-
-
-
-
-

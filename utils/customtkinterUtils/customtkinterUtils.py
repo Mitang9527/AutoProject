@@ -103,7 +103,7 @@ class CustomApp(customtkinter.CTk):
             command=command
         ).grid(row=row, column=0, padx=20, pady=10)
 
-    def create_optionmenu(self, values, row,command):
+    def create_optionmenu(self, values, row, command):
         self.ctk_optionmenu = customtkinter.CTkOptionMenu(
             self.sidebar_frame,
             values=values,

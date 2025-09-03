@@ -154,3 +154,8 @@ class App(customtkinter.CTk):
 
     def sidebar_button_event(self):
         print("sidebar_button click")
+
+
+if __name__ == '__main__':
+    app = App()
+    app.mainloop()

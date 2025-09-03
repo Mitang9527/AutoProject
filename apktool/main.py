@@ -14,7 +14,7 @@ TEMP_DIR = "app_out"
 DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
 # === 初始化主窗口 ===
 root = CustomApp()
-root.title("APKTool2.2")
+root.title("APKTool2.3")
 
 # === 日志显示框 ===
 log_box = root.textbox
