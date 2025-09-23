@@ -10,6 +10,7 @@ from utils.apktoolUtils.get_json_data import get_json_field
 from utils.apktoolUtils.increment_version_info import update_version_info, build_newname
 from utils.logUtils.logControl import INFO, ERROR
 from utils.readFilesUtils.get_path import get_project
+from utils.timeUtils.time_control import now_time_day
 
 # === apktool依赖 ===
 APKTOOL_URL = "https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar"
@@ -175,11 +176,17 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
 
         keystore_path = keystore_config[value]['path']
         keystore_password = keystore_config[value]['password']
-        INFO.logger.info(f"launcherModule: {value},正在调用{keystore_path}文件进行签名")
+        INFO.logger.info(f"launcherModule: {value},正在进行签名")
+
+        date_str = now_time_day()
+        output_dir = os.path.join(project_path, date_str)
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_apk_path = os.path.join(output_dir, output_apk)
 
         apksigner_cmd = [
             APKsigner_JAR, "sign", "--ks", keystore_path, "--ks-pass", f"pass:{keystore_password}",
-            "--out", output_apk, "app-unsigned.apk"
+            "--out", output_apk_path, "app-unsigned.apk"
         ]
         returncode = run_with_live_output(apksigner_cmd)
         if returncode != 0:
@@ -188,11 +195,11 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
         # 删除未签名的 APK 文件
         os.remove("app-unsigned.apk")
 
-        #重命名操作
+        # 重命名操作
         new_name = build_newname(file_path, launcherModule, yml_path)
-        rename_file(output_apk, new_name)
+        rename_file(output_apk_path, new_name)
         elapsed = time.time() - start_time
-        INFO.logger.info(f"APK 文件已成功打包并签名：{new_name},耗时 {elapsed:.1f} 秒")
+        INFO.logger.info(f"APK 文件已成功打包并签名：{new_name},地址:{output_apk_path},耗时 {elapsed:.1f} 秒,")
 
     except Exception as e:
         ERROR.logger.error(f"发生错误: {e}")
