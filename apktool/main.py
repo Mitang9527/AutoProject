@@ -2,6 +2,8 @@ from tkinter import filedialog
 import os
 import threading
 from functools import partial
+
+from utils.adbUtils.adb_tools import AdbTest
 from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk, file_path, Led_json, input_json, \
     reaction_json, open_folder, folder_path
 from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, update_colors_in_target_xml, \
@@ -9,9 +11,12 @@ from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, 
 from utils.apktoolUtils.get_json_data import load_json, save_json
 from utils.customtkinterUtils.customtkinterUtils import CustomApp
 from utils.logUtils.logControl import INFO, ERROR
+import subprocess
 
 TEMP_DIR = "app_out"
 DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
+
+
 # === 初始化主窗口 ===
 root = CustomApp()
 root.title("APKTool2.3")
@@ -26,10 +31,24 @@ json_box = root.json_textbox
 INFO.add_tkinter_handler(log_box)
 ERROR.add_tkinter_handler(log_box)
 
+# === 选择 APK并安装 ===
+def choose_install_apk():
+    apk_path = filedialog.askopenfilename(title="请选择一个apk进行安装", filetypes=[("APK 文件", "*.apk")])
+    if not apk_path:
+        return
+    INFO.logger.info(f"选择了 APK 文件：{apk_path}")
 
+    def task():
+        success = AdbTest.install_pkg()
+        if success:
+            INFO.logger.info("APK安装成功")
+        else:
+            ERROR.logger.error("安装失败")
+
+    threading.Thread(target=task, daemon=True).start()
 # === 选择 APK并反编译 ===
 def choose_apk():
-    apk_path = filedialog.askopenfilename(title="请选择解压APK文件夹", filetypes=[("APK 文件", "*.apk")])
+    apk_path = filedialog.askopenfilename(title="请选择解压APK", filetypes=[("APK 文件", "*.apk")])
     if not apk_path:
         return
     INFO.logger.info(f"选择了 APK 文件：{apk_path}")
@@ -42,7 +61,6 @@ def choose_apk():
             ERROR.logger.error("解包失败")
 
     threading.Thread(target=task, daemon=True).start()
-
 
 def choose_template_apk():
     apk_path = filedialog.askopenfilename(title="请选择资源APK文件夹", filetypes=[("APK 文件", "*.apk")])
@@ -59,7 +77,6 @@ def choose_template_apk():
             ERROR.logger.error("解包失败")
 
     threading.Thread(target=task, daemon=True).start()
-
 
 # === 选择slcilent.json ===
 current_json_file_path = None
@@ -121,13 +138,55 @@ def change_skin():
     except Exception as e:
         ERROR.logger.error(f"异常：{e}")
 
+def get_sha1():
+    apk_path = filedialog.askopenfilename(
+        title="请选择APK",
+        filetypes=[("APK 文件", "*.apk")]
+    )
+
+    if not apk_path:
+        return None
+
+    cmd = ["keytool", "-printcert", "-jarfile", apk_path]
+
+    try:
+        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        try:
+            output = result.decode("utf-8")
+        except UnicodeDecodeError:
+            output = result.decode("gbk", errors="ignore")
+
+        # 解析 SHA1
+        sha1 = None
+        for line in output.splitlines():
+            if "SHA1:" in line:
+                sha1 = line.split("SHA1:")[1].strip()
+                break
+
+        if sha1:
+            content = f"证书 SHA1:\n{sha1}" if sha1 else "未获取到 SHA1 值"
+            root.show_message("APK SHA1", content)  # 调用通用弹窗
+        else:
+            print("未找到 SHA1 值")
+            return None
+
+    except subprocess.CalledProcessError as e:
+        print("执行 keytool 出错:", e.output.decode(errors="ignore"))
+        return None
+
+
+
+# === adbtools按钮分布 ===
+root.create_middle_button(text="安装APK",row=1,command=choose_install_apk)
+
 # === 按钮分布 ===
-root.sidebar_button_1.configure(text="解压APK", command=choose_apk)
-root.sidebar_button_2.configure(text="解压资源APK", command=choose_template_apk)
-root.sidebar_button_3.configure(text="打包 APK", command=build_new_apk, state="normal")
+root.create_sidebar_button(text="解压APK",row=1, command=choose_apk)
+root.create_sidebar_button(text="解压资源APK",row=2, command=choose_template_apk)
+root.create_sidebar_button(text="打包 APK", row=3, command=build_new_apk)
 root.create_sidebar_button(text="一键换肤", row=4, command=change_skin)
 root.create_optionmenu(values=["slcilent_json", "input_json", "reaction_json", "LED_json"],
                        row=5, command=optionmenu_callback)
-root.create_sidebar_button(text="打开文件夹", row=6, command=lambda: open_folder(folder_path))
+root.create_sidebar_button(text="查看sha1值", row=6, command=get_sha1)
+root.create_sidebar_button(text="打开资源文件夹", row=7, command=lambda: open_folder(folder_path))
 root.save_json_button.configure(command=partial(save_json_button))
 root.mainloop()

@@ -185,7 +185,7 @@ class AdbTest:
                     print("输入的序号超出范围，请重新输入合法的序号。")
             except ValueError:
                 print("请输入合法的数字序号。")
-
+    @classmethod
     def install_pkg(self):
         start_packname_list = []
         start_packname_list.extend(get_packname(device_name))
