@@ -8,8 +8,6 @@ README.md
 v/
 ../common/__pycache__/
 ../logs/
-../test666.py
-../test777.py
 ../test_case/
 ../utils/__pycache__/
 ../utils/adbUtils/__pycache__/
@@ -23,3 +21,5 @@ v/
 ../utils/otherUtils/allureDate/__pycache__/
 ../utils/readFilesUtils/__pycache__/
 ../utils/timeUtils/__pycache__/
+
+

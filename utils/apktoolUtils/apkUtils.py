@@ -210,6 +210,35 @@ def open_folder(folder_path):
     else:
         ERROR.logger.error(f"路径不存在:{folder_path}")
 
+def get_sha1(apk_path):
+    cmd = ["keytool", "-printcert", "-jarfile", apk_path]
+
+    try:
+        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        try:
+            output = result.decode("utf-8")
+        except UnicodeDecodeError:
+            output = result.decode("gbk", errors="ignore")
+
+        # 解析 SHA1
+        sha1 = None
+        for line in output.splitlines():
+            if "SHA1:" in line:
+                sha1 = line.split("SHA1:")[1].strip()
+                break
+
+        if sha1:
+            content = f"证书 SHA1:\n{sha1}" if sha1 else "未获取到 SHA1 值"
+            return content
+        else:
+            print("未找到 SHA1 值")
+            return None
+
+    except subprocess.CalledProcessError as e:
+        print("执行 keytool 出错:", e.output.decode(errors="ignore"))
+        return None
+
+
 
 
 

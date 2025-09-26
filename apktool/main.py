@@ -5,7 +5,7 @@ from functools import partial
 
 from utils.adbUtils.adb_tools import AdbTest
 from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk, file_path, Led_json, input_json, \
-    reaction_json, open_folder, folder_path
+    reaction_json, open_folder, folder_path, get_sha1
 from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, update_colors_in_target_xml, \
     source_color_file, target_color_file, replace_app_name
 from utils.apktoolUtils.get_json_data import load_json, save_json
@@ -138,43 +138,13 @@ def change_skin():
     except Exception as e:
         ERROR.logger.error(f"异常：{e}")
 
-def get_sha1():
+def get_apk_sha1():
     apk_path = filedialog.askopenfilename(
         title="请选择APK",
         filetypes=[("APK 文件", "*.apk")]
     )
-
-    if not apk_path:
-        return None
-
-    cmd = ["keytool", "-printcert", "-jarfile", apk_path]
-
-    try:
-        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        try:
-            output = result.decode("utf-8")
-        except UnicodeDecodeError:
-            output = result.decode("gbk", errors="ignore")
-
-        # 解析 SHA1
-        sha1 = None
-        for line in output.splitlines():
-            if "SHA1:" in line:
-                sha1 = line.split("SHA1:")[1].strip()
-                break
-
-        if sha1:
-            content = f"证书 SHA1:\n{sha1}" if sha1 else "未获取到 SHA1 值"
-            root.show_message("APK SHA1", content)  # 调用通用弹窗
-        else:
-            print("未找到 SHA1 值")
-            return None
-
-    except subprocess.CalledProcessError as e:
-        print("执行 keytool 出错:", e.output.decode(errors="ignore"))
-        return None
-
-
+    sha1_ctx = get_sha1(apk_path)
+    root.show_message("APK SHA1", sha1_ctx)
 
 # === adbtools按钮分布 ===
 root.create_middle_button(text="安装APK",row=1,command=choose_install_apk)
@@ -186,7 +156,7 @@ root.create_sidebar_button(text="打包 APK", row=3, command=build_new_apk)
 root.create_sidebar_button(text="一键换肤", row=4, command=change_skin)
 root.create_optionmenu(values=["slcilent_json", "input_json", "reaction_json", "LED_json"],
                        row=5, command=optionmenu_callback)
-root.create_sidebar_button(text="查看sha1值", row=6, command=get_sha1)
+root.create_sidebar_button(text="查看sha1值", row=6, command=get_apk_sha1)
 root.create_sidebar_button(text="打开资源文件夹", row=7, command=lambda: open_folder(folder_path))
 root.save_json_button.configure(command=partial(save_json_button))
 root.mainloop()
