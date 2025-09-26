@@ -1,0 +1,17 @@
+# Created by pytest automatically.
+# 忽略所有 .pyc 文件
+*.pyc
+__pycache__/
+logs/
+utils/__pycache__/
+utils/adbUtils/__pycache__/
+utils/apktoolUtils/__pycache__/
+utils/assertion/__pycache__/
+utils/cache_process/__pycache__/
+utils/customtkinterUtils/__pycache__/
+utils/logUtils/__pycache__/
+utils/noticUtils/__pycache__/
+utils/otherUtils/__pycache__/
+utils/otherUtils/allureDate/__pycache__/
+utils/readFilesUtils/__pycache__/
+utils/timeUtils/__pycache__/
