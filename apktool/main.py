@@ -11,7 +11,6 @@ from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, 
 from utils.apktoolUtils.get_json_data import load_json, save_json
 from utils.customtkinterUtils.customtkinterUtils import CustomApp
 from utils.logUtils.logControl import INFO, ERROR
-import subprocess
 
 TEMP_DIR = "app_out"
 DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
@@ -157,6 +156,6 @@ root.create_sidebar_button(text="一键换肤", row=4, command=change_skin)
 root.create_optionmenu(values=["slcilent_json", "input_json", "reaction_json", "LED_json"],
                        row=5, command=optionmenu_callback)
 root.create_sidebar_button(text="查看sha1值", row=6, command=get_apk_sha1)
-root.create_sidebar_button(text="打开资源文件夹", row=7, command=lambda: open_folder(folder_path))
+root.create_sidebar_button(text="打开文件夹", row=7, command=lambda: open_folder(folder_path))
 root.save_json_button.configure(command=partial(save_json_button))
 root.mainloop()

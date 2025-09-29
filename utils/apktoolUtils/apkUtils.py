@@ -170,13 +170,19 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
         os.remove("app-unsigned-unaligned.apk")
 
         INFO.logger.info("APK 打包成功，正在进行 APK 签名...")
-
         # 使用 apksigner 对 APK 文件进行签名
         value = get_json_field(file_path, launcherModule)
 
-        keystore_path = keystore_config[value]['path']
-        keystore_password = keystore_config[value]['password']
-        INFO.logger.info(f"launcherModule: {value},正在进行签名")
+        if value is None:
+            INFO.logger.info(f"多合一版本 默认使用大屏文件签名")
+            value = 'large'
+        #TODO 需要兼容多合一版本的结构
+
+        keystore_info = keystore_config.get(value)
+
+        keystore_path = keystore_info['path']
+        keystore_password = keystore_info['password']
+
 
         date_str = now_time_day()
         output_dir = os.path.join(project_path, date_str)
@@ -185,10 +191,14 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
         output_apk_path = os.path.join(output_dir, output_apk)
 
         apksigner_cmd = [
-            APKsigner_JAR, "sign", "--ks", keystore_path, "--ks-pass", f"pass:{keystore_password}",
-            "--out", output_apk_path, "app-unsigned.apk"
+            APKsigner_JAR, "sign",
+            "--ks", keystore_path,
+            "--ks-pass", f"pass:{keystore_password}",
+            "--out", output_apk_path,
+            "app-unsigned.apk"
         ]
         returncode = run_with_live_output(apksigner_cmd)
+
         if returncode != 0:
             ERROR.logger.error("APK 签名失败")
             return
@@ -197,9 +207,9 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
 
         # 重命名操作
         new_name = build_newname(file_path, launcherModule, yml_path)
-        rename_file(output_apk_path, new_name)
+        new_path = rename_file(output_apk_path, new_name)
         elapsed = time.time() - start_time
-        INFO.logger.info(f"APK 文件已成功打包并签名：{new_name},地址:{output_apk_path},耗时 {elapsed:.1f} 秒,")
+        INFO.logger.info(f"APK 文件已成功打包并签名:{new_path},耗时 {elapsed:.1f} 秒,")
 
     except Exception as e:
         ERROR.logger.error(f"发生错误: {e}")

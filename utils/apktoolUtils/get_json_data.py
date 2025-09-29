@@ -33,20 +33,27 @@ def save_json(file_path, json_str) -> bool:
         ERROR.logger.error(f"保存文件出错: {e}")
         return False
 
+
 def get_json_field(file_path, field_path):
     """
     获取指定 JSON 文件中的字段值
 
     :param file_path: JSON 文件路径
     :param field_path: 字段路径（以列表形式传入，如 ['ui', 'launcherModule']）
-    :return: 字段值
+    :return: 字段值，如果有错误则返回 None
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
+
         temp_data = data
         for key in field_path:
-            temp_data = temp_data[key]
+            if isinstance(temp_data, dict):
+                temp_data = temp_data.get(key)  # 使用 .get() 以避免抛出异常
+            else:
+                ERROR.logger.error(f"路径 '{' -> '.join(field_path)}' 中的字段 '{key}' 不存在或类型不正确！")
+                return None
+
         return temp_data
 
     except KeyError as e:
@@ -54,6 +61,8 @@ def get_json_field(file_path, field_path):
         return None
     except json.JSONDecodeError as e:
         ERROR.logger.error(f"JSON 格式错误: {e}")
+        return None
+    except FileNotFoundError as e:
         return None
     except Exception as e:
         ERROR.logger.error(f"发生错误: {e}")
