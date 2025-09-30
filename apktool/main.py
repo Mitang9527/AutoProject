@@ -146,7 +146,7 @@ def get_apk_sha1():
     root.show_message("APK SHA1", sha1_ctx)
 
 # === adbtools按钮分布 ===
-root.create_middle_button(text="安装APK",row=1,command=choose_install_apk)
+root.create_middle_button(text="安装APK",row=3,command=choose_install_apk)
 
 # === 按钮分布 ===
 root.create_sidebar_button(text="解压APK",row=1, command=choose_apk)

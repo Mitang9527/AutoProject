@@ -176,7 +176,6 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
         if value is None:
             INFO.logger.info(f"多合一版本 默认使用大屏文件签名")
             value = 'large'
-        #TODO 需要兼容多合一版本的结构
 
         keystore_info = keystore_config.get(value)
 

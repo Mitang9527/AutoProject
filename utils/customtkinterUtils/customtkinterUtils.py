@@ -1,6 +1,8 @@
 import tkinter as tk
 import customtkinter
 
+from utils.adbUtils import adb_tools
+
 customtkinter.set_appearance_mode("Light")
 customtkinter.set_default_color_theme("blue")
 
@@ -23,39 +25,58 @@ class CustomApp(customtkinter.CTk):
         # ===== 左侧操作区 =====
         self.middle_button_frame = customtkinter.CTkFrame(self, width=200, corner_radius=0)
         self.middle_button_frame.grid(row=0, column=0, rowspan=3, sticky="nsew", padx=5, pady=10)
-        self.middle_button_frame.grid_rowconfigure(10, weight=1)
+        self.middle_button_frame.grid_rowconfigure(99, weight=1)
 
         self.middle_logo_label = customtkinter.CTkLabel(
             self.middle_button_frame,
             text="CustomTkinter",
             font=customtkinter.CTkFont(size=20, weight="bold")
         )
-        self.middle_logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.middle_logo_label.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 10))
 
-        self.create_middle_button_1 = customtkinter.CTkButton(self.middle_button_frame,1, text="按钮1",command=self.optionmenu_callback)
-        self.create_middle_button_1.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+        # ===== 添加设备选择 =====
+        devices = adb_tools.get_device()
+        if not devices:
+            devices = ["当前没有设备连接，请检查!!!"]
+        self.device_optionmenu = customtkinter.CTkOptionMenu(
+            self.middle_button_frame,
+            values=devices,
+            command=self.on_device_selected
+        )
+        self.device_optionmenu.configure(values=devices)
+        self.device_optionmenu.grid(row=2, column=0, padx=20, pady=5, sticky="ew")
 
-        self.middle_button_2 = customtkinter.CTkButton(self.middle_button_frame,1, text="按钮2",command=self.optionmenu_callback)
-        self.middle_button_2.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
+        if devices:
+            self.device_optionmenu.set(devices[0])
 
-        # 底部固定控件
+        # ===== 左侧按钮 =====
+        self.create_middle_button_1 = customtkinter.CTkButton(
+            self.middle_button_frame, text="按钮1", command=self.optionmenu_callback
+        )
+        self.create_middle_button_1.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
+
+        self.middle_button_2 = customtkinter.CTkButton(
+            self.middle_button_frame, text="按钮2", command=self.optionmenu_callback
+        )
+        self.middle_button_2.grid(row=4, column=0, padx=20, pady=10, sticky="ew")
+
         self.appearance_mode_label = customtkinter.CTkLabel(self.middle_button_frame, text="Appearance Mode:")
-        self.appearance_mode_label.grid(row=11, column=0, padx=20, pady=(10, 0), sticky="s")
+        self.appearance_mode_label.grid(row=100, column=0, padx=20, pady=(10, 0), sticky="s")
 
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(
             self.middle_button_frame, values=["Light", "Dark", "System"],
             command=self.change_appearance_mode_event
         )
-        self.appearance_mode_optionemenu.grid(row=12, column=0, padx=20, pady=(0, 10), sticky="s")
+        self.appearance_mode_optionemenu.grid(row=101, column=0, padx=20, pady=(0, 10), sticky="s")
 
         self.scaling_label = customtkinter.CTkLabel(self.middle_button_frame, text="UI Scaling")
-        self.scaling_label.grid(row=13, column=0, padx=20, pady=(10, 0), sticky="s")
+        self.scaling_label.grid(row=102, column=0, padx=20, pady=(10, 0), sticky="s")
 
         self.scaling_optionemenu = customtkinter.CTkOptionMenu(
             self.middle_button_frame, values=["80%", "90%", "100%", "110%", "120%"],
             command=self.change_scaling_event
         )
-        self.scaling_optionemenu.grid(row=14, column=0, padx=20, pady=(0, 20), sticky="s")
+        self.scaling_optionemenu.grid(row=103, column=0, padx=20, pady=(0, 20), sticky="s")
 
         # ===== 右侧侧边栏 =====
         self.sidebar_frame = customtkinter.CTkFrame(self, width=200, corner_radius=0)
@@ -106,7 +127,7 @@ class CustomApp(customtkinter.CTk):
         self.last_search_index = "1.0"
 
     def create_middle_button(self, text, row, command=None):
-        btn = customtkinter.CTkButton(self.middle_logo_label, text=text, command=command)
+        btn = customtkinter.CTkButton(self.middle_button_frame, text=text, command=command)
         btn.grid(row=row, column=0, padx=20, pady=10)
         return btn
 
@@ -122,6 +143,9 @@ class CustomApp(customtkinter.CTk):
 
     def optionmenu_callback(self):
         pass
+
+    def on_device_selected(self, choice):
+        print(f"当前选择的设备: {choice}")
 
     def search_previous(self):
         self.search_term = self.search_entry.get()
