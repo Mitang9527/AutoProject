@@ -10,6 +10,9 @@ project_path = get_project()
 target_dir = project_path / 'app_out' / 'res'  # 目标文件夹
 source_dir = project_path / 'app_out1' / 'res'  # 资源文件夹
 
+target_dir_color = project_path / 'app_out' / 'res' / 'values' / 'colors.xml'   # 目标color
+source_dir_color = project_path / 'app_out1' / 'res' / 'values' / 'colors.xml'     # 资源color
+
 folders_to_cover = ["mipmap", "mipmap-hdpi", "mipmap-ldpi", "mipmap-mdpi", "mipmap-xhdpi", "mipmap-xxhdpi"]
 
 # ===  皮肤颜色资源路径  ===
@@ -76,6 +79,15 @@ def update_colors_in_target_xml(source_color_file, target_color_file):
     target_tree.write(target_color_file, encoding="UTF-8", xml_declaration=True)
     INFO.logger.info(f"Successfully updated the colors in {target_color_file}")
 
+def copy_res(source_dir_color,target_dir_color):
+    if not os.path.isfile(source_dir_color):
+        raise FileNotFoundError(f"资源文件不存在: {source_dir_color}")
+
+    try:
+        shutil.copy2(source_dir_color, target_dir_color)
+        print(f"复制完成：{source_dir_color} -> {target_dir_color}")
+    except Exception as e:
+        print(f"复制失败：{e}")
 
 def replace_app_name(source_dir, target_dir):
     for root, dirs, files in os.walk(source_dir):

@@ -1,6 +1,7 @@
-#将源文件夹包括子文件夹全部解包到目标文件夹下
 import os
 import shutil
+
+from utils.logUtils.logControl import INFO, ERROR
 
 
 def extract_all_files(src_folder, dst_folder):
@@ -25,9 +26,12 @@ def extract_all_files(src_folder, dst_folder):
     except Exception as e:
         print(f"Error: {e}")
 
+def copy_files(source_dir_color, target_dir_color):
+    if not os.path.isfile(source_dir_color):
+        raise FileNotFoundError(f"资源文件不存在: {source_dir_color}")
 
-# 示例用法
-src_folder = r'C:\Users\EDY\Desktop\新建文件夹 (2)'  # 替换为实际的源文件夹路径
-dst_folder = r'C:\Users\EDY\Desktop\新建文件夹 (3)'  # 替换为实际的目标文件夹路径
-
-extract_all_files(src_folder, dst_folder)
+    try:
+        shutil.copy2(source_dir_color, target_dir_color)
+        INFO.logger.info(f"已覆盖文件：{source_dir_color} -> {target_dir_color}")
+    except Exception as e:
+        ERROR.logger.error(f"覆盖失败：{e}")

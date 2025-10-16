@@ -186,6 +186,35 @@ class CustomApp(customtkinter.CTk):
     def clear_highlight(self):
         self.json_textbox.tag_delete("highlight")
 
+    def show_message(self, title: str, content: str):
+        popup = customtkinter.CTkToplevel(self)
+        popup.title(title)
+        popup.geometry("400x180")
+        popup.grab_set()  # 模态弹窗
+
+        # ---------- 内容显示框，可复制 ----------
+        text_widget = customtkinter.CTkTextbox(popup, width=360, height=80)
+        text_widget.pack(pady=10)
+        text_widget.insert("1.0", content)
+        text_widget.configure(state="disabled")  # 只读
+
+        def copy_to_clipboard():
+            if ":" in content:
+                to_copy = content.split(":", 1)[1].strip()
+            else:
+                to_copy = content
+            self.clipboard_clear()
+            self.clipboard_append(to_copy)
+            self.update()
+
+        btn_copy = customtkinter.CTkButton(popup, text="复制", command=copy_to_clipboard)
+        btn_copy.pack(pady=5)
+
+        # # ---------- 确认按钮 ----------
+        # btn_ok = customtkinter.CTkButton(popup, text="确定", command=popup.destroy)
+        # btn_ok.pack(pady=5)
+
+
 if __name__ == '__main__':
     app =CustomApp()
     app.mainloop()

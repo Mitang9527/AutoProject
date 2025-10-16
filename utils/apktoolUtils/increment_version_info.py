@@ -118,8 +118,7 @@ def build_newname(file_path, field_path, yml_path):
 
     try:
         if launcher_module is None:
-            ERROR.logger.error("未能获取到 launcherModule 字段值")
-            return None
+            newname = 'ASAPP_' + str(new_version_name) + '.apk'
 
         elif launcher_module == 'large':
             newname = 'BSAPP_' + str(new_version_name) + '.apk'
