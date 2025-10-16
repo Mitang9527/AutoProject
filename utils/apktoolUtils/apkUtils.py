@@ -223,7 +223,7 @@ def get_sha1(apk_path):
     cmd = ["keytool", "-printcert", "-jarfile", apk_path]
 
     try:
-        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT, creationflags=subprocess.CREATE_NO_WINDOW)
         try:
             output = result.decode("utf-8")
         except UnicodeDecodeError:
