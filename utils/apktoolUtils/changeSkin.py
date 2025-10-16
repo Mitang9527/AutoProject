@@ -89,6 +89,15 @@ def update_colors_in_target_xml(source_color_file, target_color_file):
     target_tree.write(target_color_file, encoding="UTF-8", xml_declaration=True)
     INFO.logger.info(f"Successfully updated the colors in {target_color_file}")
 
+def copy_res(source_dir_color,target_dir_color):
+    if not os.path.isfile(source_dir_color):
+        raise FileNotFoundError(f"资源文件不存在: {source_dir_color}")
+
+    try:
+        shutil.copy2(source_dir_color, target_dir_color)
+        print(f"复制完成：{source_dir_color} -> {target_dir_color}")
+    except Exception as e:
+        print(f"复制失败：{e}")
 
 def replace_app_name(source_dir, target_dir):
     for root, dirs, files in os.walk(source_dir):
