@@ -24,7 +24,8 @@ keystore_small_path = project_path / 'cert' / 'shanlitech.keystore'   #小屏签
 keystore_config = {
         'large': {'path': keystore_big_path, 'password': '123456'},
         'middle': {'path': keystore_big_path, 'password': '123456'},
-        'small': {'path': keystore_small_path, 'password': 'Lgsj829517'}
+        'small': {'path': keystore_small_path, 'password': 'Lgsj829517'},
+        'none': {'path': keystore_small_path, 'password': 'Lgsj829517'}
     }
 
 # ===   app_out路径文件夹   ====
@@ -174,7 +175,7 @@ def build_and_sign_apk(project_dir='app_out', output_apk='app.apk'):
         value = get_json_field(file_path, launcherModule)
 
         if value is None:
-            INFO.logger.info(f"多合一版本 默认使用大屏文件签名")
+            INFO.logger.info("多合一版本 默认使用大屏文件签名")
             value = 'large'
 
         keystore_info = keystore_config.get(value)

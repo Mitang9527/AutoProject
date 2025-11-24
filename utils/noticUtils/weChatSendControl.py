@@ -6,7 +6,7 @@ import requests
 from utils.logUtils.logControl import ERROR
 from utils.otherUtils.allureDate.allure_report_data import TestMetrics, AllureFileClean
 from utils.timeUtils.time_control import now_time
-from utils.otherUtils.get_system_config import get_host_ip
+from utils.otherUtils.get_system_config import get_local_ip
 from utils.otherUtils.exceptions import SendMessageError, ValueTypeError
 from utils import config
 
@@ -96,7 +96,7 @@ class WeChatSend:
                                     >时间：<font color=\"comment\">{now_time()}</font>
                                     >
                                     >非相关负责人员可忽略此消息。
-                                    >测试报告，点击查看>>[测试报告入口](http://{get_host_ip()}:9999/index.html)"""
+                                    >测试报告，点击查看>>[测试报告入口](http://{get_local_ip()}:9999/index.html)"""
 
         WeChatSend(AllureFileClean().get_case_count()).send_markdown(text)
 

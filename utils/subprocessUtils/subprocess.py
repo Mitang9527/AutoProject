@@ -1,5 +1,7 @@
 import subprocess
 
+from utils.logUtils.logControl import INFO
+
 
 def execute_python_script(script_path):
     process = None
@@ -30,3 +32,13 @@ def execute_python_script(script_path):
             if process.stderr:
                 process.stderr.close()
             process.wait()
+
+def run_with_live_output(command):
+    process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    while True:
+        line = process.stdout.readline()
+        if not line and process.poll() is not None:
+            break
+        if line:
+            INFO.logger.info(f" {line.strip()}")
+    return process.returncode

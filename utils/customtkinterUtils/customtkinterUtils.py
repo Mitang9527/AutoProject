@@ -10,13 +10,16 @@ class CustomApp(customtkinter.CTk):
         self.geometry(f"{1100}x{580}")
 
         # 网格布局配置
+        self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(2, weight=0)
+
+        self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
 
         # === 创建侧边栏 ===
-        self.sidebar_frame = customtkinter.CTkFrame(self, width=200, corner_radius=0)
+        self.sidebar_frame = customtkinter.CTkFrame(self, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=5, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(20, weight=1)
 
