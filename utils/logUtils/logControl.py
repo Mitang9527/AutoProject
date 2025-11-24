@@ -74,9 +74,9 @@ class LogHandler:
         tk_handler = TkinterLogHandler(text_widget)
         tk_handler.setFormatter(self.log_color())  # 颜色格式保持一致
         self.logger.addHandler(tk_handler)
-
-INFO = LogHandler(ensure_path_sep(f"\\logs\\info-{now_time_day()}.log"), level='info')
-ERROR = LogHandler(ensure_path_sep(f"\\logs\\error-{now_time_day()}.log"), level='error')
-WARNING = LogHandler(ensure_path_sep(f'\\logs\\warning-{now_time_day()}.log'), level='warning')
+#
+# INFO = LogHandler(ensure_path_sep(f"\\logs\\info-{now_time_day()}.log"), level='info')
+# ERROR = LogHandler(ensure_path_sep(f"\\logs\\error-{now_time_day()}.log"), level='error')
+# WARNING = LogHandler(ensure_path_sep(f'\\logs\\warning-{now_time_day()}.log'), level='warning')
 # DEBUG = LogHandler(ensure_path_sep(f'\\logs\\warning-{now_time_day}.log'), level='debug')
 
