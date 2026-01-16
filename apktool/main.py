@@ -15,7 +15,7 @@ DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
 # === 初始化主窗口 ===
 root = CustomApp()
 
-root.title("APKTool_V单版本")
+root.title("APKTool_V1.1")
 
 # === 日志显示框 ===
 log_box = root.textbox
@@ -124,12 +124,18 @@ def change_skin():
         ERROR.logger.error(f"异常：{e}")
 
 def get_apk_sha1():
-    apk_path = filedialog.askopenfilename(
-        title="请选择APK",
-        filetypes=[("APK 文件", "*.apk")]
-    )
-    sha1_ctx = get_sha1(apk_path)
-    root.show_message("APK SHA1", sha1_ctx)
+    try:
+        apk_path = filedialog.askopenfilename(
+            title="请选择APK",
+            filetypes=[("APK 文件", "*.apk")]
+        )
+        if not apk_path:
+            return
+        sha1_ctx = get_sha1(apk_path)
+        root.show_message("APK SHA1", sha1_ctx)
+
+    except Exception as e:
+        ERROR.logger.error(f"异常：{e}")
 
 
 # === 按钮分布 ===

@@ -18,16 +18,19 @@ class OcrRecognition:
         # 将二进制数据转换为图像
         image = Image.open(io.BytesIO(png_data))
 
-        project_root = get_project_root()
-        png_folder_path = project_root / 'png'
-        png_folder_path.mkdir(parents=True, exist_ok=True)
-
-        pngName = datetime_strftime() + '_png.png'
-
-        file_path = png_folder_path / pngName
-        image.save(file_path)
+        # 识别图片选择是否保存
+        # project_root = get_project_root()
+        # png_folder_path = project_root / 'png'
+        # png_folder_path.mkdir(parents=True, exist_ok=True)
+        #
+        # pngName = datetime_strftime() + '_png.png'
+        #
+        # file_path = png_folder_path / pngName
+        # image.save(file_path)
 
         # 进行 OCR 识别
         result = pytesseract.image_to_string(image)
 
         return result
+
+

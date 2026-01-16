@@ -101,8 +101,8 @@ def run_with_live_output(command):
         line = process.stdout.readline()
         if not line and process.poll() is not None:
             break
-        if line:
-            INFO.logger.info(f" {line.strip()}")
+        # if line:
+        #     INFO.logger.info(f" {line.strip()}")
     return process.returncode
 
 def decompile_apk(apk_path, output_dir="app_out"):

@@ -41,7 +41,7 @@ mirror_source: http://mirrors.aliyun.com/pypi/simple/
 
 # 企业微信通知的相关配置
 wechat:
-  webhook:
+  webhook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=8da43e87-2d9f-4a30-99d5-8ed5f275abe7_test
   secret:
 
 ### 邮箱必填，需要全部都配置好，程序运行失败时，会发送邮件通知!!!!
@@ -79,7 +79,6 @@ ConnectClient:
     user: lzroot
     password: '123456'
     port: 22
-
 
 
 
