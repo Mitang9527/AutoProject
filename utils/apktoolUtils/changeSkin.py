@@ -10,8 +10,8 @@ project_path = get_project()
 target_dir = project_path / 'app_out' / 'res'  # 目标文件夹
 source_dir = project_path / 'app_out1' / 'res'  # 资源文件夹
 
-target_dir_color = project_path / 'app_out' / 'res' / 'values' / 'colors.xml'   # 目标color
-source_dir_color = project_path / 'app_out1' / 'res' / 'values' / 'colors.xml'     # 资源color
+target_dir_color = project_path / 'app_out' / 'res' / 'values' / 'colors.xml'  # 目标color
+source_dir_color = project_path / 'app_out1' / 'res' / 'values' / 'colors.xml'  # 资源color
 
 folders_to_cover = ["mipmap", "mipmap-hdpi", "mipmap-ldpi", "mipmap-mdpi", "mipmap-xhdpi", "mipmap-xxhdpi"]
 
@@ -39,15 +39,16 @@ def exchange_res(source_dir, target_dir):
     else:
         ERROR.logger.error("资源文件夹不存在")
 
-def copy_res(source_dir_color,target_dir_color):
-    if not os.path.isfile(source_dir_color):
-        raise FileNotFoundError(f"资源文件不存在: {source_dir_color}")
+
+def copy_directory(source_dir, target_dir):
+    if not os.path.isdir(source_dir):
+        raise FileNotFoundError(f"源目录不存在: {source_dir}")
 
     try:
-        shutil.copy2(source_dir_color, target_dir_color)
-        print(f"复制完成：{source_dir_color} -> {target_dir_color}")
+        shutil.copytree(source_dir, target_dir, dirs_exist_ok=True)
+        INFO.logger.info(f"复制完成：{source_dir} -> {target_dir}")
     except Exception as e:
-        print(f"复制失败：{e}")
+        ERROR.logger.error(f"复制失败：{e}")
 
 
 def get_color_value_from_xml(file_path, color_name):
@@ -61,7 +62,8 @@ def get_color_value_from_xml(file_path, color_name):
 
     return None
 
-#TODO 会造成color标签的丢失，可以直接替换color文件
+
+# TODO 会造成color标签的丢失，可以直接替换color文件
 def update_colors_in_target_xml(source_color_file, target_color_file):
     # 获取源文件中的两个颜色值
     color_primary = get_color_value_from_xml(source_color_file, "pocstar_colorPrimary")
@@ -89,7 +91,8 @@ def update_colors_in_target_xml(source_color_file, target_color_file):
     target_tree.write(target_color_file, encoding="UTF-8", xml_declaration=True)
     INFO.logger.info(f"Successfully updated the colors in {target_color_file}")
 
-def copy_res(source_dir_color,target_dir_color):
+
+def copy_res(source_dir_color, target_dir_color):
     if not os.path.isfile(source_dir_color):
         raise FileNotFoundError(f"资源文件不存在: {source_dir_color}")
 
@@ -98,6 +101,7 @@ def copy_res(source_dir_color,target_dir_color):
         print(f"复制完成：{source_dir_color} -> {target_dir_color}")
     except Exception as e:
         print(f"复制失败：{e}")
+
 
 def replace_app_name(source_dir, target_dir):
     for root, dirs, files in os.walk(source_dir):

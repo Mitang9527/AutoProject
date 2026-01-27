@@ -96,13 +96,22 @@ def ensure_apktool_installed(jar_path=APKTOOL_JAR):
         INFO.logger.info(" apktool.jar 已存在,正在解压。")
 
 def run_with_live_output(command):
-    process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while True:
         line = process.stdout.readline()
         if not line and process.poll() is not None:
             break
         # if line:
         #     INFO.logger.info(f" {line.strip()}")
+
+        error_line = process.stderr.readline()
+        if error_line:
+            ERROR.logger.error(f"Error:{error_line.strip()}")
+
+        if not error_line and process.poll() is not None:
+            break
+
     return process.returncode
 
 def decompile_apk(apk_path, output_dir="app_out"):

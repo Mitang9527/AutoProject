@@ -4,18 +4,18 @@ import threading
 from functools import partial
 from utils.apktoolUtils.apkUtils import decompile_apk, build_and_sign_apk, file_path, Led_json, input_json, \
     reaction_json, open_folder, folder_path, get_sha1
-from utils.apktoolUtils.changeSkin import exchange_res, source_dir, target_dir, replace_app_name,source_dir_color, target_dir_color
+from utils.apktoolUtils.changeSkin import copy_directory, source_dir, target_dir, replace_app_name
 from utils.apktoolUtils.get_json_data import load_json, save_json
 from utils.customtkinterUtils.customtkinterUtils import CustomApp
 from utils.logUtils.logControl import INFO, ERROR
-from utils.readFilesUtils.extract_all_files import copy_files
+
 
 TEMP_DIR = "app_out"
 DRAWABLE_DIR = os.path.join(TEMP_DIR, "res", "drawable")
 # === 初始化主窗口 ===
 root = CustomApp()
 
-root.title("APKTool_V1.1")
+root.title("APKTool_V1.2")
 
 # === 日志显示框 ===
 log_box = root.textbox
@@ -114,8 +114,8 @@ def build_new_apk():
 
 def change_skin():
     try:
-        exchange_res(source_dir, target_dir)
-        copy_files(source_dir_color, target_dir_color)
+        copy_directory(source_dir, target_dir)
+        # copy_files(source_dir_color, target_dir_color)
         # update_colors_in_target_xml(source_color_file, target_color_file)
         replace_app_name(source_dir, target_dir)
         build_new_apk()
