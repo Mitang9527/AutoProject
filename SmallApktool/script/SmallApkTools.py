@@ -1,6 +1,8 @@
 import os
+import re
 import subprocess
 import json
+from graphlib import TopologicalSorter
 
 
 class SmallApkTools:
@@ -12,29 +14,39 @@ class SmallApkTools:
 
     def start_logcat_capture(self, key_name, key_value=None):
         """
-        动态捕获用户按键的 down/up 事件
+        动态捕获用户按键的 down/up 事件，只匹配 intent action 格式:
+        android.intent.action.<KEY>.down / android.intent.action.<KEY>.up
         """
         print(f"\n请按下 {key_name.upper()} 键...")
         captured_down = captured_up = False
         detected_action_down = detected_action_up = None
 
+        # 避免多余日志干扰
+        subprocess.run(["adb", "-s", device, "logcat", "-c"], check=True, stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE)
+
         cmd = ["adb", "-s", self.device, "logcat"]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                text=True, encoding="utf-8", errors="ignore")
+
+        regex = re.compile(rf"android\.intent\.action\.{key_name}\.(down|up)", re.IGNORECASE)
 
         try:
             for line in proc.stdout:
-                line_lower = line.lower()
-                # 捕获 DOWN
-                if not captured_down and key_name.lower() in line_lower and "down" in line_lower:
-                    detected_action_down = line.strip()
-                    captured_down = True
-                    print(f"{key_name.upper()} DOWN 捕获成功: {detected_action_down}")
+                line_strip = line.strip()
+                match = regex.search(line_strip)
+                if match:
+                    event = match.group(1).lower()
 
-                # 捕获 UP
-                if not captured_up and key_name.lower() in line_lower and "up" in line_lower:
-                    detected_action_up = line.strip()
-                    captured_up = True
-                    print(f"{key_name.upper()} UP 捕获成功: {detected_action_up}")
+                    if event == "down" and not captured_down:
+                        detected_action_down = f"android.intent.action.{key_name.upper()}.down"
+                        captured_down = True
+                        print(f"{key_name.upper()} DOWN 捕获成功: {detected_action_down}")
+
+                    elif event == "up" and not captured_up:
+                        detected_action_up = f"android.intent.action.{key_name.upper()}.up"
+                        captured_up = True
+                        print(f"{key_name.upper()} UP 捕获成功: {detected_action_up}")
 
                 if captured_down and captured_up:
                     break
@@ -42,7 +54,7 @@ class SmallApkTools:
             proc.terminate()
 
         if not (captured_down and captured_up):
-            retry = input("未完全捕获，是否重试? (y/n): ").strip().lower()
+            retry = input(f"{key_name.upper()} 未完全捕获，是否重试? (y/n): ").strip().lower()
             if retry == "y":
                 return self.start_logcat_capture(key_name, key_value)
             else:
@@ -55,14 +67,18 @@ class SmallApkTools:
         self._add_event(f"{key_name}_up", "KEY_UP", key_val, detected_action_up)
         return True
 
+    # TODO待完善ipnut.json的输入
     def _add_event(self, key_name, event_type, key_value, intent_action, as_key=False):
         # stdkey
         if key_name not in self.stdkey:
             self.stdkey[key_name] = {"event": event_type, "key": key_value}
+
+        # TODO需要补充sos的事件
         # action
         if key_name not in self.action:
             cmd_id = "START_SPEAK" if "DOWN" in event_type else "STOP_SPEAK"
             self.action[key_name] = {"default": [{"command": {"id": cmd_id}}]}
+
         # intent
         if key_name not in self.intent:
             self.intent[key_name] = {"action": intent_action}
@@ -130,10 +146,6 @@ def run(device):
             print(f"当前连接设备: {devices if devices else '无设备'}")
 
         elif choice == "2":
-
-            # 避免多余日志干扰
-            subprocess.run(["adb", "-s", device, "logcat", "-c"], check=True, stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
             for key_name, default_key_value in [("ptt", -1), ("sos", -2)]:
                 print(f"\n请按下 {key_name.upper()} 键进行采集...")
                 success = tool.start_logcat_capture(key_name, default_key_value)
