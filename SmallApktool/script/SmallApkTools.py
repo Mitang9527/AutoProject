@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import json
+import time
 from graphlib import TopologicalSorter
 
 
@@ -12,6 +13,7 @@ class SmallApkTools:
         self.action = {}
         self.intent = {}
 
+    # TODO 需要将按键剥离出来逐个获取！
     def start_logcat_capture(self, key_name, key_value=None):
         """
         动态捕获用户按键的 down/up 事件，只匹配 intent action 格式:
@@ -23,6 +25,10 @@ class SmallApkTools:
 
         while not (captured_down and captured_up):
             broadcast_events = self.get_broadcast()
+
+            if broadcast_events is None:
+                return []
+
             for broadcast_event in broadcast_events:
                 print(f"捕获到广播事件: {broadcast_event}")
 
@@ -40,6 +46,7 @@ class SmallApkTools:
                         print(f"{key_name.upper()} UP 捕获成功: {detected_action_up}")
 
         # 捕获成功，添加到内部 JSON 结构
+        # TODO 重新编写逻辑，需要根据选择写入
         key_val = key_value or -1
         self._add_event(f"{key_name}_down", "KEY_DOWN", key_val, detected_action_down)
         self._add_event(f"{key_name}_up", "KEY_UP", key_val, detected_action_up)
@@ -74,8 +81,8 @@ class SmallApkTools:
             json.dump(data, f, indent=2, ensure_ascii=False)
         print(f"\n{filename} 已生成")
 
-    # TODO 需要改进主动关掉进程的方法
-    def get_broadcast(self):
+    # TODO 需要优化主动关掉进程的方法
+    def get_broadcast(self, timeout=5):
         """
         获取并返回匹配的广播事件
         """
@@ -87,12 +94,18 @@ class SmallApkTools:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8', errors='ignore')
 
             broadcast_regex = re.compile(r'(?<=broadcast\s)(.*?)(?=\sfrom\s)')
-            broadcasts = []
+            broadcasts = set()
 
-            max_iterations = 80
+            start_time = time.time()
+            max_iterations = 10000
             iterations = 0
 
             while True:
+                if time.time() - start_time > timeout:
+                    process.terminate()
+                    break
+
+                # 读取每一行日志
                 line = process.stdout.readline()
                 if line == '' and process.poll() is not None:
                     break
@@ -101,17 +114,13 @@ class SmallApkTools:
                     if match:
                         broadcast_event = match.group(0)
                         print(f"Found broadcast: {broadcast_event}")
-                        broadcasts.append(broadcast_event)
+                        broadcasts.add(broadcast_event)
 
                 iterations += 1
                 if iterations >= max_iterations:
-                    print("Reached maximum iterations. Ending loop.")
                     break
 
-            if broadcasts:
-                return broadcasts
-            else:
-                return None
+            return list(broadcasts) if broadcasts else None
 
         except Exception as e:
             print(f"发生错误: {e}")
@@ -167,13 +176,16 @@ def run(device):
             print(f"当前连接设备: {devices if devices else '无设备'}")
 
         elif choice == "2":
+            all_successful = True
             for key_name, default_key_value in [("ptt", -1), ("sos", -2)]:
                 print(f"\n请按下 {key_name.upper()} 键进行采集...")
                 success = tool.start_logcat_capture(key_name, default_key_value)
                 if not success:
                     print(f"{key_name.upper()} 采集未完成，已跳过")
+                    all_successful = False
 
-            tool.save_input_json()
+            if all_successful:
+                tool.save_input_json()
 
         elif choice == "3":
             tool.get_broadcast()
