@@ -21,45 +21,23 @@ class SmallApkTools:
         captured_down = captured_up = False
         detected_action_down = detected_action_up = None
 
-        # 避免多余日志干扰
-        subprocess.run(["adb", "-s", device, "logcat", "-c"], check=True, stdout=subprocess.PIPE,
-                       stderr=subprocess.PIPE)
+        while not (captured_down and captured_up):
+            broadcast_events = self.get_broadcast()
+            for broadcast_event in broadcast_events:
+                print(f"捕获到广播事件: {broadcast_event}")
 
-        cmd = ["adb", "-s", self.device, "logcat"]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                text=True, encoding="utf-8", errors="ignore")
-
-        regex = re.compile(rf"android\.intent\.action\.{key_name}\.(down|up)", re.IGNORECASE)
-
-        try:
-            for line in proc.stdout:
-                line_strip = line.strip()
-                match = regex.search(line_strip)
-                if match:
-                    event = match.group(1).lower()
-
-                    if event == "down" and not captured_down:
-                        detected_action_down = f"android.intent.action.{key_name.upper()}.down"
+                if key_name.lower() in broadcast_event or "down" in broadcast_event:
+                    if not captured_down:
                         captured_down = True
+                        detected_action_down = broadcast_event
                         print(f"{key_name.upper()} DOWN 捕获成功: {detected_action_down}")
 
-                    elif event == "up" and not captured_up:
-                        detected_action_up = f"android.intent.action.{key_name.upper()}.up"
+
+                elif key_name.lower() in broadcast_event or "up" in broadcast_event:
+                    if not captured_up:
                         captured_up = True
+                        detected_action_up = broadcast_event
                         print(f"{key_name.upper()} UP 捕获成功: {detected_action_up}")
-
-                if captured_down and captured_up:
-                    break
-        finally:
-            proc.terminate()
-
-        if not (captured_down and captured_up):
-            retry = input(f"{key_name.upper()} 未完全捕获，是否重试? (y/n): ").strip().lower()
-            if retry == "y":
-                return self.start_logcat_capture(key_name, key_value)
-            else:
-                print(f"{key_name.upper()} 采集取消")
-                return None
 
         # 捕获成功，添加到内部 JSON 结构
         key_val = key_value or -1
@@ -73,7 +51,7 @@ class SmallApkTools:
         if key_name not in self.stdkey:
             self.stdkey[key_name] = {"event": event_type, "key": key_value}
 
-        # TODO需要补充sos的事件
+        # TODO需要补充不需要sos的逻辑处理
         # action
         if key_name not in self.action:
             cmd_id = "START_SPEAK" if "DOWN" in event_type else "STOP_SPEAK"
@@ -96,6 +74,48 @@ class SmallApkTools:
             json.dump(data, f, indent=2, ensure_ascii=False)
         print(f"\n{filename} 已生成")
 
+    # TODO 需要改进主动关掉进程的方法
+    def get_broadcast(self):
+        """
+        获取并返回匹配的广播事件
+        """
+        try:
+            subprocess.run(["adb", "-s", device, "logcat", "-c"], check=True, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+
+            cmd = ['adb', 'logcat', '-v', 'time', '*:D', '|', 'grep', 'Broadcast']
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8', errors='ignore')
+
+            broadcast_regex = re.compile(r'(?<=broadcast\s)(.*?)(?=\sfrom\s)')
+            broadcasts = []
+
+            max_iterations = 80
+            iterations = 0
+
+            while True:
+                line = process.stdout.readline()
+                if line == '' and process.poll() is not None:
+                    break
+                if line:
+                    match = broadcast_regex.search(line)
+                    if match:
+                        broadcast_event = match.group(0)
+                        print(f"Found broadcast: {broadcast_event}")
+                        broadcasts.append(broadcast_event)
+
+                iterations += 1
+                if iterations >= max_iterations:
+                    print("Reached maximum iterations. Ending loop.")
+                    break
+
+            if broadcasts:
+                return broadcasts
+            else:
+                return None
+
+        except Exception as e:
+            print(f"发生错误: {e}")
+            return None
 
 # ==================== 辅助函数 ====================
 
@@ -138,6 +158,7 @@ def run(device):
         print("\n请选择操作：")
         print("1: 刷新设备状态")
         print("2: 开始日志采集")
+        print("3: 开始广播测试")
         print("q: 退出")
         choice = input("输入你的选择: ").strip().lower()
 
@@ -153,6 +174,10 @@ def run(device):
                     print(f"{key_name.upper()} 采集未完成，已跳过")
 
             tool.save_input_json()
+
+        elif choice == "3":
+            tool.get_broadcast()
+
 
         elif choice == "q":
             break

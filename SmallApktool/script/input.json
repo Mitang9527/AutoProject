@@ -58,16 +58,16 @@
   },
   "intent": {
     "ptt_down": {
-      "action": "02-02 22:33:11.041  2952  2952 I appproc : app_process main with argv: /system/bin com.android.commands.input.Input broadcast -a pttdown"
+      "action": "com.android.cusKey.f8.down"
     },
     "ptt_up": {
-      "action": "02-02 22:33:18.844  2972  2972 I appproc : app_process main with argv: /system/bin com.android.commands.input.Input broadcast -a pttup"
+      "action": "com.android.cusKey.f8.up"
     },
     "sos_down": {
-      "action": "02-02 22:33:28.234  2985  2985 I appproc : app_process main with argv: /system/bin com.android.commands.input.Input broadcast -a sosdown"
+      "action": "com.android.cusKey.f2.down"
     },
     "sos_up": {
-      "action": "02-02 22:33:14.844  2962  2962 I appproc : app_process main with argv: /system/bin com.android.commands.input.Input broadcast -a sosup"
+      "action": "com.android.cusKey.f2.up"
     }
   }
 }
