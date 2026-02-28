@@ -242,10 +242,18 @@ class SmartKeyBackend:
     def _generate_standard_config(self, suffix: str, key_type: str, action_str: str, virtual_key: int, is_many: bool):
         result = {"stdkey": {}, "action": {}, "intent": {}}
 
+        result = {"stdkey": {}, "action": {}, "intent": {}}
+
+        # TODO sos格式应该只保留一个，每一个sos后面的虚拟key应该保持一致
         if key_type.lower() == "sos":
             current_sos_key = virtual_key
 
-            # 【改动点 1】推导 up 广播，适配不同命名风格
+            # 生成唯一的键名 (带时间戳后缀)
+            base_name = f"sos"
+            down_name = f"down_sos_{suffix}"
+            up_name = f"up_sos_{suffix}"
+
+            # 推导 up action 字符串
             if action_str.endswith(".down"):
                 up_action_str = action_str[:-5] + ".up"
             elif action_str.endswith("_down"):
@@ -253,56 +261,42 @@ class SmartKeyBackend:
             elif "DOWN" in action_str:
                 up_action_str = action_str.replace("DOWN", "UP")
             else:
-                # 如果是长按广播 (longpress)，通常没有对应的 up，复用当前广播
                 up_action_str = action_str
 
-                # 【改动点 2】生成组内 Key 完全一致的 stdkey (sos, down_sos, up_sos)
+            # 1. stdkey: 定义按键行为
+            # base_name 用于长按逻辑，down/up_name 用于短按逻辑
             result["stdkey"] = {
-                "sos": {
-                    "key": current_sos_key,
+                base_name: {
+                    "key": current_sos_key,          # 这里保持业务逻辑，标记为 sos 类型
                     "event": "KEY_LONG_PRESS",
                     "time": 3000
                 },
-                "down_sos": {
-                    "key": current_sos_key,
+                down_name: {
+                    "key": current_sos_key, # 关联生成的虚拟键值 (如 -1000)
                     "event": "KEY_DOWN"
                 },
-                "up_sos": {
-                    "key": current_sos_key,
+                up_name: {
+                    "key": current_sos_key, # 关联生成的虚拟键值 (如 -1000)
                     "event": "KEY_UP"
                 }
             }
 
-            # 【改动点 3】写入 TRIGGER_SOS 命令
-            # result["action"] = {
-            #     "sos": {
-            #         "default": [{"command": {"id": "TRIGGER_SOS"}}],
-            #         "member": [],
-            #         "new_call_in": []
-            #     },
-            #     "down_sos": {
-            #         "default": [{"command": {"id": "TRIGGER_SOS"}}],
-            #         "member": [],
-            #         "new_call_in": []
-            #     },
-            #     "up_sos": {
-            #         "default": [],
-            #         "member": [],
-            #         "new_call_in": []
-            #     }
-            # }
+            # 2. action: 留空，由用户手动配置具体命令
+            result["action"] = {}
 
-            # 【改动点 4】关键：自动填入捕获到的广播到 intent，并标记 as_key=true (不再留空)
+            # 3. intent: 【关键修复】这里必须存储原始的广播字符串 (action_str)
+            # 这样系统才知道监听哪个广播来触发对应的虚拟键值
             result["intent"] = {
-                "down_sos": {
-                    "action": action_str,
+                down_name: {
+                    "action": action_str,      # ✅ 修正：存储原始广播，如 "com.xxx.SOS_DOWN"
                     "as_key": True
                 },
-                "up_sos": {
-                    "action": up_action_str,
+                up_name: {
+                    "action": up_action_str,   # ✅ 修正：存储原始广播，如 "com.xxx.SOS_UP"
                     "as_key": True
                 }
             }
+
 
         else:
             # === PTT 逻辑 (保持原样，完全不动) ===
@@ -351,120 +345,119 @@ class SmartKeyBackend:
         return result
 
     def _reader_thread(self, key_type: str):
-        re_broadcast = re.compile(r"Sending.*broadcast\s+([\w\.]+)\s+from")
+        # 【改动点 1】定义两个正则，兼容两种日志格式
+        # 格式 1: 标准 Android Broadcast (例如: Sending broadcast com.example.ACTION from ...)
+        re_standard = re.compile(r"Sending.*broadcast\s+([\w\.]+)\s+from")
+
+        # 格式 2: EasyTalk 特殊格式 (例如: sendEasytalkBroadCast action=com.ecom.intent.action.PTT_BUTTON_DOWN)
+        re_easytalk = re.compile(r"sendEasytalkBroadCast\s+action\s*=\s*(\S+)")
+
+        # 提取 KeyCode 的正则 (两种格式都可能包含)
         re_keycode = re.compile(r"keyCode=(\d+)")
+
         last_process_time = 0
         is_many_mode = (key_type.lower() == "ptt")
         mode_name = "防抖模式 (PTT)" if is_many_mode else "标准模式 (SOS)"
 
-        self.log_callback(f"\n--- 启动监听 (自动保存已启用): {key_type.upper()} ({mode_name}) ---\n")
+        self.log_callback(f"\n--- 启动监听 (模式：{mode_name}) ---\n")
+        self.log_callback("[Tip] 兼容模式：同时监听 'Sending broadcast' 和 'sendEasytalkBroadCast action='.\n")
 
         if self._clear_logcat():
             self.log_callback("[Info] 日志缓冲区已清空。\n")
-        else:
-            self.log_callback("[Warning] 清除日志失败，继续监听。\n")
 
         try:
             kwargs = {
-                "stdout": subprocess.PIPE,
-                "stderr": subprocess.PIPE,
-                "text": True,
-                "bufsize": 1,
-                "encoding": 'utf-8',
-                "errors": 'ignore'
+                "stdout": subprocess.PIPE, "stderr": subprocess.PIPE,
+                "text": True, "bufsize": 1, "encoding": 'utf-8', "errors": 'ignore'
             }
             if platform.system() == "Windows":
                 kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
 
-            cmd = [
-                "adb", "-s", self.device, "logcat", "-v", "time",
-                "ActivityManager:I", "InputReader:I", "*:S"
-            ]
-
+            cmd = ["adb", "-s", self.device, "logcat", "-v", "time", "*:S", "ActivityManager:I"]
             self.process = subprocess.Popen(cmd, **kwargs)
             self.is_running = True
 
             while not self.stop_event.is_set():
-                if self.process.poll() is not None:
-                    break
+                if self.process.poll() is not None: break
                 line = self.process.stdout.readline()
-                if not line:
-                    break
-                if self.stop_event.is_set():
-                    break
+                if not line or self.stop_event.is_set(): break
 
-                match_b = re_broadcast.search(line)
-                if not match_b:
+                action_str = None
+
+                # 【改动点 2】优先匹配 EasyTalk 格式，再匹配标准格式
+                match_et = re_easytalk.search(line)
+                if match_et:
+                    action_str = match_et.group(1)  # 提取 = 后面的内容
+                else:
+                    match_std = re_standard.search(line)
+                    if match_std:
+                        action_str = match_std.group(1)
+
+                # 如果两种都没匹配到，跳过此行
+                if not action_str:
                     continue
 
-                action_str = match_b.group(1)
                 current_time = time.time()
 
+                # 防抖处理
                 if current_time - last_process_time < DEBOUNCE_SECONDS:
                     continue
 
+                # 去重检查
                 if action_str in self.existing_actions:
                     self.skip_count += 1
                     if self.skip_count % SKIP_FEEDBACK_INTERVAL == 0:
-                        self.log_callback(f"[Skip] Action '{action_str}' 已存在 (累计跳过 {self.skip_count} 次)\n")
+                        self.log_callback(f"[Skip] Action '{action_str}' 已存在。\n")
                     continue
 
                 last_process_time = current_time
                 self.skip_count = 0
+
+                # 提取 KeyCode (可选)
                 match_k = re_keycode.search(line)
                 code_info = f" (KeyCode: {match_k.group(1)})" if match_k else ""
 
-                msg = f"\n[NEW] 发现新 Action: {action_str}{code_info}\n[MODE] 类型：{key_type.upper()} -> {mode_name}\n"
-                self.log_callback(msg)
+                self.log_callback(f"\n[NEW] 捕获 Action: {action_str}{code_info}\n")
 
                 timestamp_suffix = datetime.now().strftime("%Y%m%d%H%M%S")
                 new_virtual_code = -1000
                 while new_virtual_code in self.existing_codes:
                     new_virtual_code -= 1
 
+                # 调用生成配置方法 (SOS 模式下 intent 返回空，PTT 模式下自动填入)
                 new_entries = self._generate_standard_config(
-                    timestamp_suffix, key_type, action_str, new_virtual_code,
-                    is_many=is_many_mode
+                    timestamp_suffix, key_type, action_str, new_virtual_code, is_many=is_many_mode
                 )
 
                 self.data["stdkey"].update(new_entries["stdkey"])
                 self.data["action"].update(new_entries["action"])
-                # 只有当 intent 不为空时才更新 (针对 SOS 情况，intent 为空则不覆盖)
+
+                # 只有当 intent 不为空时才更新 (SOS 模式下 intent 为空，不会覆盖原有配置)
                 if new_entries["intent"]:
                     self.data["intent"].update(new_entries["intent"])
-
-                # 对于 SOS，虽然不更新 action 字符串，但我们需要记录这个 key 已被使用，防止重复
-                # 如果 intent 为空，我们手动将生成的 key 加入 existing_codes (上面已经做了)
-                # 如果需要防止相同的 action_str 被重复处理，existing_actions 逻辑依然有效
 
                 self.existing_actions.add(action_str)
                 self.existing_codes.add(new_virtual_code)
 
-                # 日志提示
                 created_keys = list(new_entries['stdkey'].keys())
-                if created_keys:
-                    self.log_callback(f"[OK] 已收录键位定义：{', '.join(created_keys)} (Key: {new_virtual_code})\n")
-                    if key_type.lower() == "sos":
-                        self.log_callback("[Note] SOS 的 Intent Action 未自动填充，请手动在 input.json 中配置。\n")
-                else:
-                    self.log_callback("[OK] 配置已更新。\n")
+                self.log_callback(f"[OK] 已生成键位：{', '.join(created_keys)} (Key: {new_virtual_code})\n")
+
+                if key_type.lower() == "sos":
+                    self.log_callback(
+                        f"[Note] SOS 模式：Intent 未自动写入。请手动在 input.json 中将 '{action_str}' 关联到 Key {new_virtual_code}。\n")
 
                 if self.save_config(silent=True):
-                    self.log_callback(f"[Auto-Save] ✅ 配置已自动写入 input.json\n")
-                    if self.config_callback:
-                        self.config_callback()
-                else:
-                    self.log_callback(f"[Auto-Save] ❌ 自动保存失败！\n")
+                    self.log_callback("[Auto-Save] ✅ 配置已保存。\n")
+                    if self.config_callback: self.config_callback()
                 self.log_callback("\n")
 
         except Exception as e:
             if not self.stop_event.is_set():
-                self.log_callback(f"\n[Error] 监听线程异常：{e}\n")
+                self.log_callback(f"\n[Error] 监听异常：{e}\n")
         finally:
             self._kill_process()
             self.is_running = False
             self.log_callback("\n[Info] 监听已停止。\n")
-
     def start_capture(self, key_type: str):
         if self.is_running:
             self.log_callback("[Warning] 监听已在运行中。\n")
