@@ -60,7 +60,7 @@ def is_java_installed():
         return False
 
 def prompt_java_installation():
-    print(" 未检测到 Java 安装。")
+    print(" 未检测到 JDK 安装。")
     print("请先安装 Java Runtime Environment (JRE) 或 Java Development Kit (JDK)。")
     print(" 官方下载地址：https://www.oracle.com/java/technologies/javase-downloads.html")
     sys.exit(1)
