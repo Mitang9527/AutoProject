@@ -1,4 +1,3 @@
-import logging
 import re
 import subprocess
 import json
@@ -13,11 +12,14 @@ from datetime import datetime
 from typing import Optional, Set
 import customtkinter as ctk
 from tkinter import messagebox
-from utils.logUtils.loguruControl import logger
 
+# ======================================
+TEMP_DIR = "app_out"
+
+APKTOOL_JAR = "apktool.jar"
 
 # ==================== 配置常量 ====================
-JSON_FILE = "input.json"
+JSON_FILE = "../../Test7788/input.json"
 
 DEFAULT_CUSTOM_LIST = [
     "join_next_group",
@@ -423,7 +425,6 @@ class SmartKeyBackend:
                 created_keys = list(new_entries['stdkey'].keys())
                 self.log_callback(f"[OK] 已生成键位：{', '.join(created_keys)} (Key: {new_virtual_code})\n")
 
-
                 if self.save_config(silent=True):
                     self.log_callback("[Auto-Save] ✅ 配置已保存。\n")
                     if self.config_callback: self.config_callback()
@@ -474,7 +475,7 @@ class App(ctk.CTk):
         # === 侧边栏 ===
         self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(10, weight=1)
+        self.sidebar_frame.grid_rowconfigure(100, weight=1)
 
         self.logo_label = ctk.CTkLabel(
             self.sidebar_frame,
@@ -528,7 +529,47 @@ class App(ctk.CTk):
             fg_color="gray",
             command=self.clear_log
         )
-        self.clear_log_btn.grid(row=9, column=0, padx=20, pady=10)
+        self.clear_log_btn.grid(row=8, column=0, padx=20, pady=10)
+
+        self.mode_label = ctk.CTkLabel(self.sidebar_frame, text="apk选择:", anchor="w")
+        self.mode_label.grid(row=9, column=0, padx=20, pady=(5, 0))
+
+        # 大小屏选择打包
+        self.apk_type_seg = ctk.CTkSegmentedButton(
+            self.sidebar_frame,
+            values=["大屏", "小屏"],
+            command=self.on_apk_type_change,
+            height=25,
+            fg_color="#3498db",
+            selected_color="green",
+            unselected_color="gray"
+        )
+        self.apk_type_seg.grid(row=10, column=0, padx=20, pady=(0, 10), sticky="ew")
+        self.apk_type_seg.set("大屏")
+
+        self.build_apk_btn = ctk.CTkButton(
+            self.sidebar_frame,
+            text="打包 APK",
+            command=self.build_apk,
+        )
+        self.build_apk_btn.grid(row=11, column=0, padx=20, pady=10)
+
+        # # 创建开关控件
+        # self.switch_var = ctk.StringVar(value="off")  # 初始化状态
+        #
+        # self.switch = ctk.CTkSwitch(
+        #     self.sidebar_frame,
+        #     text="启用监听",
+        #     variable=self.switch_var,
+        #     onvalue="on",
+        #     offvalue="off",
+        #     command=self.clear_log,
+        #     fg_color="#3498db",  # 开关背景色
+        #     progress_color="#2c3e50",  # 滑动条颜色
+        #     button_color="#ecf0f1",  # 按钮颜色
+        #     button_hover_color="#bdc3c7"  # 悬停颜色
+        # )
+        # self.switch.grid(row=11, column=0, padx=20, pady=10, sticky="w")
 
         self.status_label = ctk.CTkLabel(
             self.sidebar_frame,
@@ -536,7 +577,7 @@ class App(ctk.CTk):
             anchor="w",
             text_color="gray"
         )
-        self.status_label.grid(row=10, column=0, padx=20, pady=(0, 20), sticky="s")
+        self.status_label.grid(row=100, column=0, padx=20, pady=(0, 20), sticky="s")
 
         # === 主内容区 ===
         self.tabview = ctk.CTkTabview(self)
@@ -811,6 +852,87 @@ class App(ctk.CTk):
             self.backend.stop_capture()
         time.sleep(0.5)
         self.destroy()
+
+    def on_apk_type_change(self, value):
+        """当APK类型切换时调用"""
+        self.log_callback(f"APK类型已切换为: {value}")
+        # 这里可以更新状态，或者为后续解压操作准备
+        self.status_label.configure(text=f"状态：已选择 {value} APK")
+
+    # ---------------apktools 处理-----------------
+
+    def run_with_live_output(self, command):
+        process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            if line:
+                print(f" {line.strip()}")
+
+            error_line = process.stderr.readline()
+            if error_line:
+                print(f"Error:{error_line.strip()}")
+
+            if not error_line and process.poll() is not None:
+                break
+
+        return process.returncode
+
+    def decompile_apk(self, apk_path, output_dir="app_out"):
+
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir, ignore_errors=True)
+
+        command = ["java", "-jar", APKTOOL_JAR, "d", apk_path, "-s", "-o", output_dir]
+
+        exit_code = self.run_with_live_output(command)
+
+        if exit_code == 0:
+            print(f"成功：输出目录 {output_dir}")
+            return True
+        else:
+            print(" 失败：apktool 或 Java 问题")
+            return False
+
+    def choose_apk(self, apk_path):
+
+        def task():
+            success = self.decompile_apk(apk_path, TEMP_DIR)
+            if success:
+                print("APK 解包完成")
+            else:
+                print("解包失败")
+
+        threading.Thread(target=task, daemon=True).start()
+
+    # TODO 需要加上日志回调
+    def build_apk(self):
+        apk_type = self.apk_type_seg.get()
+        print(apk_type)
+        if apk_type == "大屏":
+            apk_path = "LargeApp.apk"
+        else:  # 小屏
+            apk_path = "SmallApp.apk"
+
+        self.choose_apk(apk_path)
+
+        # output_path = "app.apk"
+        #
+        # def task():
+        #     try:
+        #         self.log_callback("正在打包...")
+        #
+        #         self.build_and_sign_apk(TEMP_DIR, output_path)
+        #
+        #     except Exception as e:
+        #         self.log_callback(f"异常：{e}")
+        #
+        # threading.Thread(target=task, daemon=True).start()
+
+    def build_and_sign_apk(self, TEMP_DIR, output_path):
+        pass
 
 
 if __name__ == "__main__":
