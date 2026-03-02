@@ -1,3 +1,4 @@
+import logging
 import re
 import subprocess
 import json
@@ -12,6 +13,8 @@ from datetime import datetime
 from typing import Optional, Set
 import customtkinter as ctk
 from tkinter import messagebox
+from utils.logUtils.loguruControl import logger
+
 
 # ==================== 配置常量 ====================
 JSON_FILE = "input.json"
@@ -38,6 +41,7 @@ def check_command(cmd):
     """检查命令是否在系统 PATH 中"""
     return shutil.which(cmd) is not None
 
+
 def is_adb_installed():
     """检测 ADB 是否安装且可运行"""
     if not check_command("adb"):
@@ -52,6 +56,7 @@ def is_adb_installed():
         return result.returncode == 0
     except Exception:
         return False
+
 
 def is_java_installed():
     """检测 Java 是否安装且可运行"""
@@ -242,64 +247,44 @@ class SmartKeyBackend:
     def _generate_standard_config(self, suffix: str, key_type: str, action_str: str, virtual_key: int, is_many: bool):
         result = {"stdkey": {}, "action": {}, "intent": {}}
 
-        result = {"stdkey": {}, "action": {}, "intent": {}}
-
         # TODO sos格式应该只保留一个，每一个sos后面的虚拟key应该保持一致
         if key_type.lower() == "sos":
             current_sos_key = virtual_key
 
-            # 生成唯一的键名 (带时间戳后缀)
-            base_name = f"sos"
-            down_name = f"down_sos_{suffix}"
-            up_name = f"up_sos_{suffix}"
+            base_name = f"sos_{suffix}"
 
-            # 推导 up action 字符串
-            if action_str.endswith(".down"):
-                up_action_str = action_str[:-5] + ".up"
-            elif action_str.endswith("_down"):
-                up_action_str = action_str[:-5] + "_up"
-            elif "DOWN" in action_str:
-                up_action_str = action_str.replace("DOWN", "UP")
-            else:
-                up_action_str = action_str
+            # # # 推导 up action 字符串
+            # if action_str.endswith(".down"):
+            #     up_action_str = action_str[:-5] + ".up"
+            # elif action_str.endswith("_down"):
+            #     up_action_str = action_str[:-5] + "_up"
+            # elif "DOWN" in action_str:
+            #     up_action_str = action_str.replace("DOWN", "UP")
+            # else:
+            #     up_action_str = action_str
 
             # 1. stdkey: 定义按键行为
             # base_name 用于长按逻辑，down/up_name 用于短按逻辑
             result["stdkey"] = {
                 base_name: {
-                    "key": current_sos_key,          # 这里保持业务逻辑，标记为 sos 类型
-                    "event": "KEY_LONG_PRESS",
+                    "key": current_sos_key,
+                    "event": "KEY_CLICK",
                     "time": 3000
-                },
-                down_name: {
-                    "key": current_sos_key, # 关联生成的虚拟键值 (如 -1000)
-                    "event": "KEY_DOWN"
-                },
-                up_name: {
-                    "key": current_sos_key, # 关联生成的虚拟键值 (如 -1000)
-                    "event": "KEY_UP"
                 }
             }
 
-            # 2. action: 留空，由用户手动配置具体命令
+            # 2. action: 留空
             result["action"] = {}
 
-            # 3. intent: 【关键修复】这里必须存储原始的广播字符串 (action_str)
-            # 这样系统才知道监听哪个广播来触发对应的虚拟键值
+            # 3.intent :保留存取的广播
             result["intent"] = {
-                down_name: {
-                    "action": action_str,      # ✅ 修正：存储原始广播，如 "com.xxx.SOS_DOWN"
-                    "as_key": True
-                },
-                up_name: {
-                    "action": up_action_str,   # ✅ 修正：存储原始广播，如 "com.xxx.SOS_UP"
-                    "as_key": True
+                base_name: {
+                    "action": action_str
                 }
             }
 
-
         else:
-            # === PTT 逻辑 (保持原样，完全不动) ===
+            # === PTT 逻辑  ===
             prefix = "ptt" if key_type.lower() == "ptt" else "sos"
             down_name = f"many_{prefix}_down_{suffix}" if is_many else f"{prefix}_down_{suffix}"
             up_name = f"{prefix}_up_{suffix}"
@@ -345,7 +330,6 @@ class SmartKeyBackend:
         return result
 
     def _reader_thread(self, key_type: str):
-        # 【改动点 1】定义两个正则，兼容两种日志格式
         # 格式 1: 标准 Android Broadcast (例如: Sending broadcast com.example.ACTION from ...)
         re_standard = re.compile(r"Sending.*broadcast\s+([\w\.]+)\s+from")
 
@@ -360,7 +344,6 @@ class SmartKeyBackend:
         mode_name = "防抖模式 (PTT)" if is_many_mode else "标准模式 (SOS)"
 
         self.log_callback(f"\n--- 启动监听 (模式：{mode_name}) ---\n")
-        self.log_callback("[Tip] 兼容模式：同时监听 'Sending broadcast' 和 'sendEasytalkBroadCast action='.\n")
 
         if self._clear_logcat():
             self.log_callback("[Info] 日志缓冲区已清空。\n")
@@ -384,7 +367,6 @@ class SmartKeyBackend:
 
                 action_str = None
 
-                # 【改动点 2】优先匹配 EasyTalk 格式，再匹配标准格式
                 match_et = re_easytalk.search(line)
                 if match_et:
                     action_str = match_et.group(1)  # 提取 = 后面的内容
@@ -413,7 +395,6 @@ class SmartKeyBackend:
                 last_process_time = current_time
                 self.skip_count = 0
 
-                # 提取 KeyCode (可选)
                 match_k = re_keycode.search(line)
                 code_info = f" (KeyCode: {match_k.group(1)})" if match_k else ""
 
@@ -442,9 +423,6 @@ class SmartKeyBackend:
                 created_keys = list(new_entries['stdkey'].keys())
                 self.log_callback(f"[OK] 已生成键位：{', '.join(created_keys)} (Key: {new_virtual_code})\n")
 
-                if key_type.lower() == "sos":
-                    self.log_callback(
-                        f"[Note] SOS 模式：Intent 未自动写入。请手动在 input.json 中将 '{action_str}' 关联到 Key {new_virtual_code}。\n")
 
                 if self.save_config(silent=True):
                     self.log_callback("[Auto-Save] ✅ 配置已保存。\n")
@@ -458,6 +436,7 @@ class SmartKeyBackend:
             self._kill_process()
             self.is_running = False
             self.log_callback("\n[Info] 监听已停止。\n")
+
     def start_capture(self, key_type: str):
         if self.is_running:
             self.log_callback("[Warning] 监听已在运行中。\n")
@@ -478,7 +457,7 @@ class SmartKeyBackend:
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("SmartKey Configurator")
+        self.title("App Adaptation_1.0")
         self.geometry("1200x700")
 
         self.backend: Optional[SmartKeyBackend] = None
@@ -499,7 +478,7 @@ class App(ctk.CTk):
 
         self.logo_label = ctk.CTkLabel(
             self.sidebar_frame,
-            text="SmartKey\nConfigurator",
+            text="App\nAdaptation",
             font=ctk.CTkFont(size=20, weight="bold")
         )
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
@@ -655,7 +634,8 @@ class App(ctk.CTk):
         if selection not in ["未检测到设备", "ADB 错误"]:
             self.current_device = selection
         self.status_label.configure(
-            text=f"状态：已切换至 {selection}",
+            text=f"状态：已切换\n"
+                 f"{selection}",
             text_color="green"
         )
 
