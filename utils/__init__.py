@@ -2,6 +2,8 @@ from utils.readFilesUtils.yamlControl import GetYamlData
 from common.setting import ensure_path_sep
 from utils.otherUtils.models import Config
 import sys
+from utils.logUtils.loguruControl import LogManager
+from loguru import logger
 
 args = sys.argv
 config_name = "config.yaml"
@@ -13,6 +15,7 @@ print(f">>>>>>>>>>>>> load config file: {config_name} >>>>>>>>>>>>>>")
 # 加载配置文件
 yaml_data = GetYamlData(ensure_path_sep("\\common\\" + config_name)).get_yaml_data()
 config = Config(**yaml_data)
+LogManager(level="INFO")
 
 # # 获取服务器列表并实例化 SSHClient
 # clients_config = yaml_data.get('ConnectClient', [])

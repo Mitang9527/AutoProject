@@ -6,7 +6,7 @@ from datetime import date, timedelta, datetime
 from faker import Faker
 from jsonpath import jsonpath
 
-from utils.logUtils.logControl import ERROR
+# from utils.logUtils.logControl import ERROR
 
 
 class Context:
@@ -195,7 +195,7 @@ def regular(target):
         return target
 
     except AttributeError:
-        ERROR.logger.error("未找到对应的替换的数据, 请检查数据是否正确 %s", target)
+        # ERROR.logger.error("未找到对应的替换的数据, 请检查数据是否正确 %s", target)
         raise
 
 

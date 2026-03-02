@@ -3,7 +3,7 @@ from typing import Text
 from datetime import datetime, timedelta
 
 
-def count_milliseconds():
+def count_milliseconds(access_start, access_end):
     """
     计算时间
     :return:
@@ -12,6 +12,13 @@ def count_milliseconds():
     access_end = datetime.now()
     access_delta = (access_end - access_start).seconds * 1000
     return access_delta
+
+def timestamp():
+    """
+    返回时间戳
+    """
+    timestamp_ms = int(time.time() * 1000)
+    return timestamp_ms
 
 def timestamp_conversion(time_str: Text) -> int:
     """
@@ -104,5 +111,3 @@ def timeit(func):
         print(f"{func.__name__}耗时: {end_time - start_time}.3f")
         return result
     return wrapper
-
-
