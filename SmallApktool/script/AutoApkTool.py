@@ -901,6 +901,8 @@ class App(ctk.CTk):
 
     def build_apk(self) -> None:
         """主打包入口"""
+        output_dir: str = "app_out"
+
         apk_type = self.apk_type_seg.get()
         self.current_apk_type = apk_type
 
@@ -996,6 +998,8 @@ class App(ctk.CTk):
 
                 self.append_log(f"\n[SUCCESS] ✅ 打包完成!\n文件位置：{output_apk_path}\n")
                 self.status_label.configure(text="状态：打包成功", text_color="green")
+                # 删除app_out文件夹
+                shutil.rmtree(output_dir, ignore_errors=True)
                 messagebox.showinfo("成功", f"APK 打包成功！\n保存在：{output_apk_path}")
 
             except Exception as e:
@@ -1084,7 +1088,6 @@ class App(ctk.CTk):
             version_info = self.get_field_value_from_yml(yml_path, "versionInfo")
             version_name = version_info.get("versionName") if version_info else "unknown"
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            # return f"APP_{version_name}_{timestamp}.apk"
             return f"APP_test_{timestamp}.apk"
         except Exception:
             return f"APP_{datetime.now().strftime('%Y%m%d%H%M%S')}.apk"
