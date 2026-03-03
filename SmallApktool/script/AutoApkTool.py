@@ -104,9 +104,11 @@ def show_env_error_dialog(parent: ctk.CTk, missing_list: List[str]) -> None:
     """显示环境缺失的弹窗"""
     msg = "系统环境检查未通过，缺少以下组件：\n\n"
     if "ADB" in missing_list:
-        msg += "❌ ADB (Android Debug Bridge)\n   解决：下载 'Platform Tools' 并添加到 PATH。\n"
+        msg += "❌ ADB (Android Debug Bridge)\n   " \
+               "解决：解压Env中的ADB压缩包并进行安装，设置系统变量。\n"
     if "JAVA" in missing_list:
-        msg += "❌ Java (JDK/JRE)\n   解决：安装 JDK 17+ 并配置 JAVA_HOME。\n"
+        msg += "❌ Java (JDK/JRE)\n   " \
+               "解决：解压Env中的JDK压缩包并进行安装\n"
     msg += "\n请安装缺失组件后点击【重试检测】。"
 
     dialog = ctk.CTkToplevel(parent)
