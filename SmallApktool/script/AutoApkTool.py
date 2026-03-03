@@ -1,50 +1,74 @@
+# -*- coding: utf-8 -*-
+import os
 import re
 import subprocess
-import json
-import os
-import time
-import platform
-import queue
-import threading
 import sys
+import json
+import time
+import queue
 import shutil
+import platform
+import threading
+import traceback
 from datetime import datetime
-from typing import Optional, Set
+from pathlib import Path
+from typing import Optional, Set, List, Any, Dict
+
 import customtkinter as ctk
 from tkinter import messagebox
+from ruamel.yaml import YAML
+from ruamel.yaml.constructor import ConstructorError
 
-# ======================================
+# ==================== 全局配置常量 ====================
+
+# 路径配置
+PROJECT_PATH = Path(os.getcwd())
+JSON_FILE = "input.json"
 TEMP_DIR = "app_out"
-
 APKTOOL_JAR = "apktool.jar"
 
-# ==================== 配置常量 ====================
-JSON_FILE = "../../Test7788/input.json"
+# 关键文件路径
+PATH_YML = PROJECT_PATH / "app_out" / "apktool.yml"
+PATH_SLCLIENT_JSON = PROJECT_PATH / "app_out" / "assets" / "slclient.json"
+PATH_INPUT_JSON_SRC = "input.json"
+PATH_INPUT_JSON_DST = PROJECT_PATH / "app_out" / "assets" / "slclient" / "input.json"
 
+# 签名配置
+KEYSTORE_BIG = PROJECT_PATH / "cert" / "shanli.jks"
+KEYSTORE_SMALL = PROJECT_PATH / "cert" / "shanlitech.keystore"
+
+KEYSTORE_CONFIG = {
+    "large": {"path": KEYSTORE_BIG, "password": "123456"},
+    "middle": {"path": KEYSTORE_BIG, "password": "123456"},
+    "small": {"path": KEYSTORE_SMALL, "password": "Lgsj829517"},
+}
+
+# 工具链路径
+ZIPALIGN_EXE = PROJECT_PATH / "win" / "zipalign.exe"
+APKSIGNER_BAT = PROJECT_PATH / "win" / "apksigner.bat"
+
+# 业务常量
+LAUNCHER_MODULE_PATH = ["ui", "launcherModule"]
 DEFAULT_CUSTOM_LIST = [
-    "join_next_group",
-    "switch_group_name_tts",
-    "switch_group_click",
-    "join_prev_group",
-    "new_call_in"
+    "join_next_group", "switch_group_name_tts", "switch_group_click",
+    "join_prev_group", "new_call_in"
 ]
-
 SKIP_FEEDBACK_INTERVAL = 5
-
 DEBOUNCE_SECONDS = 1.5
 
+# UI 初始化
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
 
-# ==================== 环境检测模块 ====================
+# ==================== 环境检测工具函数 ====================
 
-def check_command(cmd):
+def check_command(cmd: str) -> bool:
     """检查命令是否在系统 PATH 中"""
     return shutil.which(cmd) is not None
 
 
-def is_adb_installed():
+def is_adb_installed() -> bool:
     """检测 ADB 是否安装且可运行"""
     if not check_command("adb"):
         return False
@@ -60,7 +84,7 @@ def is_adb_installed():
         return False
 
 
-def is_java_installed():
+def is_java_installed() -> bool:
     """检测 Java 是否安装且可运行"""
     if not check_command("java"):
         return False
@@ -76,22 +100,14 @@ def is_java_installed():
         return False
 
 
-def show_env_error_dialog(parent, missing_list):
+def show_env_error_dialog(parent: ctk.CTk, missing_list: List[str]) -> None:
     """显示环境缺失的弹窗"""
     msg = "系统环境检查未通过，缺少以下组件：\n\n"
-
     if "ADB" in missing_list:
-        msg += "❌ ADB (Android Debug Bridge)\n"
-        msg += "   用途：与安卓设备通信。\n"
-        msg += "   解决：下载 'Platform Tools' 并添加到 PATH 环境变量。\n"
-
+        msg += "❌ ADB (Android Debug Bridge)\n   解决：下载 'Platform Tools' 并添加到 PATH。\n"
     if "JAVA" in missing_list:
-        msg += "❌ Java (JDK/JRE)\n"
-        msg += "   用途：运行部分 Java 工具链。\n"
-        msg += "   解决：安装 JDK 17+ 并配置 JAVA_HOME。\n"
-        msg += "   链接：https://adoptium.net/\n\n"
-
-    msg += "请安装缺失组件后点击【重试检测】。"
+        msg += "❌ Java (JDK/JRE)\n   解决：安装 JDK 17+ 并配置 JAVA_HOME。\n"
+    msg += "\n请安装缺失组件后点击【重试检测】。"
 
     dialog = ctk.CTkToplevel(parent)
     dialog.title("环境缺失警告")
@@ -114,21 +130,17 @@ def show_env_error_dialog(parent, missing_list):
         parent.quit()
         sys.exit(0)
 
-    btn_retry = ctk.CTkButton(btn_frame, text="重试检测", command=on_retry, fg_color="green")
-    btn_retry.pack(side="left", padx=10)
-
-    btn_exit = ctk.CTkButton(btn_frame, text="退出程序", command=on_exit, fg_color="red")
-    btn_exit.pack(side="left", padx=10)
+    ctk.CTkButton(btn_frame, text="重试检测", command=on_retry, fg_color="green").pack(side="left", padx=10)
+    ctk.CTkButton(btn_frame, text="退出程序", command=on_exit, fg_color="red").pack(side="left", padx=10)
 
 
 class EnvChecker:
     """环境检查器类"""
 
-    def __init__(self, parent_app):
+    def __init__(self, parent_app: ctk.CTk):
         self.parent = parent_app
-        self.check_count = 0
 
-    def check_all(self, show_dialog=True):
+    def check_all(self, show_dialog: bool = True) -> bool:
         missing = []
         if not is_adb_installed():
             missing.append("ADB")
@@ -142,9 +154,11 @@ class EnvChecker:
         return True
 
 
-# ==================== 后端逻辑类 ====================
+# ==================== 后端逻辑类 (ADB 监听) ====================
 
 class SmartKeyBackend:
+    """ADB 监听与配置生成后端"""
+
     def __init__(self, device: str, log_callback: callable, config_callback: callable):
         self.device = device
         self.log_callback = log_callback
@@ -154,16 +168,15 @@ class SmartKeyBackend:
         self.skip_count = 0
         self.is_running = False
 
-        self.data = {}
+        self.data: Dict = {}
         self.existing_actions: Set[str] = set()
         self.existing_codes: Set[int] = set()
 
-    def load_config(self):
+    def load_config(self) -> bool:
+        """加载本地 input.json 配置"""
         if not os.path.exists(JSON_FILE):
             self.data = {
-                "stdkey": {},
-                "action": {},
-                "intent": {},
+                "stdkey": {}, "action": {}, "intent": {},
                 "custom": DEFAULT_CUSTOM_LIST.copy()
             }
             self.existing_actions = set()
@@ -171,7 +184,7 @@ class SmartKeyBackend:
             return True
 
         try:
-            with open(JSON_FILE, 'r', encoding='utf-8') as f:
+            with open(JSON_FILE, "r", encoding="utf-8") as f:
                 self.data = json.load(f)
 
             self.existing_actions = {
@@ -183,6 +196,7 @@ class SmartKeyBackend:
                 if info.get("key") is not None
             }
 
+            # 确保键存在
             self.data.setdefault("stdkey", {})
             self.data.setdefault("action", {})
             self.data.setdefault("intent", {})
@@ -192,18 +206,17 @@ class SmartKeyBackend:
         except Exception as e:
             self.log_callback(f"[Error] 读取配置失败：{e}\n")
             self.data = {
-                "stdkey": {},
-                "action": {},
-                "intent": {},
+                "stdkey": {}, "action": {}, "intent": {},
                 "custom": DEFAULT_CUSTOM_LIST.copy()
             }
             self.existing_actions = set()
             self.existing_codes = set()
             return False
 
-    def save_config(self, silent=False):
+    def save_config(self, silent: bool = False) -> bool:
+        """保存配置到 input.json"""
         try:
-            with open(JSON_FILE, 'w', encoding='utf-8') as f:
+            with open(JSON_FILE, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
             if not silent:
                 self.log_callback(f"[OK] 配置已保存到 {JSON_FILE}\n")
@@ -212,7 +225,8 @@ class SmartKeyBackend:
             self.log_callback(f"[Error] 保存失败：{e}\n")
             return False
 
-    def _kill_process(self):
+    def _kill_process(self) -> None:
+        """强制终止子进程"""
         if self.process is None:
             return
         try:
@@ -226,14 +240,15 @@ class SmartKeyBackend:
                 self.process.terminate()
                 try:
                     self.process.wait(timeout=3)
-                except:
+                except Exception:
                     self.process.kill()
-        except:
+        except Exception:
             pass
         finally:
             self.process = None
 
-    def _clear_logcat(self):
+    def _clear_logcat(self) -> bool:
+        """清空 ADB Logcat 缓冲区"""
         try:
             subprocess.run(
                 ["adb", "-s", self.device, "logcat", "-c"],
@@ -246,51 +261,26 @@ class SmartKeyBackend:
         except Exception:
             return False
 
-    def _generate_standard_config(self, suffix: str, key_type: str, action_str: str, virtual_key: int, is_many: bool):
+    def _generate_standard_config(
+        self, suffix: str, key_type: str, action_str: str,
+        virtual_key: int, is_many: bool
+    ) -> Dict:
+        """生成标准键位配置数据结构"""
         result = {"stdkey": {}, "action": {}, "intent": {}}
 
-        # TODO sos格式应该只保留一个，每一个sos后面的虚拟key应该保持一致
         if key_type.lower() == "sos":
-            current_sos_key = virtual_key
-
             base_name = f"sos_{suffix}"
-
-            # # # 推导 up action 字符串
-            # if action_str.endswith(".down"):
-            #     up_action_str = action_str[:-5] + ".up"
-            # elif action_str.endswith("_down"):
-            #     up_action_str = action_str[:-5] + "_up"
-            # elif "DOWN" in action_str:
-            #     up_action_str = action_str.replace("DOWN", "UP")
-            # else:
-            #     up_action_str = action_str
-
-            # 1. stdkey: 定义按键行为
-            # base_name 用于长按逻辑，down/up_name 用于短按逻辑
             result["stdkey"] = {
-                base_name: {
-                    "key": current_sos_key,
-                    "event": "KEY_CLICK",
-                    "time": 3000
-                }
+                base_name: {"key": virtual_key, "event": "KEY_CLICK", "time": 3000}
             }
-
-            # 2. action: 留空
             result["action"] = {}
-
-            # 3.intent :保留存取的广播
-            result["intent"] = {
-                base_name: {
-                    "action": action_str
-                }
-            }
-
+            result["intent"] = {base_name: {"action": action_str}}
         else:
-            # === PTT 逻辑  ===
             prefix = "ptt" if key_type.lower() == "ptt" else "sos"
             down_name = f"many_{prefix}_down_{suffix}" if is_many else f"{prefix}_down_{suffix}"
             up_name = f"{prefix}_up_{suffix}"
 
+            # 推导 UP Action
             if action_str.endswith(".down"):
                 up_action_str = action_str[:-5] + ".up"
             elif action_str.endswith("_down"):
@@ -305,11 +295,9 @@ class SmartKeyBackend:
                 up_name: {"event": "KEY_UP", "key": virtual_key}
             }
 
-            # 保持原有逻辑：is_many 时 cmd_down_list 为空
             cmd_down_list = [] if is_many else [
                 {"command": {"id": "START_SPEAK" if key_type.lower() == "ptt" else "TRIGGER_SOS"}}
             ]
-
             cmd_up_id = "STOP_SPEAK" if key_type.lower() == "ptt" else "NONE"
             cmd_up_list = [{"command": {"id": cmd_up_id}}] if cmd_up_id != "NONE" else []
 
@@ -331,14 +319,10 @@ class SmartKeyBackend:
 
         return result
 
-    def _reader_thread(self, key_type: str):
-        # 格式 1: 标准 Android Broadcast (例如: Sending broadcast com.example.ACTION from ...)
+    def _reader_thread(self, key_type: str) -> None:
+        """监听线程主循环"""
         re_standard = re.compile(r"Sending.*broadcast\s+([\w\.]+)\s+from")
-
-        # 格式 2: EasyTalk 特殊格式 (例如: sendEasytalkBroadCast action=com.ecom.intent.action.PTT_BUTTON_DOWN)
         re_easytalk = re.compile(r"sendEasytalkBroadCast\s+action\s*=\s*(\S+)")
-
-        # 提取 KeyCode 的正则 (两种格式都可能包含)
         re_keycode = re.compile(r"keyCode=(\d+)")
 
         last_process_time = 0
@@ -346,14 +330,17 @@ class SmartKeyBackend:
         mode_name = "防抖模式 (PTT)" if is_many_mode else "标准模式 (SOS)"
 
         self.log_callback(f"\n--- 启动监听 (模式：{mode_name}) ---\n")
-
         if self._clear_logcat():
             self.log_callback("[Info] 日志缓冲区已清空。\n")
 
         try:
             kwargs = {
-                "stdout": subprocess.PIPE, "stderr": subprocess.PIPE,
-                "text": True, "bufsize": 1, "encoding": 'utf-8', "errors": 'ignore'
+                "stdout": subprocess.PIPE,
+                "stderr": subprocess.PIPE,
+                "text": True,
+                "bufsize": 1,
+                "encoding": "utf-8",
+                "errors": "ignore"
             }
             if platform.system() == "Windows":
                 kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -363,31 +350,28 @@ class SmartKeyBackend:
             self.is_running = True
 
             while not self.stop_event.is_set():
-                if self.process.poll() is not None: break
+                if self.process.poll() is not None:
+                    break
                 line = self.process.stdout.readline()
-                if not line or self.stop_event.is_set(): break
+                if not line or self.stop_event.is_set():
+                    break
 
                 action_str = None
-
                 match_et = re_easytalk.search(line)
                 if match_et:
-                    action_str = match_et.group(1)  # 提取 = 后面的内容
+                    action_str = match_et.group(1)
                 else:
                     match_std = re_standard.search(line)
                     if match_std:
                         action_str = match_std.group(1)
 
-                # 如果两种都没匹配到，跳过此行
                 if not action_str:
                     continue
 
                 current_time = time.time()
-
-                # 防抖处理
                 if current_time - last_process_time < DEBOUNCE_SECONDS:
                     continue
 
-                # 去重检查
                 if action_str in self.existing_actions:
                     self.skip_count += 1
                     if self.skip_count % SKIP_FEEDBACK_INTERVAL == 0:
@@ -399,7 +383,6 @@ class SmartKeyBackend:
 
                 match_k = re_keycode.search(line)
                 code_info = f" (KeyCode: {match_k.group(1)})" if match_k else ""
-
                 self.log_callback(f"\n[NEW] 捕获 Action: {action_str}{code_info}\n")
 
                 timestamp_suffix = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -407,27 +390,25 @@ class SmartKeyBackend:
                 while new_virtual_code in self.existing_codes:
                     new_virtual_code -= 1
 
-                # 调用生成配置方法 (SOS 模式下 intent 返回空，PTT 模式下自动填入)
                 new_entries = self._generate_standard_config(
                     timestamp_suffix, key_type, action_str, new_virtual_code, is_many=is_many_mode
                 )
 
                 self.data["stdkey"].update(new_entries["stdkey"])
                 self.data["action"].update(new_entries["action"])
-
-                # 只有当 intent 不为空时才更新 (SOS 模式下 intent 为空，不会覆盖原有配置)
                 if new_entries["intent"]:
                     self.data["intent"].update(new_entries["intent"])
 
                 self.existing_actions.add(action_str)
                 self.existing_codes.add(new_virtual_code)
 
-                created_keys = list(new_entries['stdkey'].keys())
+                created_keys = list(new_entries["stdkey"].keys())
                 self.log_callback(f"[OK] 已生成键位：{', '.join(created_keys)} (Key: {new_virtual_code})\n")
 
                 if self.save_config(silent=True):
                     self.log_callback("[Auto-Save] ✅ 配置已保存。\n")
-                    if self.config_callback: self.config_callback()
+                    if self.config_callback:
+                        self.config_callback()
                 self.log_callback("\n")
 
         except Exception as e:
@@ -438,7 +419,8 @@ class SmartKeyBackend:
             self.is_running = False
             self.log_callback("\n[Info] 监听已停止。\n")
 
-    def start_capture(self, key_type: str):
+    def start_capture(self, key_type: str) -> None:
+        """启动监听线程"""
         if self.is_running:
             self.log_callback("[Warning] 监听已在运行中。\n")
             return
@@ -448,7 +430,8 @@ class SmartKeyBackend:
         t = threading.Thread(target=self._reader_thread, args=(key_type,), daemon=True)
         t.start()
 
-    def stop_capture(self):
+    def stop_capture(self) -> None:
+        """停止监听"""
         self.stop_event.set()
         self._kill_process()
 
@@ -456,27 +439,41 @@ class SmartKeyBackend:
 # ==================== 前端 UI 类 ====================
 
 class App(ctk.CTk):
+    """主应用程序窗口"""
+
     def __init__(self):
         super().__init__()
         self.title("App Adaptation_1.0")
         self.geometry("1200x700")
 
+        # 状态变量
         self.backend: Optional[SmartKeyBackend] = None
         self.current_device: str = ""
-        self.log_queue = queue.Queue()
-        self.is_listening = False
-        self.env_checker = EnvChecker(self)
+        self.log_queue: queue.Queue = queue.Queue()
+        self.is_listening: bool = False
+        self.env_checker: EnvChecker = EnvChecker(self)
+        self.current_apk_type: str = "大屏"
 
+        # 事件绑定
         self.bind("<<EnvRetry>>", lambda e: self.on_env_retry())
-
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # === 侧边栏 ===
-        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0)
+        self._init_sidebar()
+        self._init_main_area()
+
+        # 启动定时任务
+        self.after(100, self.process_log_queue)
+        self.after(500, self.initial_env_check)
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def _init_sidebar(self) -> None:
+        """初始化侧边栏"""
+        self.sidebar_frame = ctk.CTkFrame(self, width=220, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(100, weight=1)
 
+        # Logo
         self.logo_label = ctk.CTkLabel(
             self.sidebar_frame,
             text="App\nAdaptation",
@@ -484,9 +481,9 @@ class App(ctk.CTk):
         )
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
+        # 设备选择
         self.device_label = ctk.CTkLabel(self.sidebar_frame, text="ADB 设备:", anchor="w")
         self.device_label.grid(row=1, column=0, padx=20, pady=(10, 0))
-
         self.device_var = ctk.StringVar(value="检测中...")
         self.device_menu = ctk.CTkOptionMenu(
             self.sidebar_frame,
@@ -495,7 +492,6 @@ class App(ctk.CTk):
             command=self.on_device_change
         )
         self.device_menu.grid(row=2, column=0, padx=20, pady=5)
-
         self.refresh_btn = ctk.CTkButton(
             self.sidebar_frame,
             text="刷新设备",
@@ -504,9 +500,9 @@ class App(ctk.CTk):
         )
         self.refresh_btn.grid(row=3, column=0, padx=20, pady=5)
 
+        # 监听模式
         self.mode_label = ctk.CTkLabel(self.sidebar_frame, text="监听模式:", anchor="w")
         self.mode_label.grid(row=4, column=0, padx=20, pady=(5, 0))
-
         self.mode_var = ctk.StringVar(value="ptt")
         self.mode_menu = ctk.CTkOptionMenu(
             self.sidebar_frame,
@@ -515,6 +511,7 @@ class App(ctk.CTk):
         )
         self.mode_menu.grid(row=5, column=0, padx=20, pady=5)
 
+        # 控制按钮
         self.start_btn = ctk.CTkButton(
             self.sidebar_frame,
             text="开始监听",
@@ -522,7 +519,6 @@ class App(ctk.CTk):
             command=self.toggle_listen
         )
         self.start_btn.grid(row=7, column=0, padx=20, pady=10)
-
         self.clear_log_btn = ctk.CTkButton(
             self.sidebar_frame,
             text="清空日志",
@@ -531,46 +527,32 @@ class App(ctk.CTk):
         )
         self.clear_log_btn.grid(row=8, column=0, padx=20, pady=10)
 
-        self.mode_label = ctk.CTkLabel(self.sidebar_frame, text="apk选择:", anchor="w")
-        self.mode_label.grid(row=9, column=0, padx=20, pady=(5, 0))
+        # APK 选择区域
+        self.apk_select_label = ctk.CTkLabel(self.sidebar_frame, text="APK 类型:", anchor="w")
+        self.apk_select_label.grid(row=9, column=0, padx=20, pady=(15, 0))
 
-        # 大小屏选择打包
         self.apk_type_seg = ctk.CTkSegmentedButton(
             self.sidebar_frame,
             values=["大屏", "小屏"],
             command=self.on_apk_type_change,
-            height=25,
+            height=30,
             fg_color="#3498db",
-            selected_color="green",
+            selected_color="#27ae60",
             unselected_color="gray"
         )
-        self.apk_type_seg.grid(row=10, column=0, padx=20, pady=(0, 10), sticky="ew")
+        self.apk_type_seg.grid(row=10, column=0, padx=20, pady=5, sticky="ew")
         self.apk_type_seg.set("大屏")
 
         self.build_apk_btn = ctk.CTkButton(
             self.sidebar_frame,
             text="打包 APK",
-            command=self.build_apk,
+            fg_color="#d35400",
+            hover_color="#e67e22",
+            command=self.build_apk
         )
         self.build_apk_btn.grid(row=11, column=0, padx=20, pady=10)
 
-        # # 创建开关控件
-        # self.switch_var = ctk.StringVar(value="off")  # 初始化状态
-        #
-        # self.switch = ctk.CTkSwitch(
-        #     self.sidebar_frame,
-        #     text="启用监听",
-        #     variable=self.switch_var,
-        #     onvalue="on",
-        #     offvalue="off",
-        #     command=self.clear_log,
-        #     fg_color="#3498db",  # 开关背景色
-        #     progress_color="#2c3e50",  # 滑动条颜色
-        #     button_color="#ecf0f1",  # 按钮颜色
-        #     button_hover_color="#bdc3c7"  # 悬停颜色
-        # )
-        # self.switch.grid(row=11, column=0, padx=20, pady=10, sticky="w")
-
+        # 底部状态栏
         self.status_label = ctk.CTkLabel(
             self.sidebar_frame,
             text="状态：初始化...",
@@ -579,7 +561,8 @@ class App(ctk.CTk):
         )
         self.status_label.grid(row=100, column=0, padx=20, pady=(0, 20), sticky="s")
 
-        # === 主内容区 ===
+    def _init_main_area(self) -> None:
+        """初始化主内容区"""
         self.tabview = ctk.CTkTabview(self)
         self.tabview.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
 
@@ -599,13 +582,9 @@ class App(ctk.CTk):
         self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
         self.scroll_frame.grid_columnconfigure(0, weight=1)
 
-        self.after(100, self.process_log_queue)
-        self.after(500, self.initial_env_check)
+    # ==================== 事件处理回调 ====================
 
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
-
-    def initial_env_check(self):
-        """启动时的环境检查"""
+    def initial_env_check(self) -> None:
         if not self.env_checker.check_all(show_dialog=True):
             self.status_label.configure(text="状态：环境缺失", text_color="red")
             self.device_var.set("等待环境修复")
@@ -617,11 +596,10 @@ class App(ctk.CTk):
             self.refresh_devices()
             self.after(100, self.refresh_config_view)
 
-    def on_env_retry(self):
-        """当用户点击弹窗的重试按钮时"""
-        self.log_textbox.insert("end", "\n[Info] 正在重新检测环境...\n")
+    def on_env_retry(self) -> None:
+        self.append_log("\n[Info] 正在重新检测环境...\n")
         if self.env_checker.check_all(show_dialog=False):
-            self.log_textbox.insert("end", "[OK] 环境检测通过！\n")
+            self.append_log("[OK] 环境检测通过！\n")
             self.status_label.configure(text="状态：环境就绪", text_color="green")
             self.start_btn.configure(state="normal")
             self.refresh_devices()
@@ -629,7 +607,7 @@ class App(ctk.CTk):
         else:
             self.env_checker.check_all(show_dialog=True)
 
-    def refresh_devices(self):
+    def refresh_devices(self) -> None:
         if not self.winfo_exists():
             return
         if not is_adb_installed():
@@ -637,11 +615,7 @@ class App(ctk.CTk):
             return
 
         try:
-            out = subprocess.check_output(
-                ["adb", "devices"],
-                text=True,
-                stderr=subprocess.DEVNULL
-            )
+            out = subprocess.check_output(["adb", "devices"], text=True, stderr=subprocess.DEVNULL)
             devs = [
                 line.split()[0] for line in out.splitlines()
                 if "\tdevice" in line and not line.startswith("List")
@@ -650,18 +624,12 @@ class App(ctk.CTk):
             self.device_menu.configure(values=devs if devs else ["未检测到设备"])
 
             if devs:
-                if current_val not in devs and current_val not in ["未连接", "未检测到设备", "检测中...", "等待环境修复"]:
-                    self.device_var.set(devs[0])
-                    self.current_device = devs[0]
-                elif current_val in ["未连接", "未检测到设备", "检测中...", "等待环境修复"]:
+                if current_val not in devs or current_val in ["未连接", "未检测到设备", "检测中...", "等待环境修复"]:
                     self.device_var.set(devs[0])
                     self.current_device = devs[0]
                 else:
                     self.current_device = current_val
-                self.status_label.configure(
-                    text=f"状态：已连接\n {self.current_device}",
-                    text_color="green"
-                )
+                self.status_label.configure(text=f"状态：已连接\n{self.current_device}", text_color="green")
             else:
                 self.device_var.set("未检测到设备")
                 self.current_device = ""
@@ -671,24 +639,18 @@ class App(ctk.CTk):
                 self.device_menu.configure(values=["ADB 错误"])
             self.device_var.set("ADB 错误")
 
-    def on_device_change(self, selection):
+    def on_device_change(self, selection: str) -> None:
         if selection not in ["未检测到设备", "ADB 错误"]:
             self.current_device = selection
-        self.status_label.configure(
-            text=f"状态：已切换\n"
-                 f"{selection}",
-            text_color="green"
-        )
+        self.status_label.configure(text=f"状态：已切换\n{selection}", text_color="green")
 
-    def toggle_listen(self):
+    def toggle_listen(self) -> None:
         if not self.winfo_exists():
             return
-
         if not is_adb_installed():
-            messagebox.showerror("错误", "ADB 环境丢失！请检查配置。")
+            messagebox.showerror("错误", "ADB 环境丢失！")
             self.env_checker.check_all(show_dialog=True)
             return
-
         if not self.current_device or self.current_device in ["未检测到设备", "ADB 错误", "未连接"]:
             messagebox.showerror("错误", "请先选择有效的 ADB 设备！")
             self.refresh_devices()
@@ -714,15 +676,17 @@ class App(ctk.CTk):
                     return
             self.is_listening = True
             self.start_btn.configure(text="停止监听", fg_color="red")
-            self.status_label.configure(text="状态：监听中 (自动保存)", text_color="green")
+            self.status_label.configure(text="状态：监听中", text_color="green")
             self.mode_menu.configure(state="disabled")
             self.device_menu.configure(state="disabled")
             self.backend.start_capture(mode)
 
-    def append_log(self, text: str):
+    def append_log(self, text: str) -> None:
+        """线程安全的日志添加方法"""
         self.log_queue.put(text)
 
-    def process_log_queue(self):
+    def process_log_queue(self) -> None:
+        """处理日志队列并更新 UI"""
         if not self.winfo_exists():
             return
         try:
@@ -731,35 +695,23 @@ class App(ctk.CTk):
                     text = self.log_queue.get_nowait()
                     if self.log_textbox.winfo_exists():
                         self.log_textbox.insert("end", text)
-                    self.log_textbox.see("end")
+                        self.log_textbox.see("end")
                 except queue.Empty:
-                    break
-                except Exception:
                     break
         except Exception:
             pass
         self.after(100, self.process_log_queue)
 
-    def clear_log(self):
+    def clear_log(self) -> None:
         if self.log_textbox.winfo_exists():
             self.log_textbox.delete("0.0", "end")
 
-    def save_config_action(self):
-        if not self.winfo_exists():
-            return
-        if not self.backend:
-            messagebox.showinfo("提示", "尚未初始化后端。")
-            return
-        if self.backend.save_config(silent=False):
-            messagebox.showinfo("成功", "配置已手动保存到 input.json")
-            self.refresh_config_view()
-
-    def refresh_config_view(self):
+    def refresh_config_view(self) -> None:
         if not self.winfo_exists():
             return
         self.after(0, self._safe_refresh_config_view)
 
-    def _safe_refresh_config_view(self):
+    def _safe_refresh_config_view(self) -> None:
         if not self.winfo_exists():
             return
         try:
@@ -770,169 +722,376 @@ class App(ctk.CTk):
                     pass
 
             data = {}
-            if self.backend and hasattr(self.backend, 'data'):
+            if self.backend and hasattr(self.backend, "data"):
                 data = self.backend.data
-            else:
-                if os.path.exists(JSON_FILE):
-                    try:
-                        with open(JSON_FILE, 'r', encoding='utf-8') as f:
-                            data = json.load(f)
-                    except:
-                        pass
+            elif os.path.exists(JSON_FILE):
+                try:
+                    with open(JSON_FILE, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                except Exception:
+                    pass
 
             intents = data.get("intent", {})
             stdkeys = data.get("stdkey", {})
-            actions = data.get("action", {})
 
             if not intents and not stdkeys:
                 lbl = ctk.CTkLabel(self.scroll_frame, text="暂无配置数据。", text_color="gray")
                 lbl.grid(row=0, column=0, pady=20)
                 return
 
-            headers = ["键名 (Key)", "事件类型", "虚拟键值", "Action 广播", "默认命令"]
+            headers = ["键名", "事件类型", "键值", "Action", "命令"]
             for i, h in enumerate(headers):
-                lbl = ctk.CTkLabel(
+                ctk.CTkLabel(
                     self.scroll_frame,
                     text=h,
                     font=ctk.CTkFont(weight="bold"),
                     anchor="w"
-                )
-                lbl.grid(row=0, column=i, padx=10, pady=10, sticky="w")
+                ).grid(row=0, column=i, padx=10, pady=10, sticky="w")
 
             row_idx = 1
-            # 遍历 stdkey 来显示所有键位（包括那些还没有 intent 的 SOS 键）
             all_keys = set(stdkeys.keys()) | set(intents.keys())
+            actions_data = data.get("action", {})
 
             for name in all_keys:
                 if not self.winfo_exists():
                     return
-
-                sk_info = stdkeys.get(name, {})
-                ac_info = actions.get(name, {})
+                sk = stdkeys.get(name, {})
+                ac = actions_data.get(name, {})
                 info = intents.get(name, {})
 
-                event_type = sk_info.get("event", "N/A")
-                key_code = sk_info.get("key", "N/A")
-                action_val = info.get("action", "未配置")
-                as_key = "✅" if info.get("as_key") else "-"
+                ctk.CTkLabel(self.scroll_frame, text=name, anchor="w").grid(
+                    row=row_idx, column=0, padx=10, pady=5, sticky="w"
+                )
+                ctk.CTkLabel(self.scroll_frame, text=sk.get("event", "N/A"), anchor="w").grid(
+                    row=row_idx, column=1, padx=10, pady=5, sticky="w"
+                )
+                ctk.CTkLabel(self.scroll_frame, text=str(sk.get("key", "N/A")), anchor="w").grid(
+                    row=row_idx, column=2, padx=10, pady=5, sticky="w"
+                )
+                ctk.CTkLabel(
+                    self.scroll_frame,
+                    text=info.get("action", "-"),
+                    anchor="w",
+                    text_color="#3498db"
+                ).grid(row=row_idx, column=3, padx=10, pady=5, sticky="w")
 
-                default_cmds = ac_info.get("default", [])
-                cmd_str = ", ".join(
-                    [c.get("command", {}).get("id", "Unknown") for c in default_cmds]
-                ) if default_cmds else "None"
-
-                try:
-                    ctk.CTkLabel(self.scroll_frame, text=name, anchor="w").grid(
-                        row=row_idx, column=0, padx=10, pady=5, sticky="w"
-                    )
-                    ctk.CTkLabel(self.scroll_frame, text=f"{event_type} {as_key}", anchor="w").grid(
-                        row=row_idx, column=1, padx=10, pady=5, sticky="w"
-                    )
-                    ctk.CTkLabel(self.scroll_frame, text=str(key_code), anchor="w").grid(
-                        row=row_idx, column=2, padx=10, pady=5, sticky="w"
-                    )
-
-                    action_color = "#3498db" if action_val != "未配置" else "gray"
-                    ctk.CTkLabel(self.scroll_frame, text=action_val, anchor="w", text_color=action_color).grid(
-                        row=row_idx, column=3, padx=10, pady=5, sticky="w"
-                    )
-
-                    ctk.CTkLabel(self.scroll_frame, text=cmd_str, anchor="w", text_color="gray").grid(
-                        row=row_idx, column=4, padx=10, pady=5, sticky="w"
-                    )
-                    row_idx += 1
-                except Exception:
-                    break
+                cmds = ac.get("default", [])
+                cmd_str = ", ".join([c.get("command", {}).get("id", "") for c in cmds]) if cmds else "-"
+                ctk.CTkLabel(
+                    self.scroll_frame,
+                    text=cmd_str,
+                    anchor="w",
+                    text_color="gray"
+                ).grid(row=row_idx, column=4, padx=10, pady=5, sticky="w")
+                row_idx += 1
         except Exception:
             pass
 
-    def on_closing(self):
+    def on_closing(self) -> None:
         if self.backend and self.is_listening:
-            self.log_queue.put("\n[Info] 正在停止监听以关闭程序...\n")
+            self.append_log("\n[Info] 正在停止监听以关闭程序...\n")
             self.backend.stop_capture()
         time.sleep(0.5)
         self.destroy()
 
-    def on_apk_type_change(self, value):
-        """当APK类型切换时调用"""
-        self.log_callback(f"APK类型已切换为: {value}")
-        # 这里可以更新状态，或者为后续解压操作准备
-        self.status_label.configure(text=f"状态：已选择 {value} APK")
+    def on_apk_type_change(self, value: str) -> None:
+        self.current_apk_type = value
+        self.status_label.configure(text=f"状态：已选择 {value} APK", text_color="#d35400")
+        self.append_log(f"[Info] APK 类型切换为：{value}\n")
 
-    # ---------------apktools 处理-----------------
+    # ==================== APK 工具链逻辑 ====================
 
-    def run_with_live_output(self, command):
-        process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW,
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        while True:
-            line = process.stdout.readline()
-            if not line and process.poll() is not None:
-                break
-            if line:
-                print(f" {line.strip()}")
+    def get_json_field(self, file_path: Path, field_path: List[str]) -> Any:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            temp_data = data
+            for key in field_path:
+                if isinstance(temp_data, dict):
+                    temp_data = temp_data.get(key)
+                else:
+                    return None
+            return temp_data
+        except Exception:
+            return None
 
-            error_line = process.stderr.readline()
-            if error_line:
-                print(f"Error:{error_line.strip()}")
+    def safe_remove(self, file_path: str, retries: int = 3) -> bool:
+        """安全删除文件，带重试机制"""
+        for i in range(retries):
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    self.append_log(f"[OK] 已删除临时文件")
+                    return True
+            except PermissionError:
+                self.append_log(f"[Warn] 文件被占用，等待 0.5 秒后重试... ({i + 1}/{retries})\n")
+                time.sleep(0.5)
+            except Exception as e:
+                self.append_log(f"[Error] 删除文件失败：{e}\n")
+                return False
+        return False
 
-            if not error_line and process.poll() is not None:
-                break
+    def run_with_live_output(self, command: List[str]) -> int:
+        """
+        【核心修复】双线程读取 stdout/stderr，防止死锁，并实时推送到 GUI
+        """
+        self.append_log(f"[CMD] {' '.join(command)}\n")
 
-        return process.returncode
+        try:
+            startupinfo = None
+            if platform.system() == "Windows":
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
-    def decompile_apk(self, apk_path, output_dir="app_out"):
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+                startupinfo=startupinfo,
+                creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
+            )
 
+            log_queue = queue.Queue()
+
+            def reader_thread(stream, prefix=""):
+                for line in iter(stream.readline, ""):
+                    if line:
+                        log_queue.put(prefix + line.strip())
+                stream.close()
+
+            t_out = threading.Thread(target=reader_thread, args=(process.stdout, ""), daemon=True)
+            t_err = threading.Thread(target=reader_thread, args=(process.stderr, "[ERR] "), daemon=True)
+            t_out.start()
+            t_err.start()
+
+            while t_out.is_alive() or t_err.is_alive():
+                try:
+                    line = log_queue.get(timeout=0.5)
+                    self.after(0, self.append_log, line + "\n")
+                except queue.Empty:
+                    continue
+
+            t_out.join()
+            t_err.join()
+            returncode = process.wait()
+            self.append_log(f"[Result] 命令执行完毕，返回码：{returncode}\n")
+            return returncode
+
+        except Exception as e:
+            self.append_log(f"[CRITICAL] 执行命令发生严重错误：{e}\n")
+            traceback.print_exc()
+            return -1
+
+    def decompile_apk(self, apk_path: str, output_dir: str = "app_out") -> bool:
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir, ignore_errors=True)
+            self.append_log(f"[Info] 已清理旧目录：{output_dir}\n")
 
-        command = ["java", "-jar", APKTOOL_JAR, "d", apk_path, "-s", "-o", output_dir]
-
+        command = [
+            "java", "-jar", str(APKTOOL_JAR),
+            "d", apk_path, "-s", "-o", output_dir
+        ]
         exit_code = self.run_with_live_output(command)
+        return exit_code == 0
 
-        if exit_code == 0:
-            print(f"成功：输出目录 {output_dir}")
-            return True
-        else:
-            print(" 失败：apktool 或 Java 问题")
-            return False
+    def build_apk(self) -> None:
+        """主打包入口"""
+        apk_type = self.apk_type_seg.get()
+        self.current_apk_type = apk_type
 
-    def choose_apk(self, apk_path):
+        apk_path = "LargeApp.apk" if apk_type == "大屏" else "SmallApp.apk"
+
+        if not os.path.exists(apk_path):
+            messagebox.showerror("错误", f"找不到 APK 文件：{apk_path}\n请确保该文件在当前目录下。")
+            return
+
+        # 禁用按钮防止重复点击
+        self.build_apk_btn.configure(state="disabled", text="打包中...")
+        self.status_label.configure(text="状态：正在打包...", text_color="#d35400")
 
         def task():
-            success = self.decompile_apk(apk_path, TEMP_DIR)
-            if success:
-                print("APK 解包完成")
-            else:
-                print("解包失败")
+            try:
+                self.append_log(f"\n=== 开始打包流程 ({apk_type}) ===\n")
+
+                # 1. 反编译
+                self.append_log("[Step 1] 正在反编译 APK...\n")
+                if not self.decompile_apk(apk_path, TEMP_DIR):
+                    raise Exception("反编译失败")
+
+                else:
+                    self.append_log("[Step 2] 编译成功\n")
+
+                # 2. 更新版本信息
+                # self.append_log("[Step 2] 正在更新版本信息...\n")
+                # if os.path.exists(PATH_YML):
+                #     self.update_version_info(PATH_YML)
+                # else:
+                #     self.append_log("[Warn] 未找到 apktool.yml，跳过版本更新\n")
+
+                # 2.替换input.json
+                self.copy_files(PATH_INPUT_JSON_SRC,PATH_INPUT_JSON_DST)
+
+                # 3. 构建未签名 APK
+                self.append_log("[Step 3] 正在打包 APK...\n")
+                apktool_cmd = [
+                    "java", "-jar", str(APKTOOL_JAR),
+                    "b", TEMP_DIR, "-o", "app-unsigned-unaligned.apk"
+                ]
+                if self.run_with_live_output(apktool_cmd) != 0:
+                    raise Exception("APK 打包失败")
+
+                # 4. Zipalign 对齐
+                self.append_log("[Step 4] 正在对齐APK...\n")
+                zipalign_cmd = [
+                    str(ZIPALIGN_EXE), "-v", "-p", "4",
+                    "app-unsigned-unaligned.apk", "app-unsigned.apk"
+                ]
+                if self.run_with_live_output(zipalign_cmd) != 0:
+                    raise Exception("APK 对齐失败")
+
+                self.safe_remove("app-unsigned-unaligned.apk")
+
+                # 5. 签名
+                self.append_log("[Step 5] 正在签名 APK...\n")
+                value_map = {"大屏": "large", "中屏": "middle", "小屏": "small"}
+                key = value_map.get(apk_type, "large")
+
+                # 从 slclient.json 获取实际类型
+                json_val = self.get_json_field(PATH_SLCLIENT_JSON, LAUNCHER_MODULE_PATH)
+                if json_val and json_val in KEYSTORE_CONFIG:
+                    key = json_val
+                    self.append_log(f"[Info] 检测到 JSON 配置，使用签名类型：{key}\n")
+
+                ks_info = KEYSTORE_CONFIG.get(key, KEYSTORE_CONFIG["large"])
+                ks_path = ks_info["path"]
+                ks_pass = ks_info["password"]
+
+                if not os.path.exists(ks_path):
+                    raise Exception(f"签名文件不存在：{ks_path}")
+
+                date_str = time.strftime("%Y_%m_%d", time.localtime())
+                output_dir_path = PROJECT_PATH / date_str
+                output_dir_path.mkdir(exist_ok=True)
+
+                final_name = self.build_newname(PATH_YML) if os.path.exists(PATH_YML) else f"app_{apk_type}_{date_str}.apk"
+                output_apk_path = output_dir_path / final_name
+
+                apksigner_cmd = [
+                    str(APKSIGNER_BAT), "sign",
+                    "--ks", str(ks_path),
+                    "--ks-pass", f"pass:{ks_pass}",
+                    "--out", str(output_apk_path),
+                    "app-unsigned.apk"
+                ]
+
+                if self.run_with_live_output(apksigner_cmd) != 0:
+                    raise Exception("APK 签名失败")
+
+                self.safe_remove("app-unsigned.apk")
+
+                self.append_log(f"\n[SUCCESS] ✅ 打包完成!\n文件位置：{output_apk_path}\n")
+                self.status_label.configure(text="状态：打包成功", text_color="green")
+                messagebox.showinfo("成功", f"APK 打包成功！\n保存在：{output_apk_path}")
+
+            except Exception as e:
+                error_msg = f"[FAIL] ❌ 打包失败：{str(e)}"
+                self.append_log(f"\n{error_msg}\n")
+                self.status_label.configure(text="状态：打包失败", text_color="red")
+                messagebox.showerror("错误", error_msg)
+            finally:
+                self.build_apk_btn.configure(state="normal", text="打包 APK")
 
         threading.Thread(target=task, daemon=True).start()
 
-    # TODO 需要加上日志回调
-    def build_apk(self):
-        apk_type = self.apk_type_seg.get()
-        print(apk_type)
-        if apk_type == "大屏":
-            apk_path = "LargeApp.apk"
-        else:  # 小屏
-            apk_path = "SmallApp.apk"
+    def copy_files(self,source_dir_color, target_dir_color):
+        if not os.path.isfile(source_dir_color):
+            raise FileNotFoundError(f"资源文件不存在: {source_dir_color}")
 
-        self.choose_apk(apk_path)
+        try:
+            shutil.copy2(source_dir_color, target_dir_color)
+            self.append_log(f"已覆盖文件：{source_dir_color} -> {target_dir_color}")
+        except Exception as e:
+            self.append_log(f"覆盖失败：{e}")
 
-        # output_path = "app.apk"
-        #
-        # def task():
-        #     try:
-        #         self.log_callback("正在打包...")
-        #
-        #         self.build_and_sign_apk(TEMP_DIR, output_path)
-        #
-        #     except Exception as e:
-        #         self.log_callback(f"异常：{e}")
-        #
-        # threading.Thread(target=task, daemon=True).start()
+    # ==================== 版本管理辅助函数 ====================
 
-    def build_and_sign_apk(self, TEMP_DIR, output_path):
-        pass
+    def update_version_name(self, version_name: str) -> str:
+        """将版本名中 'POCSTARS_' 后面的数字替换为当前时间戳"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        pattern = r"(POCSTARS_)\d+$"
+        new_version_name = re.sub(pattern, rf"\1{timestamp}", version_name)
+
+        if new_version_name == version_name:
+            self.append_log(f"[Warn] 未匹配到 POCSTARS_ 结尾的数字格式，原始：{version_name}\n")
+            return f"{version_name}_{timestamp}"
+        return new_version_name
+
+    def increment_version_code(self, version_code: Any) -> Any:
+        try:
+            return int(version_code) + 1
+        except (ValueError, TypeError):
+            return version_code
+
+    def load_yml(self, yml_path: Path) -> Optional[Dict]:
+        yaml = YAML()
+        if not os.path.exists(yml_path):
+            return None
+        try:
+            with open(yml_path, "r", encoding="utf-8") as f:
+                return yaml.load(f)
+        except Exception as e:
+            self.append_log(f"[Error] 加载 YAML 失败：{e}\n")
+            return None
+
+    def update_version_info(self, yml_path: Path) -> None:
+        yaml = YAML()
+
+        def represent_none(self, data):
+            return self.represent_scalar("tag:yaml.org,2002:null", "null")
+
+        yaml.representer.add_representer(type(None), represent_none)
+
+        data = self.load_yml(yml_path)
+        if not data:
+            return
+
+        version_info = data.get("versionInfo", {})
+        old_code = version_info.get("versionCode")
+        old_name = version_info.get("versionName")
+
+        if not old_code or not old_name:
+            self.append_log("[Warn] 无法获取版本信息，跳过更新\n")
+            return
+
+        new_code = self.increment_version_code(old_code)
+        new_name = self.update_version_name(old_name)
+
+        version_info["versionCode"] = new_code
+        version_info["versionName"] = new_name
+
+        with open(yml_path, "w", encoding="utf-8") as f:
+            yaml.dump(data, f)
+
+        self.append_log(f"[Version] 更新成功：{old_name}->{new_name}, Code: {old_code}->{new_code}\n")
+
+    def build_newname(self, yml_path: Path) -> str:
+        try:
+            version_info = self.get_field_value_from_yml(yml_path, "versionInfo")
+            version_name = version_info.get("versionName") if version_info else "unknown"
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            # return f"APP_{version_name}_{timestamp}.apk"
+            return f"APP_test_{timestamp}.apk"
+        except Exception:
+            return f"APP_{datetime.now().strftime('%Y%m%d%H%M%S')}.apk"
+
+    def get_field_value_from_yml(self, yml_path: Path, field_name: str) -> Dict:
+        data = self.load_yml(yml_path)
+        if data:
+            return data.get(field_name, {})
+        return {}
 
 
 if __name__ == "__main__":
