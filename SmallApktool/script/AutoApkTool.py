@@ -949,7 +949,7 @@ class App(ctk.CTk):
         self.switch_custom_env.grid_remove()
 
         # DNS 输入框
-        ctk.CTkLabel(parent, text="DNS IP:", anchor="w", font=ctk.CTkFont(size=10)).grid(
+        ctk.CTkLabel(parent, text="DNS IP:", anchor="w").grid(
             row=2, column=0, padx=5, pady=(5, 2), sticky="w"
         )
 
@@ -963,7 +963,7 @@ class App(ctk.CTk):
         # self.entry_custom_ip.configure(state="disabled")
 
         # Context 输入框
-        ctk.CTkLabel(parent, text="Context:", anchor="w", font=ctk.CTkFont(size=10)).grid(
+        ctk.CTkLabel(parent, text="Context:", anchor="w").grid(
             row=3, column=0, padx=5, pady=(2, 10), sticky="w"
         )
 
@@ -1003,7 +1003,6 @@ class App(ctk.CTk):
         if saved in base_options:
             self._on_env_selected(saved)
             return
-
 
         if base_options:
             self.opt_env.set(base_options[0])
@@ -1146,13 +1145,24 @@ class App(ctk.CTk):
         self.entry_fps.insert(0, "60")
 
     def _refresh_custom_inputs(self):
-        """切换到独立部署模式时：仅置空输入框，不加载任何数据"""
+        """切换到独立部署模式时：清空历史内容，仅显示提示文字"""
         if self.opt_env.get() != self.CUSTOM_OPTION_NAME:
             return
 
-        # 置空输入框
+        # 1. 强制清空输入框的历史内容
         self.entry_custom_ip.delete(0, 'end')
         self.entry_custom_context.delete(0, 'end')
+
+        # 2. 设置占位符提示文字（清空后必显示）
+        self.entry_custom_ip.configure(
+            placeholder_text="Eg: 192.168.1:10200",
+            placeholder_text_color="#95a5a6"
+        )
+        self.entry_custom_context.configure(
+            placeholder_text="Eg: demoText",
+            placeholder_text_color="#95a5a6"
+        )
+
 
     def _toggle_custom_env_inputs(self):
         """处理开关的显隐逻辑"""
@@ -1205,7 +1215,7 @@ class App(ctk.CTk):
             self.lbl_env_info.configure(
                 text="⚠️ 提示：IP 格式建议为 'IP:端口' (如 192.168.1.1:8080)",
                 text_color="#d35400",
-                font=ctk.CTkFont(size=11)
+                font=ctk.CTkFont(size=12)
             )
             # 这里不 return，允许用户强行保存，或者你可以根据需求 return
 
@@ -1276,7 +1286,7 @@ class App(ctk.CTk):
             self.lbl_env_info.configure(
                 text=f"❌ 保存失败: {str(e)}",
                 text_color="#c0392b",
-                font=ctk.CTkFont(size=11)
+                font=ctk.CTkFont(size=12)
             )
             print(f"Error saving config: {e}")
 
@@ -1389,7 +1399,6 @@ class App(ctk.CTk):
         # self.entry_custom_ip.delete(0, 'end')
         # self.entry_custom_context.delete(0, 'end')
 
-
     def _update_preview(self, key, value):
         """通用配置更新回调，用于实时更新内存中的配置字典"""
         if not hasattr(self, 'build_config'):
@@ -1400,23 +1409,15 @@ class App(ctk.CTk):
         """从 slclient.json 加载所有配置并填充到 UI (可选功能)"""
         if not PATH_SLCLIENT_JSON.exists():
             return
-
         try:
             with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            # 示例：加载环境
-            # current_id = data.get('ui', {}).get('launcherModule', '1')
-            # 反向查找名字... (略)
-
-            # 示例：加载地图
-            # map_prov = data.get('map', {}).get('provider', 'gaode')
-            # if hasattr(self, 'opt_map'): self.opt_map.set(map_prov)
-
-            self.append_log("[Info] 已从 slclient.json 加载配置到界面。\n")
+            # self.append_log("[Info] 已从 slclient.json 加载配置到界面。\n")
         except Exception as e:
             self.append_log(f"[Warn] 加载配置失败: {e}\n")
 
+    # TODO 打包时获取配置写入
     def apply_selected_config_to_slclient(self) -> None:
         """打包时调用：收集所有四个模块的数据并写入 JSON"""
         if not PATH_SLCLIENT_JSON.exists():
