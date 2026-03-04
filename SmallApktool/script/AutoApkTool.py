@@ -33,6 +33,9 @@ ENV_CONF = {
     '国内环境': {'ip_address': 'cndns.shanliptt.com:10200', 'context': 'show'},
 }
 
+DEFAULT_ENV = "海外环境"
+
+
 # 关键文件路径
 PATH_YML = PROJECT_PATH / "app_out" / "apktool.yml"
 PATH_SLCLIENT_JSON = PROJECT_PATH / "app_out" / "assets" / "slclient.json"
@@ -911,79 +914,99 @@ class App(ctk.CTk):
         """构建环境配置内容"""
 
         # --- 1. 准备选项列表 ---
-        # 基础预设选项
         base_options = list(ENV_CONF.keys())
-        # 【关键】新增独立选项
-        self.CUSTOM_OPTION_NAME = "独立部署 (Profile)"
-        env_options = base_options + [self.CUSTOM_OPTION_NAME]
+        self.CUSTOM_OPTION_NAME = "独立部署"
 
-        if not base_options:
-            base_options = ["无可用配置"]
-            env_options = ["无可用配置", self.CUSTOM_OPTION_NAME]
+        if base_options:
+            env_options = base_options + [self.CUSTOM_OPTION_NAME]
+        else:
+            env_options = [self.CUSTOM_OPTION_NAME]
 
         # --- 2. 创建控件 ---
 
-        # A. 标签
-        ctk.CTkLabel(parent, text="服务器节点:", anchor="w").grid(row=0, column=0, padx=5, pady=10, sticky="w")
+        # 标签
+        ctk.CTkLabel(parent, text="服务器节点:", anchor="w").grid(
+            row=0, column=0, padx=5, pady=10, sticky="w"
+        )
 
-        # B. 下拉菜单
-        self.opt_env = ctk.CTkOptionMenu(parent, values=env_options, command=self._on_env_selected)
+        # 下拉菜单
+        self.opt_env = ctk.CTkOptionMenu(
+            parent,
+            values=env_options,
+            command=self._on_env_selected
+        )
         self.opt_env.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
 
-        # C. 独立部署开关 (现在它只作为状态指示或辅助，主要逻辑由下拉菜单控制)
-        # 为了简化逻辑，我们可以让“选中独立部署选项”直接等同于“开启编辑模式”
-        # 但保留开关以符合你之前的UI习惯，或者我们直接用下拉菜单控制状态。
-        # 这里采用：选中"独立部署"选项 -> 自动进入编辑态。
-
-        # ctk.CTkLabel(parent, text="操作模式:", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="w")
-
+        # 操作模式开关（隐藏，仅作为扩展）
         self.switch_custom_env = ctk.CTkSwitch(
             parent,
             text="启用手动编辑",
             command=self._toggle_custom_env_inputs,
             fg_color="#d35400",
-            state="disabled"  # 初始禁用，由下拉菜单逻辑控制是否启用
+            state="disabled"
         )
-        # self.switch_custom_env.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-        # 隐藏该按钮
         self.switch_custom_env.grid_remove()
 
-        # D. 输入框
-        ctk.CTkLabel(parent, text="DNS IP:", anchor="w", font=ctk.CTkFont(size=10)).grid(row=2, column=0, padx=5,
-                                                                                         pady=(5, 2), sticky="w")
-        self.entry_custom_ip = ctk.CTkEntry(parent, placeholder_text="eg: 192.168.1:10200", state="disabled")
+        # DNS 输入框
+        ctk.CTkLabel(parent, text="DNS IP:", anchor="w", font=ctk.CTkFont(size=10)).grid(
+            row=2, column=0, padx=5, pady=(5, 2), sticky="w"
+        )
+
+        self.entry_custom_ip = ctk.CTkEntry(parent, state="disabled")
         self.entry_custom_ip.grid(row=2, column=1, padx=5, pady=(5, 2), sticky="ew")
 
-        ctk.CTkLabel(parent, text="Context:", anchor="w", font=ctk.CTkFont(size=10)).grid(row=3, column=0, padx=5,
-                                                                                          pady=(2, 10), sticky="w")
-        self.entry_custom_context = ctk.CTkEntry(parent, placeholder_text="eg: demotext", state="disabled")
+        # 回显默认文字（只读）
+        self.entry_custom_ip.configure(state="normal")
+        self.entry_custom_ip.delete(0, 'end')
+        self.entry_custom_ip.insert(0, "192.168.1:10200")
+        self.entry_custom_ip.configure(state="disabled")
+
+        # Context 输入框
+        ctk.CTkLabel(parent, text="Context:", anchor="w", font=ctk.CTkFont(size=10)).grid(
+            row=3, column=0, padx=5, pady=(2, 10), sticky="w"
+        )
+
+        self.entry_custom_context = ctk.CTkEntry(parent, state="disabled")
         self.entry_custom_context.grid(row=3, column=1, padx=5, pady=(2, 10), sticky="ew")
 
-        # E. 保存按钮
+        # 回显默认文字
+        self.entry_custom_context.configure(state="normal")
+        self.entry_custom_context.delete(0, 'end')
+        self.entry_custom_context.insert(0, "demotext")
+        self.entry_custom_context.configure(state="disabled")
+
+        # 保存按钮（默认隐藏）
         self.btn_save_custom = ctk.CTkButton(
-            parent, text="💾 保存",
+            parent,
+            text="💾 保存",
             command=self._save_profile_changes,
-            fg_color="#d35400", hover_color="#e67e22", height=28, font=ctk.CTkFont(weight="bold")
+            fg_color="#d35400",
+            hover_color="#e67e22",
+            height=28,
+            font=ctk.CTkFont(weight="bold")
         )
         self.btn_save_custom.grid_remove()
 
-        # F. 状态提示
-        self.lbl_env_info = ctk.CTkLabel(parent, text="", text_color="gray", font=ctk.CTkFont(size=10), anchor="w")
+        # 状态提示
+        self.lbl_env_info = ctk.CTkLabel(
+            parent,
+            text="",
+            text_color="gray",
+            font=ctk.CTkFont(size=10),
+            anchor="w"
+        )
         self.lbl_env_info.grid(row=5, column=0, columnspan=2, padx=5, pady=(5, 10), sticky="w")
 
-        # --- 3. 设置默认行为 ---
-        # 默认选中 "海外环境" (预设)
-        if "海外环境" in base_options:
+        # --- 3. 默认选中 ---
+        if DEFAULT_ENV in base_options:
             self.opt_env.set("海外环境")
             self._on_env_selected("海外环境")
         elif base_options:
             self.opt_env.set(base_options[0])
             self._on_env_selected(base_options[0])
         else:
-            # 如果连预设都没有，默认选独立部署
             self.opt_env.set(self.CUSTOM_OPTION_NAME)
             self._on_env_selected(self.CUSTOM_OPTION_NAME)
-
     def _save_profile_changes(self):
         """
         将当前输入的 IP 和 Context 保存到 slclient.json 的 profile 节点中。
@@ -1036,10 +1059,6 @@ class App(ctk.CTk):
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
-            # 5. 【重要】不再修改 ENV_CONF
-            # 原因：ENV_CONF 应始终保持为“纯净预设”。
-            # 下次用户点击“独立部署”时，_enter_custom_mode 会重新从文件读取最新值，
-            # 这样能保证界面显示与文件绝对一致，避免内存状态不同步。
 
             # 6. 成功反馈
             success_msg = (
@@ -1070,6 +1089,8 @@ class App(ctk.CTk):
             self.lbl_env_info.configure(text=error_msg, text_color="#c0392b")
             messagebox.showerror("未知错误", error_msg)
             print(f"Save Error Details: {e}")
+
+
     def _build_sound_content(self, parent):
         """构建声音配置内容"""
         # 1. 背景音乐音量
@@ -1119,36 +1140,13 @@ class App(ctk.CTk):
         self.entry_fps.insert(0, "60")
 
     def _refresh_custom_inputs(self):
-        """仅刷新独立部署模式下的输入框数据，不改变UI状态"""
+        """切换到独立部署模式时：仅置空输入框，不加载任何数据"""
         if self.opt_env.get() != self.CUSTOM_OPTION_NAME:
             return
 
-        # 优先从文件加载最新数据
-        file_data = self._load_profile_from_file()
-
-        if file_data:
-            dns_val = file_data.get("dns", [])
-            ip_str = dns_val[0] if isinstance(dns_val, list) and dns_val else str(dns_val)
-            ctx_str = file_data.get("context", "")
-        else:
-            # 文件不存在或无数据，使用“海外环境”作为默认模板填充，但不修改海外环境本身
-            template = ENV_CONF.get("海外环境", {})
-            ip_val = template.get('ip_address', '')
-            ip_str = ip_val[0] if isinstance(ip_val, list) else ip_val
-            ctx_str = template.get('context', '')
-
-        # 只有当输入框为空或者用户没有正在输入时才覆盖？
-        # 为了简单，每次切换到该选项都重置为最新保存的值（或模板）
-        # 如果希望保留用户未保存的临时修改，可以加判断，这里采用重置策略以保证一致性
-        current_ip = self.entry_custom_ip.get()
-        current_ctx = self.entry_custom_context.get()
-
-        # 简单策略：直接填入最新数据
+        # 置空输入框
         self.entry_custom_ip.delete(0, 'end')
-        self.entry_custom_ip.insert(0, ip_str)
-
         self.entry_custom_context.delete(0, 'end')
-        self.entry_custom_context.insert(0, ctx_str)
 
     def _toggle_custom_env_inputs(self):
         """处理开关的显隐逻辑"""
@@ -1167,12 +1165,6 @@ class App(ctk.CTk):
             # 刷新数据
             self._refresh_custom_inputs()
 
-            self.lbl_env_info.configure(
-                text=f"✏️ 模式：[独立部署]\n正在编辑",
-                text_color="#d35400",
-                font=ctk.CTkFont(size=11, weight="bold")
-            )
-            self.entry_custom_ip.focus()
         else:
             # --- 关闭编辑 ---
             self.entry_custom_ip.configure(state="disabled")
@@ -1313,15 +1305,36 @@ class App(ctk.CTk):
 
         # 情况 A: 用户选择了预设节点 (海外/国内)
         if selected_name != self.CUSTOM_OPTION_NAME:
+
             # 1. 关闭编辑模式
             if self.switch_custom_env.get():
                 self.switch_custom_env.deselect()
-                self._toggle_custom_env_inputs()  # 执行关闭界面的逻辑
+                self._toggle_custom_env_inputs()
+                self.btn_save_custom.grid_remove()
 
-            # 2. 禁用开关 (预设模式下不允许开开关)
+            # 2. 禁用开关
             self.switch_custom_env.configure(state="disabled")
 
-            # 3. 显示预设信息
+            # 3. 获取预设配置
+            preset = ENV_CONF.get(selected_name, {})
+
+            dns_ip = preset.get("ip_address", "")
+            context = preset.get("context", "")
+
+            # 4. 先启用输入框才能写入
+            self.entry_custom_ip.configure(state="normal")
+            self.entry_custom_context.configure(state="normal")
+
+            self.entry_custom_ip.delete(0, "end")
+            self.entry_custom_ip.insert(0, dns_ip)
+
+            self.entry_custom_context.delete(0, "end")
+            self.entry_custom_context.insert(0, context)
+
+            # 5. 写完再禁用
+            self.entry_custom_ip.configure(state="disabled")
+            self.entry_custom_context.configure(state="disabled")
+
             self._show_preset_info(selected_name)
 
         # 情况 B: 用户选择了 "独立部署 (Profile)"
@@ -1337,6 +1350,20 @@ class App(ctk.CTk):
                 # 如果已经是开启状态，刷新一下数据（防止切换回来数据没更新）
                 self._refresh_custom_inputs()
 
+    def _fill_env_inputs(self, dns_ip, context, readonly=True):
+        self.entry_custom_ip.configure(state="normal")
+        self.entry_custom_context.configure(state="normal")
+
+        self.entry_custom_ip.delete(0, "end")
+        self.entry_custom_ip.insert(0, dns_ip)
+
+        self.entry_custom_context.delete(0, "end")
+        self.entry_custom_context.insert(0, context)
+
+        if readonly:
+            self.entry_custom_ip.configure(state="disabled")
+            self.entry_custom_context.configure(state="disabled")
+
     def _show_preset_info(self,node_name):
         """显示预设节点的只读信息"""
         config = ENV_CONF.get(node_name, {})
@@ -1346,14 +1373,15 @@ class App(ctk.CTk):
         if isinstance(ip_val, list):
             ip_val = ip_val[0] if ip_val else "N/A"
 
-        self.lbl_env_info.configure(
-            text=f"✅ 模式：预设节点 [{node_name}]\nIP: {ip_val} | Context: {ctx_val}\n(预设配置不可直接修改)",
-            text_color="#27ae60",
-            font=ctk.CTkFont(size=11)
-        )
-        # 确保输入框清空或禁用
-        self.entry_custom_ip.delete(0, 'end')
-        self.entry_custom_context.delete(0, 'end')
+        # self.lbl_env_info.configure(
+        #     text=f"✅ 模式：预设节点 [{node_name}]\nIP: {ip_val}\n"
+        #          f" | Context: {ctx_val}",
+        #     text_color="#27ae60",
+        #     font=ctk.CTkFont(size=11)
+        # )
+        # # 确保输入框清空或禁用
+        # self.entry_custom_ip.delete(0, 'end')
+        # self.entry_custom_context.delete(0, 'end')
 
 
     def _update_preview(self, key, value):
