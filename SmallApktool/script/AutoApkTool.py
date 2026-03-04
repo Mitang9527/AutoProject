@@ -29,8 +29,8 @@ APKTOOL_JAR = "apktool.jar"
 
 # 环境配置
 ENV_CONF = {
+    '海外环境': {'ip_address': 'sgdns.shanlipoc.com:10200', 'context': 'pocstar'},
     '国内环境': {'ip_address': 'cndns.shanliptt.com:10200', 'context': 'show'},
-    '海外环境': {'ip_address': 'sgdns.shanlipoc.com:10200', 'context': 'pocstar'}
 }
 
 # 关键文件路径
@@ -586,7 +586,10 @@ class App(ctk.CTk):
 
         self.tab_log = self.tabview.add("实时日志")
         self.tab_config = self.tabview.add("配置列表")
-        self.tab_build_config = self.tabview.add("打包配置")
+        self.tab_build_config = self.tabview.add("终端配置")
+        self.load_slclient_config()
+
+        self._init_sidebar()
         self._init_build_config_page()
 
         self.log_textbox = ctk.CTkTextbox(
@@ -821,145 +824,648 @@ class App(ctk.CTk):
 
     def _init_build_config_page(self) -> None:
         """初始化打包配置页面"""
-        header_lbl = ctk.CTkLabel(self.tab_build_config, text="APK 环境配置", font=ctk.CTkFont(size=16, weight="bold"))
-        header_lbl.pack(pady=(20, 10))
-        sub_lbl = ctk.CTkLabel(self.tab_build_config, text="以下选项将读取 slclient.json 并决定签名证书及最终配置", text_color="gray")
-        sub_lbl.pack(pady=(0, 20))
 
-        form_frame = ctk.CTkFrame(self.tab_build_config)
-        form_frame.pack(fill="both", expand=True, padx=40, pady=10)
-        form_frame.grid_columnconfigure(1, weight=1)
-
-        # 1. APK 环境类型
-        ctk.CTkLabel(form_frame, text="服务器环境:", anchor="w").grid(row=0, column=0, padx=20, pady=15, sticky="w")
-
-        env_options = list(ENV_CONF.keys())
-        self.opt_env = ctk.CTkOptionMenu(
-            form_frame,
-            values=env_options,
-            command=self._on_env_selected
+        # 主标题
+        lbl_title = ctk.CTkLabel(
+            self.tab_build_config,
+            text="APK属性配置",
+            font=ctk.CTkFont(size=18, weight="bold")
         )
-        self.opt_env.grid(row=0, column=1, padx=20, pady=15, sticky="ew")
-        self.opt_env.set(env_options[0])  # 默认选中第一个
+        lbl_title.pack(pady=(15, 10))
 
-        self._on_env_selected(env_options[0])
+        # --- 主容器：使用 Grid 布局实现 2x2 ---
+        grid_frame = ctk.CTkFrame(self.tab_build_config, fg_color="transparent")
+        grid_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # 2. 地图源
-        ctk.CTkLabel(form_frame, text="地图:", anchor="w").grid(row=1, column=0, padx=20, pady=15, sticky="w")
-        self.opt_map = ctk.CTkOptionMenu(form_frame, values=["baidu", "google"], command=lambda v: self._update_config("map_source", v))
-        self.opt_map.grid(row=1, column=1, padx=20, pady=15, sticky="ew")
+        # 配置行列权重，确保四等分 (weight=1 表示平均分配空间)
+        grid_frame.grid_columnconfigure(0, weight=1)
+        grid_frame.grid_columnconfigure(1, weight=1)
+        grid_frame.grid_rowconfigure(0, weight=1)
+        grid_frame.grid_rowconfigure(1, weight=1)
 
-        # 3. 编码格式
-        ctk.CTkLabel(form_frame, text="编码格式:", anchor="w").grid(row=2, column=0, padx=20, pady=15, sticky="w")
-        self.opt_enc = ctk.CTkOptionMenu(form_frame, values=["opus", "evrc8k", "amrnb"], command=lambda v: self._update_config("encoding", v))
-        self.opt_enc.grid(row=2, column=1, padx=20, pady=15, sticky="ew")
+        # --- 创建四个子模块卡片 ---
 
-        # 刷新按钮
-        # refresh_btn = ctk.CTkButton(form_frame, text="重新读取 slclient.json", command=self.load_slclient_options)
-        # refresh_btn.grid(row=3, column=0, columnspan=2, pady=20)
+        # 1. 左上：环境配置
+        self.frame_env = self._create_config_card(
+            parent=grid_frame,
+            title="🌍 环境配置 (Environment)",
+            row=0, col=0,
+            content_func=self._build_env_content
+        )
 
-        # 启动时自动加载一次
-        self.after(500, self.load_slclient_options)
+        # 2. 右上：声音配置
+        self.frame_sound = self._create_config_card(
+            parent=grid_frame,
+            title="🔊 声音配置 (Audio)",
+            row=0, col=1,
+            content_func=self._build_sound_content
+        )
 
-    def _on_env_selected(self,selected_name: str):
-        """用户选择环境名称时，提取对应的 IP 和 Context"""
-        if selected_name in ENV_CONF:
-            config = ENV_CONF[selected_name]
+        # 3. 左下：地图配置
+        self.frame_map = self._create_config_card(
+            parent=grid_frame,
+            title="🗺️地图配置 (Map)",
+            row=1, col=0,
+            content_func=self._build_map_content
+        )
 
-            # 将完整的配置对象存入实例变量，供打包时使用
-            self.current_env_config = {
-                "name": selected_name,
-                "ip": config['ip_address'],
-                "context": config['context']
-            }
+        # 4. 右下：其他设置
+        self.frame_other = self._create_config_card(
+            parent=grid_frame,
+            title="⚙️ 其他设置 (Others)",
+            row=1, col=1,
+            content_func=self._build_other_content
+        )
 
-            self.append_log(f"[Config] 已选择: {selected_name}\n")
-            self.append_log(f"   -> IP: {config['ip_address']}\n")
-            self.append_log(f"   -> Context: {config['context']}\n")
+        # 初始化时加载一次默认值
+        self.after(500, self.load_all_configs)
+
+    def _create_config_card(self, parent, title, row, col, content_func):
+        """辅助函数：创建一个带标题的卡片容器"""
+        card = ctk.CTkFrame(parent, corner_radius=10, border_width=1, border_color="#3B8ED0")
+        card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+
+        # 卡片内部布局
+        card.grid_columnconfigure(0, weight=1)
+        card.grid_rowconfigure(1, weight=1)  # 内容区域可伸缩
+
+        # 标题栏
+        lbl_title = ctk.CTkLabel(
+            card, text=title,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            anchor="w"
+        )
+        lbl_title.grid(row=0, column=0, padx=15, pady=10, sticky="w")
+
+        # 内容容器 (由 content_func 填充)
+        content_frame = ctk.CTkFrame(card, fg_color="transparent")
+        content_frame.grid(row=1, column=0, padx=15, pady=(0, 15), sticky="nsew")
+        content_frame.grid_columnconfigure(1, weight=1)  # 让输入框撑开
+
+        # 执行填充函数
+        content_func(content_frame)
+
+        return card
+
+    def _build_env_content(self, parent):
+        """构建环境配置内容"""
+
+        # --- 1. 准备选项列表 ---
+        # 基础预设选项
+        base_options = list(ENV_CONF.keys())
+        # 【关键】新增独立选项
+        self.CUSTOM_OPTION_NAME = "独立部署 (Profile)"
+        env_options = base_options + [self.CUSTOM_OPTION_NAME]
+
+        if not base_options:
+            base_options = ["无可用配置"]
+            env_options = ["无可用配置", self.CUSTOM_OPTION_NAME]
+
+        # --- 2. 创建控件 ---
+
+        # A. 标签
+        ctk.CTkLabel(parent, text="服务器节点:", anchor="w").grid(row=0, column=0, padx=5, pady=10, sticky="w")
+
+        # B. 下拉菜单
+        self.opt_env = ctk.CTkOptionMenu(parent, values=env_options, command=self._on_env_selected)
+        self.opt_env.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
+
+        # C. 独立部署开关 (现在它只作为状态指示或辅助，主要逻辑由下拉菜单控制)
+        # 为了简化逻辑，我们可以让“选中独立部署选项”直接等同于“开启编辑模式”
+        # 但保留开关以符合你之前的UI习惯，或者我们直接用下拉菜单控制状态。
+        # 这里采用：选中"独立部署"选项 -> 自动进入编辑态。
+
+        ctk.CTkLabel(parent, text="操作模式:", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.switch_custom_env = ctk.CTkSwitch(
+            parent,
+            text="启用手动编辑",
+            command=self._toggle_custom_env_inputs,
+            fg_color="#d35400",
+            state="disabled"  # 初始禁用，由下拉菜单逻辑控制是否启用
+        )
+        self.switch_custom_env.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+
+        # D. 输入框
+        ctk.CTkLabel(parent, text="DNS IP:", anchor="w", font=ctk.CTkFont(size=10)).grid(row=2, column=0, padx=5,
+                                                                                         pady=(5, 2), sticky="w")
+        self.entry_custom_ip = ctk.CTkEntry(parent, placeholder_text="eg: 192.168.1.99", state="disabled")
+        self.entry_custom_ip.grid(row=2, column=1, padx=5, pady=(5, 2), sticky="ew")
+
+        ctk.CTkLabel(parent, text="Context:", anchor="w", font=ctk.CTkFont(size=10)).grid(row=3, column=0, padx=5,
+                                                                                          pady=(2, 10), sticky="w")
+        self.entry_custom_context = ctk.CTkEntry(parent, placeholder_text="eg: pocstar", state="disabled")
+        self.entry_custom_context.grid(row=3, column=1, padx=5, pady=(2, 10), sticky="ew")
+
+        # E. 保存按钮
+        self.btn_save_custom = ctk.CTkButton(
+            parent, text="💾 保存修改到 slclient.json",
+            command=self._save_profile_changes,
+            fg_color="#d35400", hover_color="#e67e22", height=28, font=ctk.CTkFont(weight="bold")
+        )
+        self.btn_save_custom.grid_remove()
+
+        # F. 状态提示
+        self.lbl_env_info = ctk.CTkLabel(parent, text="", text_color="gray", font=ctk.CTkFont(size=10), anchor="w")
+        self.lbl_env_info.grid(row=5, column=0, columnspan=2, padx=5, pady=(5, 10), sticky="w")
+
+        # --- 3. 设置默认行为 ---
+        # 默认选中 "海外环境" (预设)
+        if "海外环境" in base_options:
+            self.opt_env.set("海外环境")
+            self._on_env_selected("海外环境")
+        elif base_options:
+            self.opt_env.set(base_options[0])
+            self._on_env_selected(base_options[0])
         else:
-            self.append_log(f"[Error] 未找到环境配置: {selected_name}\n")
+            # 如果连预设都没有，默认选独立部署
+            self.opt_env.set(self.CUSTOM_OPTION_NAME)
+            self._on_env_selected(self.CUSTOM_OPTION_NAME)
 
-    def apply_selected_config_to_slclient(self) -> None:
-        if not hasattr(self, 'current_env_config'):
+    def _save_profile_changes(self):
+        """将当前输入的 IP 和 Context 覆盖写入到 slclient.json 的 profile 节点中"""
+        import json
+        import re
+
+        new_ip = self.entry_custom_ip.get().strip()
+        new_context = self.entry_custom_context.get().strip()
+
+        # 1. 基础验证
+        if not new_ip or not new_context:
+            self.lbl_env_info.configure(
+                text="❌ 错误：DNS IP 和 Context 不能为空！",
+                text_color="#c0392b",
+                font=ctk.CTkFont(size=12, weight="bold")
+            )
             return
 
-        with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # 简单的 IP 格式检查
+        if ":" not in new_ip and not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', new_ip):
+            if not messagebox.askyesno("格式提示", f"IP '{new_ip}' 看起来不包含端口或非标准 IP。\n确定要保存吗？"):
+                return
 
-        cfg = self.current_env_config
+        try:
+            json_path = PATH_SLCLIENT_JSON
 
+            if not json_path.exists():
+                raise FileNotFoundError(f"配置文件不存在：{json_path}")
 
-        # 1. 写入 IP
-        if "network" not in data: data["network"] = {}
-        data["network"]["server_ip"] = cfg['ip']  # 例如: cndns.shanliptt.com:10200
+            # 2. 读取现有 JSON
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
 
-        # 2. 写入 Context
-        data["network"]["context_path"] = cfg['context']  # 例如: show
+            # 3. 定位并修改 profile 节点
+            # 根据你的描述：找到 "profile": { "context": "...", "dns": [...] }
+            if "profile" not in data:
+                # 如果没有 profile 节点，创建一个
+                data["profile"] = {}
 
+            # 更新 Context
+            data["profile"]["context"] = new_context
 
-        # 写回文件
-        with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            # 更新 DNS (将其改为只包含新 IP 的列表)
+            # 原需求：将其 dns 改为 192.168.1.99 (即 [new_ip])
+            data["profile"]["dns"] = [new_ip]
 
-        self.append_log(f"[OK] 已直接更新配置:\n   IP: {cfg['ip']}\n   Context: {cfg['context']}\n")
+            # 4. 写回文件
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
 
-    def load_slclient_options(self) -> None:
-        """从 slclient.json 读取可用选项并更新 UI"""
-        # default_envs = ["large", "middle", "small"]
-        # default_maps = ["baidu", "google"]
+            # 5. 同步更新内存中的 ENV_CONF，以便界面即时生效
+            # 更新 "海外环境" 对应的缓存
+            ENV_CONF["海外环境"]["context"] = new_context
+            ENV_CONF["海外环境"]["ip_address"] = [new_ip]  # 保持列表格式或字符串格式需与你加载逻辑一致
 
-        # env_options = default_envs
-        # map_options = default_maps
+            # 6. 成功反馈
+            self.lbl_env_info.configure(
+                text=f"✅ 保存成功!\nProfile 已更新:\n- Context: {new_context}\n- DNS: [{new_ip}]",
+                text_color="#27ae60",
+                font=ctk.CTkFont(size=11, weight="bold")
+            )
 
-        # 尝试解析真实文件
-        if PATH_SLCLIENT_JSON.exists():
-            try:
-                with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
+            messagebox.showinfo("成功", "配置已保存")
+
+            # 可选：保存后自动关闭独立部署模式，应用新状态
+            # self.switch_custom_env.deselect()
+            # self._toggle_custom_env_inputs()
+
+        except Exception as e:
+            error_msg = f"❌ 保存失败: {str(e)}"
+            self.lbl_env_info.configure(text=error_msg, text_color="#c0392b")
+            messagebox.showerror("错误", error_msg)
+            print(f"Save Error: {e}")
+
+    def _build_sound_content(self, parent):
+        """构建声音配置内容"""
+        # 1. 背景音乐音量
+        ctk.CTkLabel(parent, text="BGM 音量:", anchor="w").grid(row=0, column=0, padx=5, pady=8, sticky="w")
+        self.slider_bgm = ctk.CTkSlider(parent, from_=0, to=100, number_of_steps=100,
+                                        command=lambda v: self._update_preview("bgm", int(v)))
+        self.slider_bgm.grid(row=0, column=1, padx=5, pady=8, sticky="ew")
+        self.slider_bgm.set(80)  # 默认 80%
+
+        lbl_bgm_val = ctk.CTkLabel(parent, text="80%", width=40, anchor="w")
+        lbl_bgm_val.grid(row=0, column=2, padx=5, pady=8, sticky="w")
+        # 绑定更新标签
+        self.slider_bgm.configure(
+            command=lambda v: (self._update_preview("bgm", int(v)), lbl_bgm_val.configure(text=f"{int(v)}%")))
+
+        # 2. 音效开关
+        ctk.CTkLabel(parent, text="开启音效:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
+        self.switch_sfx = ctk.CTkSwitch(parent, text="Enabled",
+                                        command=lambda: self._update_preview("sfx", self.switch_sfx.get()))
+        self.switch_sfx.grid(row=1, column=1, padx=5, pady=8, sticky="w")
+        self.switch_sfx.select()  # 默认开启
+
+    def _build_map_content(self, parent):
+        """构建地图配置内容"""
+        # 1. 地图源
+        ctk.CTkLabel(parent, text="地图数据源:", anchor="w").grid(row=0, column=0, padx=5, pady=10, sticky="w")
+        self.opt_map = ctk.CTkOptionMenu(parent, values=["baidu","baidu[海外]" "google",], command=lambda v: self._update_preview("map_provider", v))
+        self.opt_map.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
+        self.opt_map.set("baidu")
+
+        # 2. 卫星图层
+        ctk.CTkLabel(parent, text="默认卫星图:", anchor="w").grid(row=1, column=0, padx=5, pady=10, sticky="w")
+        self.switch_satellite = ctk.CTkSwitch(parent, text="Satellite Mode", command=lambda: self._update_preview("satellite", self.switch_satellite.get()))
+        self.switch_satellite.grid(row=1, column=1, padx=5, pady=10, sticky="w")
+
+    def _build_other_content(self, parent):
+        """构建其他设置内容"""
+        # 1. 调试模式
+        ctk.CTkLabel(parent, text="调试模式 (Debug):", anchor="w").grid(row=0, column=0, padx=5, pady=10, sticky="w")
+        self.switch_debug = ctk.CTkSwitch(parent, text="Enable Logs", command=lambda: self._update_preview("debug", self.switch_debug.get()))
+        self.switch_debug.grid(row=0, column=1, padx=5, pady=10, sticky="w")
+
+        # 2. 帧率限制
+        ctk.CTkLabel(parent, text="最大帧率 (FPS):", anchor="w").grid(row=1, column=0, padx=5, pady=10, sticky="w")
+        self.entry_fps = ctk.CTkEntry(parent, width=60, placeholder_text="60")
+        self.entry_fps.grid(row=1, column=1, padx=5, pady=10, sticky="w")
+        self.entry_fps.insert(0, "60")
+
+    def _refresh_custom_inputs(self):
+        """仅刷新独立部署模式下的输入框数据，不改变UI状态"""
+        if self.opt_env.get() != self.CUSTOM_OPTION_NAME:
+            return
+
+        # 优先从文件加载最新数据
+        file_data = self._load_profile_from_file()
+
+        if file_data:
+            dns_val = file_data.get("dns", [])
+            ip_str = dns_val[0] if isinstance(dns_val, list) and dns_val else str(dns_val)
+            ctx_str = file_data.get("context", "")
+        else:
+            # 文件不存在或无数据，使用“海外环境”作为默认模板填充，但不修改海外环境本身
+            template = ENV_CONF.get("海外环境", {})
+            ip_val = template.get('ip_address', '')
+            ip_str = ip_val[0] if isinstance(ip_val, list) else ip_val
+            ctx_str = template.get('context', '')
+
+        # 只有当输入框为空或者用户没有正在输入时才覆盖？
+        # 为了简单，每次切换到该选项都重置为最新保存的值（或模板）
+        # 如果希望保留用户未保存的临时修改，可以加判断，这里采用重置策略以保证一致性
+        current_ip = self.entry_custom_ip.get()
+        current_ctx = self.entry_custom_context.get()
+
+        # 简单策略：直接填入最新数据
+        self.entry_custom_ip.delete(0, 'end')
+        self.entry_custom_ip.insert(0, ip_str)
+
+        self.entry_custom_context.delete(0, 'end')
+        self.entry_custom_context.insert(0, ctx_str)
+
+    def _toggle_custom_env_inputs(self):
+        """处理开关的显隐逻辑"""
+        is_on = self.switch_custom_env.get()
+
+        # 如果当前选的不是独立部署，却强行开了开关（理论上不会发生，因为_on_env_selected控制了）
+        if self.opt_env.get() != self.CUSTOM_OPTION_NAME:
+            self.switch_custom_env.deselect()
+            return
+
+        if is_on:
+            # --- 开启编辑 ---
+            self.entry_custom_ip.configure(state="normal")
+            self.entry_custom_context.configure(state="normal")
+            self.btn_save_custom.grid(row=4, column=0, columnspan=2, padx=5, pady=10, sticky="ew")
+
+            # 刷新数据
+            self._refresh_custom_inputs()
+
+            self.lbl_env_info.configure(
+                text=f"✏️ 模式：[独立部署]\n正在编辑 slclient.json 中的 profile 节点。\n此操作不影响'海外环境'预设。",
+                text_color="#d35400",
+                font=ctk.CTkFont(size=11, weight="bold")
+            )
+            self.entry_custom_ip.focus()
+        else:
+            # --- 关闭编辑 ---
+            self.entry_custom_ip.configure(state="disabled")
+            self.entry_custom_context.configure(state="disabled")
+            self.btn_save_custom.grid_remove()
+
+            # 关闭时，如果不保存，刚才的修改就丢弃了，显示文件里的最新值或者提示
+            self.lbl_env_info.configure(
+                text=f"ℹ️ 已退出编辑模式。\n未保存的修改已丢弃。",
+                text_color="gray"
+            )
+
+    def _save_custom_env_to_file(self):
+        """将当前输入的独立部署配置保存到 slclient.json"""
+        import json
+        import os
+
+        ip = self.entry_custom_ip.get().strip()
+        context = self.entry_custom_context.get().strip()
+
+        # 1. 基础验证
+        if not ip or not context:
+            self.lbl_env_info.configure(
+                text="❌ 错误：IP 和 Context 不能为空！",
+                text_color="#c0392b",
+                font=ctk.CTkFont(size=12, weight="bold")
+            )
+            return
+
+        # 简单的 IP:Port 格式检查 (可选)
+        if ":" not in ip:
+            self.lbl_env_info.configure(
+                text="⚠️ 提示：IP 格式建议为 'IP:端口' (如 192.168.1.1:8080)",
+                text_color="#d35400",
+                font=ctk.CTkFont(size=11)
+            )
+            # 这里不 return，允许用户强行保存，或者你可以根据需求 return
+
+        # 2. 生成唯一的节点名称
+        # 使用 "Custom_" + context 作为 key，避免冲突
+        new_node_name = f"Custom_{context}"
+
+        # 检查是否已存在同名节点
+        if new_node_name in ENV_CONF:
+            confirm = messagebox.askyesno(
+                "节点已存在",
+                f"名为 '{new_node_name}' 的配置已存在。\n是否覆盖现有配置？"
+            )
+            if not confirm:
+                return
+
+        # 3. 读取并更新 slclient.json
+        try:
+            json_path = "slclient.json"  # 确保路径正确，如果是相对路径则相对于脚本运行目录
+
+            # 如果文件不存在，创建一个基础结构 (根据你的实际 JSON 结构调整)
+            data = {}
+            if os.path.exists(json_path):
+                with open(json_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
 
-                # 获取当前环境类型 (ui.launcherModule)
-                current_env = self.get_json_field(PATH_SLCLIENT_JSON, LAUNCHER_MODULE_PATH)
-                if current_env:
-                    # 将当前值置顶，并合并默认列表去重
-                    env_options = list(dict.fromkeys([current_env] + default_envs))
+            # 假设 JSON 结构是 { "nodes": { "name": {...} } } 或者直接是 { "name": {...} }
+            # 请根据你实际的 slclient.json 结构调整下面的赋值逻辑
+            # 这里假设结构是直接平铺的：{ "NodeName": { "ip_address": "...", "context": "..." } }
+            # 如果你的结构嵌套在 "environments" 或其他键下，请相应修改，例如：data['environments'][new_node_name] = ...
 
-                # 获取当前地图 (map.provider) - 假设路径，可根据实际 json 结构调整
-                current_map = self.get_json_field(PATH_SLCLIENT_JSON, ["map", "provider"])
-                if current_map:
-                    map_options = list(dict.fromkeys([current_map] + default_maps))
+            data[new_node_name] = {
+                "ip_address": ip,
+                "context": context,
+                "description": "User Custom Environment"  # 可选描述
+            }
 
-                self.append_log(f"[Config] 已加载 slclient.json 配置选项。\n")
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
 
-            except Exception as e:
-                self.append_log(f"[Warn] 读取 slclient.json 失败: {e}，使用默认选项。\n")
-        else:
-            self.append_log("[Info] 未找到 slclient.json (可能尚未反编译)，使用默认选项。\n")
+            # 4. 保存成功后的反馈
+            self.lbl_env_info.configure(
+                text=f"✅ 已保存: {new_node_name}",
+                text_color="#27ae60",
+                font=ctk.CTkFont(size=12, weight="bold")
+            )
 
-        # 更新 UI 下拉框
-        self.opt_env.configure(values=env_options)
-        self.opt_map.configure(values=map_options)
+            # 5. 动态刷新内存和下拉菜单
+            # 更新全局配置字典 (如果 ENV_CONF 是全局变量)
+            ENV_CONF[new_node_name] = data[new_node_name]
 
-        # 设置默认选中值
-        if env_options:
-            self.build_config["env_type"] = env_options[0]
-            self.opt_env.set(env_options[0])
-            self._update_config("env_type", env_options[0])  # 触发侧边栏更新
+            # 刷新下拉菜单选项
+            current_options = list(self.opt_env.cget("values"))
+            if new_node_name not in current_options:
+                new_options = current_options + [new_node_name]
+                self.opt_env.configure(values=new_options)
+                self.opt_env.set(new_node_name)  # 自动选中新建的
 
-        if map_options:
-            self.build_config["map_source"] = map_options[0]
-            self.opt_map.set(map_options[0])
+            # 触发选中事件，应用新配置
+            self._on_env_selected(new_node_name)
 
-    def _update_config(self, key: str, value: str) -> None:
-        """更新内部配置字典并刷新侧边栏显示"""
+            # 可选：保存后自动切回“预设模式”并选中刚创建的项，或者保持独立部署模式
+            # 这里选择保持独立部署模式但提示已保存，或者你可以选择自动关闭开关：
+            # self.switch_custom_env.deselect()
+            # self._toggle_custom_env_inputs()
+
+        except Exception as e:
+            self.lbl_env_info.configure(
+                text=f"❌ 保存失败: {str(e)}",
+                text_color="#c0392b",
+                font=ctk.CTkFont(size=11)
+            )
+            print(f"Error saving config: {e}")
+
+    def _update_config_from_custom_inputs(self):
+        """从手动输入框读取数据并更新内部配置"""
+        ip = self.entry_custom_ip.get().strip()
+        context = self.entry_custom_context.get().strip()
+
+        if not ip or not context:
+            self.lbl_env_info.configure(text="⚠️ 请完整填写 IP 和 Context", text_color="orange")
+            # 即使为空也先存着，等打包时再报错或忽略
+            self.current_env_config = {
+                "name": "独立部署 (未配置)",
+                "ip": ip,
+                "context": context,
+                "is_custom": True
+            }
+            return
+
+        self.current_env_config = {
+            "name": f"独立部署 ({ip})",
+            "ip": ip,
+            "context": context,
+            "is_custom": True
+        }
+        self.lbl_env_info.configure(text=f"🔧 独立部署: {ip} | {context}", text_color="#3498db")
+
+    def _on_env_selected(self, selected_name):
+        """当下拉菜单选择改变时触发 - 核心路由"""
+        if not hasattr(self, 'switch_custom_env'):
+            return
+
+        # 情况 A: 用户选择了预设节点 (海外/国内)
+        if selected_name != self.CUSTOM_OPTION_NAME:
+            # 1. 关闭编辑模式
+            if self.switch_custom_env.get():
+                self.switch_custom_env.deselect()
+                self._toggle_custom_env_inputs()  # 执行关闭界面的逻辑
+
+            # 2. 禁用开关 (预设模式下不允许开开关)
+            self.switch_custom_env.configure(state="disabled")
+
+            # 3. 显示预设信息
+            self._show_preset_info(selected_name)
+
+        # 情况 B: 用户选择了 "独立部署 (Profile)"
+        elif selected_name == self.CUSTOM_OPTION_NAME:
+            # 1. 启用开关
+            self.switch_custom_env.configure(state="normal", text="启用手动编辑")
+
+            # 2. 自动开启编辑模式 (如果还没开)
+            if not self.switch_custom_env.get():
+                self.switch_custom_env.select()
+                self._toggle_custom_env_inputs()  # 执行开启界面的逻辑
+            else:
+                # 如果已经是开启状态，刷新一下数据（防止切换回来数据没更新）
+                self._refresh_custom_inputs()
+
+    def _show_preset_info(self,node_name):
+        """显示预设节点的只读信息"""
+        config = ENV_CONF.get(node_name, {})
+        ip_val = config.get('ip_address', 'N/A')
+        ctx_val = config.get('context', 'N/A')
+
+        if isinstance(ip_val, list):
+            ip_val = ip_val[0] if ip_val else "N/A"
+
+        self.lbl_env_info.configure(
+            text=f"✅ 模式：预设节点 [{node_name}]\nIP: {ip_val} | Context: {ctx_val}\n(预设配置不可直接修改)",
+            text_color="#27ae60",
+            font=ctk.CTkFont(size=11)
+        )
+        # 确保输入框清空或禁用
+        self.entry_custom_ip.delete(0, 'end')
+        self.entry_custom_context.delete(0, 'end')
+
+
+    def _update_preview(self, key, value):
+        """通用配置更新回调，用于实时更新内存中的配置字典"""
+        if not hasattr(self, 'build_config'):
+            self.build_config = {}
         self.build_config[key] = value
-        self.append_log(f"[Config] 设置 {key} = {value}\n")
 
-        # 更新侧边栏的状态提示
-        if key == "env_type":
-            type_map = {"large": "大屏", "middle": "中屏", "small": "小屏"}
-            display_name = type_map.get(value, value)
-            map_val = self.build_config.get('map_source', '未知')
-            self.apk_status_label.configure(text=f"APK 配置:\n类型：{display_name}\n地图：{map_val}")
+    def load_all_configs(self):
+        """从 slclient.json 加载所有配置并填充到 UI (可选功能)"""
+        if not PATH_SLCLIENT_JSON.exists():
+            return
+
+        try:
+            with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # 示例：加载环境
+            # current_id = data.get('ui', {}).get('launcherModule', '1')
+            # 反向查找名字... (略)
+
+            # 示例：加载地图
+            # map_prov = data.get('map', {}).get('provider', 'gaode')
+            # if hasattr(self, 'opt_map'): self.opt_map.set(map_prov)
+
+            self.append_log("[Info] 已从 slclient.json 加载配置到界面。\n")
+        except Exception as e:
+            self.append_log(f"[Warn] 加载配置失败: {e}\n")
+
+    def apply_selected_config_to_slclient(self) -> None:
+        """打包时调用：收集所有四个模块的数据并写入 JSON"""
+        if not PATH_SLCLIENT_JSON.exists():
+            self.append_log("[Error] slclient.json 不存在，无法写入配置。\n")
+            return
+
+        try:
+            with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            if not hasattr(self, 'current_env_config'):
+                self.append_log("[Error] 环境配置未初始化。\n")
+                return
+
+            cfg = self.current_env_config
+
+            # 如果是独立部署模式，校验输入是否为空
+            if cfg.get('is_custom'):
+                if not cfg['ip'] or not cfg['context']:
+                    self.append_log("[Error] 独立部署模式下，IP 和 Context 不能为空！请填写或关闭独立部署开关。\n")
+                    # 可以选择弹窗提示或阻止打包
+                    return
+                self.append_log(f"[Info] 使用独立部署配置: {cfg['ip']}\n")
+
+            # 写入逻辑 (与之前一致)
+            if "network" not in data: data["network"] = {}
+            data["network"]["server_ip"] = cfg['ip']
+            data["network"]["context_path"] = cfg['context']
+
+            # 如果有 ID 映射逻辑 (仅针对非自定义模式)
+            if not cfg.get('is_custom') and "ui" in data:
+                # 这里可以加入 NAME_TO_ID 逻辑
+                pass
+
+            # 2. 写入声音配置
+            if hasattr(self, 'slider_bgm'):
+                if "audio" not in data: data["audio"] = {}
+                data["audio"]["bgm_volume"] = int(self.slider_bgm.get())
+                data["audio"]["sfx_enabled"] = bool(self.switch_sfx.get())
+
+            # 3. 写入地图配置
+            if hasattr(self, 'opt_map'):
+                if "map" not in data: data["map"] = {}
+                data["map"]["provider"] = self.opt_map.get()
+                data["map"]["satellite_default"] = bool(self.switch_satellite.get())
+
+            # 4. 写入其他设置
+            if hasattr(self, 'switch_debug'):
+                if "system" not in data: data["system"] = {}
+                data["system"]["debug_mode"] = bool(self.switch_debug.get())
+                fps_val = getattr(self, 'entry_fps', None)
+                if fps_val:
+                    try:
+                        data["system"]["max_fps"] = int(fps_val.get())
+                    except:
+                        data["system"]["max_fps"] = 60
+
+            # 写回文件
+            with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+
+            self.append_log("[OK] 所有配置 (环境/声音/地图/其他) 已成功写入 slclient.json\n")
+
+        except Exception as e:
+            self.append_log(f"[Error] 写入 slclient.json 失败: {e}\n")
+            import traceback
+            traceback.print_exc()
+
+    # 在 App 类定义之前或 __init__ 中调用
+    def load_slclient_config(self):
+        """启动时从 slclient.json 加载配置更新 ENV_CONF"""
+        if not PATH_SLCLIENT_JSON.exists():
+            print(f"⚠️ 未找到 {PATH_SLCLIENT_JSON}，使用默认硬编码配置。")
+            return
+
+        try:
+            with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # 假设 JSON 中有 "profile" 节点，将其映射到 "海外环境"
+            if "profile" in data:
+                prof = data["profile"]
+                # 更新全局 ENV_CONF 中的 "海外环境"
+                # 注意：原代码中 ip_address 是字符串，这里如果 dns 是列表，取第一个
+                dns_list = prof.get("dns", [])
+                ip_val = dns_list[0] if isinstance(dns_list, list) and dns_list else prof.get("dns", "")
+
+                ENV_CONF["海外环境"]["context"] = prof.get("context", "pocstar")
+                ENV_CONF["海外环境"]["ip_address"] = ip_val
+
+                print(f"✅ 已从 slclient.json 加载 profile 配置到 '海外环境'。")
+
+            # 如果有其他节点也可以在这里解析添加到 ENV_CONF
+        except Exception as e:
+            print(f"❌ 加载 slclient.json 失败: {e}")
+
+    # 在 App.__init__ 中，在初始化 UI 之前调用
+    # self.load_slclient_config() (如果定义为类方法) 或直接调用 load_slclient_config()
 
     # ==================== APK 工具链逻辑 ====================
 
