@@ -935,7 +935,8 @@ class App(ctk.CTk):
         # 但保留开关以符合你之前的UI习惯，或者我们直接用下拉菜单控制状态。
         # 这里采用：选中"独立部署"选项 -> 自动进入编辑态。
 
-        ctk.CTkLabel(parent, text="操作模式:", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        # ctk.CTkLabel(parent, text="操作模式:", anchor="w").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+
         self.switch_custom_env = ctk.CTkSwitch(
             parent,
             text="启用手动编辑",
@@ -943,22 +944,24 @@ class App(ctk.CTk):
             fg_color="#d35400",
             state="disabled"  # 初始禁用，由下拉菜单逻辑控制是否启用
         )
-        self.switch_custom_env.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+        # self.switch_custom_env.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+        # 隐藏该按钮
+        self.switch_custom_env.grid_remove()
 
         # D. 输入框
         ctk.CTkLabel(parent, text="DNS IP:", anchor="w", font=ctk.CTkFont(size=10)).grid(row=2, column=0, padx=5,
                                                                                          pady=(5, 2), sticky="w")
-        self.entry_custom_ip = ctk.CTkEntry(parent, placeholder_text="eg: 192.168.1.99", state="disabled")
+        self.entry_custom_ip = ctk.CTkEntry(parent, placeholder_text="eg: 192.168.1:10200", state="disabled")
         self.entry_custom_ip.grid(row=2, column=1, padx=5, pady=(5, 2), sticky="ew")
 
         ctk.CTkLabel(parent, text="Context:", anchor="w", font=ctk.CTkFont(size=10)).grid(row=3, column=0, padx=5,
                                                                                           pady=(2, 10), sticky="w")
-        self.entry_custom_context = ctk.CTkEntry(parent, placeholder_text="eg: pocstar", state="disabled")
+        self.entry_custom_context = ctk.CTkEntry(parent, placeholder_text="eg: demotext", state="disabled")
         self.entry_custom_context.grid(row=3, column=1, padx=5, pady=(2, 10), sticky="ew")
 
         # E. 保存按钮
         self.btn_save_custom = ctk.CTkButton(
-            parent, text="💾 保存修改到 slclient.json",
+            parent, text="💾 保存",
             command=self._save_profile_changes,
             fg_color="#d35400", hover_color="#e67e22", height=28, font=ctk.CTkFont(weight="bold")
         )
@@ -982,9 +985,10 @@ class App(ctk.CTk):
             self._on_env_selected(self.CUSTOM_OPTION_NAME)
 
     def _save_profile_changes(self):
-        """将当前输入的 IP 和 Context 覆盖写入到 slclient.json 的 profile 节点中"""
-        import json
-        import re
+        """
+        将当前输入的 IP 和 Context 保存到 slclient.json 的 profile 节点中。
+        专用于【独立部署】模式，不影响 ENV_CONF 中的预设节点（如海外/国内）。
+        """
 
         new_ip = self.entry_custom_ip.get().strip()
         new_context = self.entry_custom_context.get().strip()
@@ -998,62 +1002,74 @@ class App(ctk.CTk):
             )
             return
 
-        # 简单的 IP 格式检查
-        if ":" not in new_ip and not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', new_ip):
-            if not messagebox.askyesno("格式提示", f"IP '{new_ip}' 看起来不包含端口或非标准 IP。\n确定要保存吗？"):
+        # 2. IP 格式宽松检查 (支持 IP:Port 或纯 IP)
+        # 允许：192.168.1.1, 192.168.1.1:53, 8.8.8.8, domain.com 等
+        # 只要不是明显的乱码即可，这里只做简单提示
+        ip_part = new_ip.split(':')[0]
+        if not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', ip_part) and not re.match(r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                                                                              ip_part):
+            if not messagebox.askyesno("格式确认",
+                                       f"检测到的 IP/域名 '{new_ip}' 格式可能不标准。\n"
+                                       f"确定要保存到独立部署配置吗？"):
                 return
 
         try:
             json_path = PATH_SLCLIENT_JSON
 
+            # 如果文件不存在，创建一个新结构
             if not json_path.exists():
-                raise FileNotFoundError(f"配置文件不存在：{json_path}")
-
-            # 2. 读取现有 JSON
-            with open(json_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+                data = {}
+            else:
+                # 读取现有 JSON
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
 
             # 3. 定位并修改 profile 节点
-            # 根据你的描述：找到 "profile": { "context": "...", "dns": [...] }
             if "profile" not in data:
-                # 如果没有 profile 节点，创建一个
                 data["profile"] = {}
 
-            # 更新 Context
+            # 更新数据
             data["profile"]["context"] = new_context
-
-            # 更新 DNS (将其改为只包含新 IP 的列表)
-            # 原需求：将其 dns 改为 192.168.1.99 (即 [new_ip])
-            data["profile"]["dns"] = [new_ip]
+            data["profile"]["dns"] = [new_ip]  # 强制存为列表，符合 slclient 常见格式
 
             # 4. 写回文件
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
-            # 5. 同步更新内存中的 ENV_CONF，以便界面即时生效
-            # 更新 "海外环境" 对应的缓存
-            ENV_CONF["海外环境"]["context"] = new_context
-            ENV_CONF["海外环境"]["ip_address"] = [new_ip]  # 保持列表格式或字符串格式需与你加载逻辑一致
+            # 5. 【重要】不再修改 ENV_CONF
+            # 原因：ENV_CONF 应始终保持为“纯净预设”。
+            # 下次用户点击“独立部署”时，_enter_custom_mode 会重新从文件读取最新值，
+            # 这样能保证界面显示与文件绝对一致，避免内存状态不同步。
 
             # 6. 成功反馈
+            success_msg = (
+                f"✅ 独立部署配置已保存!\n"
+                f"- Context: {new_context}\n"
+                f"- DNS: {new_ip}"
+            )
             self.lbl_env_info.configure(
-                text=f"✅ 保存成功!\nProfile 已更新:\n- Context: {new_context}\n- DNS: [{new_ip}]",
+                text=success_msg,
                 text_color="#27ae60",
                 font=ctk.CTkFont(size=11, weight="bold")
             )
 
-            messagebox.showinfo("成功", "配置已保存")
+            messagebox.showinfo("保存成功", "配置已写入")
 
-            # 可选：保存后自动关闭独立部署模式，应用新状态
-            # self.switch_custom_env.deselect()
-            # self._toggle_custom_env_inputs()
 
+        except FileNotFoundError:
+            # 理论上上面已经处理了不存在的情况，这里以防万一
+            error_msg = "❌ 错误：找不到配置文件路径。"
+            self.lbl_env_info.configure(text=error_msg, text_color="#c0392b")
+            messagebox.showerror("路径错误", error_msg)
+        except PermissionError:
+            error_msg = "❌ 错误：没有权限写入文件，请以管理员身份运行。"
+            self.lbl_env_info.configure(text=error_msg, text_color="#c0392b")
+            messagebox.showerror("权限错误", error_msg)
         except Exception as e:
             error_msg = f"❌ 保存失败: {str(e)}"
             self.lbl_env_info.configure(text=error_msg, text_color="#c0392b")
-            messagebox.showerror("错误", error_msg)
-            print(f"Save Error: {e}")
-
+            messagebox.showerror("未知错误", error_msg)
+            print(f"Save Error Details: {e}")
     def _build_sound_content(self, parent):
         """构建声音配置内容"""
         # 1. 背景音乐音量
@@ -1138,7 +1154,6 @@ class App(ctk.CTk):
         """处理开关的显隐逻辑"""
         is_on = self.switch_custom_env.get()
 
-        # 如果当前选的不是独立部署，却强行开了开关（理论上不会发生，因为_on_env_selected控制了）
         if self.opt_env.get() != self.CUSTOM_OPTION_NAME:
             self.switch_custom_env.deselect()
             return
@@ -1153,7 +1168,7 @@ class App(ctk.CTk):
             self._refresh_custom_inputs()
 
             self.lbl_env_info.configure(
-                text=f"✏️ 模式：[独立部署]\n正在编辑 slclient.json 中的 profile 节点。\n此操作不影响'海外环境'预设。",
+                text=f"✏️ 模式：[独立部署]\n正在编辑",
                 text_color="#d35400",
                 font=ctk.CTkFont(size=11, weight="bold")
             )
@@ -1166,7 +1181,7 @@ class App(ctk.CTk):
 
             # 关闭时，如果不保存，刚才的修改就丢弃了，显示文件里的最新值或者提示
             self.lbl_env_info.configure(
-                text=f"ℹ️ 已退出编辑模式。\n未保存的修改已丢弃。",
+                text=f"ℹ未保存的修改已丢弃。",
                 text_color="gray"
             )
 
