@@ -30,7 +30,7 @@ APKTOOL_JAR = "apktool.jar"
 # 环境配置
 ENV_CONF = {
     '海外环境': {'ip_address': 'sgdns.shanlipoc.com:10200', 'context': 'pocstar'},
-    '国内环境': {'ip_address': 'cndns.shanliptt.com:10200', 'context': 'show'},
+    '国内环境2.0': {'ip_address': 'cndns.shanliptt.com:10200', 'context': 'show'},
 }
 
 DEFAULT_ENV = "海外环境"
@@ -590,7 +590,8 @@ class App(ctk.CTk):
         self.tab_log = self.tabview.add("实时日志")
         self.tab_config = self.tabview.add("配置列表")
         self.tab_build_config = self.tabview.add("终端配置")
-        self.load_slclient_config()
+
+        # self.load_slclient_config()
 
         self._init_sidebar()
         self._init_build_config_page()
@@ -956,10 +957,10 @@ class App(ctk.CTk):
         self.entry_custom_ip.grid(row=2, column=1, padx=5, pady=(5, 2), sticky="ew")
 
         # 回显默认文字（只读）
-        self.entry_custom_ip.configure(state="normal")
-        self.entry_custom_ip.delete(0, 'end')
-        self.entry_custom_ip.insert(0, "192.168.1:10200")
-        self.entry_custom_ip.configure(state="disabled")
+        # self.entry_custom_ip.configure(state="normal")
+        # self.entry_custom_ip.delete(0, 'end')
+        # self.entry_custom_ip.insert(0, "192.168.1:10200")
+        # self.entry_custom_ip.configure(state="disabled")
 
         # Context 输入框
         ctk.CTkLabel(parent, text="Context:", anchor="w", font=ctk.CTkFont(size=10)).grid(
@@ -970,10 +971,10 @@ class App(ctk.CTk):
         self.entry_custom_context.grid(row=3, column=1, padx=5, pady=(2, 10), sticky="ew")
 
         # 回显默认文字
-        self.entry_custom_context.configure(state="normal")
-        self.entry_custom_context.delete(0, 'end')
-        self.entry_custom_context.insert(0, "demotext")
-        self.entry_custom_context.configure(state="disabled")
+        # self.entry_custom_context.configure(state="normal")
+        # self.entry_custom_context.delete(0, 'end')
+        # self.entry_custom_context.insert(0, "demotext")
+        # self.entry_custom_context.configure(state="disabled")
 
         # 保存按钮（默认隐藏）
         self.btn_save_custom = ctk.CTkButton(
@@ -997,16 +998,21 @@ class App(ctk.CTk):
         )
         self.lbl_env_info.grid(row=5, column=0, columnspan=2, padx=5, pady=(5, 10), sticky="w")
 
-        # --- 3. 默认选中 ---
-        if DEFAULT_ENV in base_options:
-            self.opt_env.set("海外环境")
-            self._on_env_selected("海外环境")
-        elif base_options:
+        saved = self.opt_env.get()
+
+        if saved in base_options:
+            self._on_env_selected(saved)
+            return
+
+
+        if base_options:
             self.opt_env.set(base_options[0])
             self._on_env_selected(base_options[0])
+
         else:
             self.opt_env.set(self.CUSTOM_OPTION_NAME)
             self._on_env_selected(self.CUSTOM_OPTION_NAME)
+
     def _save_profile_changes(self):
         """
         将当前输入的 IP 和 Context 保存到 slclient.json 的 profile 节点中。
@@ -1061,16 +1067,16 @@ class App(ctk.CTk):
 
 
             # 6. 成功反馈
-            success_msg = (
-                f"✅ 独立部署配置已保存!\n"
-                f"- Context: {new_context}\n"
-                f"- DNS: {new_ip}"
-            )
-            self.lbl_env_info.configure(
-                text=success_msg,
-                text_color="#27ae60",
-                font=ctk.CTkFont(size=11, weight="bold")
-            )
+            # success_msg = (
+            #     f"✅ 独立部署配置已保存!\n"
+            #     f"- Context: {new_context}\n"
+            #     f"- DNS: {new_ip}"
+            # )
+            # self.lbl_env_info.configure(
+            #     text=success_msg,
+            #     text_color="#27ae60",
+            #     font=ctk.CTkFont(size=11, weight="bold")
+            # )
 
             messagebox.showinfo("保存成功", "配置已写入")
 
@@ -1117,7 +1123,7 @@ class App(ctk.CTk):
         """构建地图配置内容"""
         # 1. 地图源
         ctk.CTkLabel(parent, text="地图数据源:", anchor="w").grid(row=0, column=0, padx=5, pady=10, sticky="w")
-        self.opt_map = ctk.CTkOptionMenu(parent, values=["baidu","baidu[海外]" "google",], command=lambda v: self._update_preview("map_provider", v))
+        self.opt_map = ctk.CTkOptionMenu(parent, values=["baidu","baidu[海外]","google",], command=lambda v: self._update_preview("map_provider", v))
         self.opt_map.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
         self.opt_map.set("baidu")
 
@@ -1648,7 +1654,7 @@ class App(ctk.CTk):
                 self.copy_files(PATH_INPUT_JSON_SRC,PATH_INPUT_JSON_DST)
 
                 # 3. 构建未签名 APK
-                self.append_log("[Step 3] 正在打包 APK...\n")
+                self.append_log("\n[Step 3] 正在打包 APK...\n")
                 apktool_cmd = [
                     "java", "-jar", str(APKTOOL_JAR),
                     "b", TEMP_DIR, "-o", "app-unsigned-unaligned.apk"
