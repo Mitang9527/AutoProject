@@ -27,6 +27,12 @@ JSON_FILE = "input.json"
 TEMP_DIR = "app_out"
 APKTOOL_JAR = "apktool.jar"
 
+# 环境配置
+ENV_CONF = {
+    '国内环境': {'ip_address': 'cndns.shanliptt.com:10200', 'context': 'show'},
+    '海外环境': {'ip_address': 'sgdns.shanlipoc.com:10200', 'context': 'pocstar'}
+}
+
 # 关键文件路径
 PATH_YML = PROJECT_PATH / "app_out" / "apktool.yml"
 PATH_SLCLIENT_JSON = PROJECT_PATH / "app_out" / "assets" / "slclient.json"
@@ -461,6 +467,15 @@ class App(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
+        # 打包配置状态管理
+        self.build_config = {
+            "env_type": "",      # 默认环境类型
+            "map_source": "baidu",    # 默认地图
+            "encoding": "amrnb"       # 默认编码
+        }
+
+        self.slclient_options = {}  # 存储从 slclient.json 解析出的可选值
+
         self._init_sidebar()
         self._init_main_area()
 
@@ -468,6 +483,7 @@ class App(ctk.CTk):
         self.after(100, self.process_log_queue)
         self.after(500, self.initial_env_check)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
 
     def _init_sidebar(self) -> None:
         """初始化侧边栏"""
@@ -570,6 +586,8 @@ class App(ctk.CTk):
 
         self.tab_log = self.tabview.add("实时日志")
         self.tab_config = self.tabview.add("配置列表")
+        self.tab_build_config = self.tabview.add("打包配置")
+        self._init_build_config_page()
 
         self.log_textbox = ctk.CTkTextbox(
             self.tab_log,
@@ -801,6 +819,148 @@ class App(ctk.CTk):
         self.status_label.configure(text=f"状态：已选择 {value} APK", text_color="#d35400")
         self.append_log(f"[Info] APK 类型切换为：{value}\n")
 
+    def _init_build_config_page(self) -> None:
+        """初始化打包配置页面"""
+        header_lbl = ctk.CTkLabel(self.tab_build_config, text="APK 环境配置", font=ctk.CTkFont(size=16, weight="bold"))
+        header_lbl.pack(pady=(20, 10))
+        sub_lbl = ctk.CTkLabel(self.tab_build_config, text="以下选项将读取 slclient.json 并决定签名证书及最终配置", text_color="gray")
+        sub_lbl.pack(pady=(0, 20))
+
+        form_frame = ctk.CTkFrame(self.tab_build_config)
+        form_frame.pack(fill="both", expand=True, padx=40, pady=10)
+        form_frame.grid_columnconfigure(1, weight=1)
+
+        # 1. APK 环境类型
+        ctk.CTkLabel(form_frame, text="服务器环境:", anchor="w").grid(row=0, column=0, padx=20, pady=15, sticky="w")
+
+        env_options = list(ENV_CONF.keys())
+        self.opt_env = ctk.CTkOptionMenu(
+            form_frame,
+            values=env_options,
+            command=self._on_env_selected
+        )
+        self.opt_env.grid(row=0, column=1, padx=20, pady=15, sticky="ew")
+        self.opt_env.set(env_options[0])  # 默认选中第一个
+
+        self._on_env_selected(env_options[0])
+
+        # 2. 地图源
+        ctk.CTkLabel(form_frame, text="地图:", anchor="w").grid(row=1, column=0, padx=20, pady=15, sticky="w")
+        self.opt_map = ctk.CTkOptionMenu(form_frame, values=["baidu", "google"], command=lambda v: self._update_config("map_source", v))
+        self.opt_map.grid(row=1, column=1, padx=20, pady=15, sticky="ew")
+
+        # 3. 编码格式
+        ctk.CTkLabel(form_frame, text="编码格式:", anchor="w").grid(row=2, column=0, padx=20, pady=15, sticky="w")
+        self.opt_enc = ctk.CTkOptionMenu(form_frame, values=["opus", "evrc8k", "amrnb"], command=lambda v: self._update_config("encoding", v))
+        self.opt_enc.grid(row=2, column=1, padx=20, pady=15, sticky="ew")
+
+        # 刷新按钮
+        # refresh_btn = ctk.CTkButton(form_frame, text="重新读取 slclient.json", command=self.load_slclient_options)
+        # refresh_btn.grid(row=3, column=0, columnspan=2, pady=20)
+
+        # 启动时自动加载一次
+        self.after(500, self.load_slclient_options)
+
+    def _on_env_selected(self,selected_name: str):
+        """用户选择环境名称时，提取对应的 IP 和 Context"""
+        if selected_name in ENV_CONF:
+            config = ENV_CONF[selected_name]
+
+            # 将完整的配置对象存入实例变量，供打包时使用
+            self.current_env_config = {
+                "name": selected_name,
+                "ip": config['ip_address'],
+                "context": config['context']
+            }
+
+            self.append_log(f"[Config] 已选择: {selected_name}\n")
+            self.append_log(f"   -> IP: {config['ip_address']}\n")
+            self.append_log(f"   -> Context: {config['context']}\n")
+        else:
+            self.append_log(f"[Error] 未找到环境配置: {selected_name}\n")
+
+    def apply_selected_config_to_slclient(self) -> None:
+        if not hasattr(self, 'current_env_config'):
+            return
+
+        with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        cfg = self.current_env_config
+
+
+        # 1. 写入 IP
+        if "network" not in data: data["network"] = {}
+        data["network"]["server_ip"] = cfg['ip']  # 例如: cndns.shanliptt.com:10200
+
+        # 2. 写入 Context
+        data["network"]["context_path"] = cfg['context']  # 例如: show
+
+
+        # 写回文件
+        with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        self.append_log(f"[OK] 已直接更新配置:\n   IP: {cfg['ip']}\n   Context: {cfg['context']}\n")
+
+    def load_slclient_options(self) -> None:
+        """从 slclient.json 读取可用选项并更新 UI"""
+        # default_envs = ["large", "middle", "small"]
+        # default_maps = ["baidu", "google"]
+
+        # env_options = default_envs
+        # map_options = default_maps
+
+        # 尝试解析真实文件
+        if PATH_SLCLIENT_JSON.exists():
+            try:
+                with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                # 获取当前环境类型 (ui.launcherModule)
+                current_env = self.get_json_field(PATH_SLCLIENT_JSON, LAUNCHER_MODULE_PATH)
+                if current_env:
+                    # 将当前值置顶，并合并默认列表去重
+                    env_options = list(dict.fromkeys([current_env] + default_envs))
+
+                # 获取当前地图 (map.provider) - 假设路径，可根据实际 json 结构调整
+                current_map = self.get_json_field(PATH_SLCLIENT_JSON, ["map", "provider"])
+                if current_map:
+                    map_options = list(dict.fromkeys([current_map] + default_maps))
+
+                self.append_log(f"[Config] 已加载 slclient.json 配置选项。\n")
+
+            except Exception as e:
+                self.append_log(f"[Warn] 读取 slclient.json 失败: {e}，使用默认选项。\n")
+        else:
+            self.append_log("[Info] 未找到 slclient.json (可能尚未反编译)，使用默认选项。\n")
+
+        # 更新 UI 下拉框
+        self.opt_env.configure(values=env_options)
+        self.opt_map.configure(values=map_options)
+
+        # 设置默认选中值
+        if env_options:
+            self.build_config["env_type"] = env_options[0]
+            self.opt_env.set(env_options[0])
+            self._update_config("env_type", env_options[0])  # 触发侧边栏更新
+
+        if map_options:
+            self.build_config["map_source"] = map_options[0]
+            self.opt_map.set(map_options[0])
+
+    def _update_config(self, key: str, value: str) -> None:
+        """更新内部配置字典并刷新侧边栏显示"""
+        self.build_config[key] = value
+        self.append_log(f"[Config] 设置 {key} = {value}\n")
+
+        # 更新侧边栏的状态提示
+        if key == "env_type":
+            type_map = {"large": "大屏", "middle": "中屏", "small": "小屏"}
+            display_name = type_map.get(value, value)
+            map_val = self.build_config.get('map_source', '未知')
+            self.apk_status_label.configure(text=f"APK 配置:\n类型：{display_name}\n地图：{map_val}")
+
     # ==================== APK 工具链逻辑 ====================
 
     def get_json_field(self, file_path: Path, field_path: List[str]) -> Any:
@@ -999,7 +1159,7 @@ class App(ctk.CTk):
                 self.append_log(f"\n[SUCCESS] ✅ 打包完成!\n文件位置：{output_apk_path}\n")
                 self.status_label.configure(text="状态：打包成功", text_color="green")
                 # 删除app_out文件夹
-                shutil.rmtree(output_dir, ignore_errors=True)
+                # shutil.rmtree(output_dir, ignore_errors=True)
                 messagebox.showinfo("成功", f"APK 打包成功！\n保存在：{output_apk_path}")
 
             except Exception as e:
