@@ -956,12 +956,6 @@ class App(ctk.CTk):
         self.entry_custom_ip = ctk.CTkEntry(parent, state="disabled")
         self.entry_custom_ip.grid(row=2, column=1, padx=5, pady=(5, 2), sticky="ew")
 
-        # 回显默认文字（只读）
-        # self.entry_custom_ip.configure(state="normal")
-        # self.entry_custom_ip.delete(0, 'end')
-        # self.entry_custom_ip.insert(0, "192.168.1:10200")
-        # self.entry_custom_ip.configure(state="disabled")
-
         # Context 输入框
         ctk.CTkLabel(parent, text="Context:", anchor="w").grid(
             row=3, column=0, padx=5, pady=(2, 10), sticky="w"
@@ -975,6 +969,22 @@ class App(ctk.CTk):
         # self.entry_custom_context.delete(0, 'end')
         # self.entry_custom_context.insert(0, "demotext")
         # self.entry_custom_context.configure(state="disabled")
+
+        # 登录方式下拉框
+        ctk.CTkLabel(parent, text="登录方式:", anchor="w").grid(
+            row=4, column=0, padx=5, pady=10, sticky="w"
+        )
+
+        self.opt_login_type = ctk.CTkOptionMenu(
+            parent,
+            values=['账号登录', 'IMEI登录', 'ICCID登录'],
+
+            command=lambda v: self._update_preview("login_type", v)
+        )
+        self.opt_login_type.set("账号登录")
+        self.opt_login_type.grid(row=4, column=1, padx=5, pady=10, sticky="ew")
+        # 默认选中「账号」
+        self.opt_login_type.set('账号登录')
 
         # 保存按钮（默认隐藏）
         self.btn_save_custom = ctk.CTkButton(
