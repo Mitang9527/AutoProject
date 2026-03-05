@@ -1190,10 +1190,8 @@ class App(ctk.CTk):
                 )
 
             if slclient_profile:
-
                 profile_dns = slclient_profile.get("dns", [])
                 profile_context = slclient_profile.get("context", "")
-
                 profile_ip = profile_dns[0] if isinstance(profile_dns, list) and profile_dns else ""
 
 
@@ -1213,7 +1211,6 @@ class App(ctk.CTk):
             self._refresh_custom_inputs()
 
         else:
-
             self.entry_custom_ip.configure(state="disabled")
             self.entry_custom_context.configure(state="disabled")
             self.btn_save_custom.grid_remove()
@@ -1344,12 +1341,54 @@ class App(ctk.CTk):
         }
         self.lbl_env_info.configure(text=f"🔧 独立部署: {ip} | {context}", text_color="#3498db")
 
+    def _sync_preset_node_to_json(self, node_name: str) -> None:
+        """
+        将选中的预设节点配置同步写入 slclient.json 的 profile 节点
+        """
+        if node_name == self.CUSTOM_OPTION_NAME:
+            return  # 独立部署模式不在此处处理
+
+        config = ENV_CONF.get(node_name, {})
+        ip_address = config.get("ip_address", "")
+        context = config.get("context", "")
+
+        if not ip_address or not context:
+            self.append_log(f"[Warn] 节点 {node_name} 配置不完整，跳过写入。\n")
+            return
+
+        try:
+            json_path = PATH_SLCLIENT_JSON
+
+            # 读取现有内容
+            data = {}
+            if json_path.exists():
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+            # 更新 profile 节点
+            if "profile" not in data:
+                data["profile"] = {}
+
+            # 写入 DNS (列表格式) 和 Context
+            data["profile"]["dns"] = [ip_address]
+            data["profile"]["context"] = context
+
+            # 写回文件
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+
+            self.append_log(f"[OK] 节点已切换并同步: {node_name} -> slclient.json\n")
+
+        except Exception as e:
+            self.append_log(f"[Error] 同步节点配置到 JSON 失败: {e}\n")
+
     def _on_env_selected(self, selected_name):
         """当下拉菜单选择改变时触发 - 核心路由"""
         if not hasattr(self, 'switch_custom_env'):
             return
 
         # 情况 A: 用户选择了预设节点 (海外/国内)
+        self._sync_preset_node_to_json(selected_name)
         if selected_name != self.CUSTOM_OPTION_NAME:
 
             # 1. 关闭编辑模式
@@ -1357,6 +1396,7 @@ class App(ctk.CTk):
                 self.switch_custom_env.deselect()
                 self._toggle_custom_env_inputs()
                 self.btn_save_custom.grid_remove()
+
 
             # 2. 禁用开关
             self.switch_custom_env.configure(state="disabled")
