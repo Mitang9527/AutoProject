@@ -1163,7 +1163,6 @@ class App(ctk.CTk):
             placeholder_text_color="#95a5a6"
         )
 
-
     def _toggle_custom_env_inputs(self):
         """处理开关的显隐逻辑"""
         is_on = self.switch_custom_env.get()
@@ -1173,21 +1172,52 @@ class App(ctk.CTk):
             return
 
         if is_on:
-            # --- 开启编辑 ---
             self.entry_custom_ip.configure(state="normal")
             self.entry_custom_context.configure(state="normal")
             self.btn_save_custom.grid(row=4, column=0, columnspan=2, padx=5, pady=10, sticky="ew")
 
-            # 刷新数据
+            # ========== 读取 slclient.json 的 profile 并判断 ==========
+            slclient_profile = None
+            try:
+                if PATH_SLCLIENT_JSON.exists():
+                    with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
+                        slclient_data = json.load(f)
+                        slclient_profile = slclient_data.get("profile", {})
+            except Exception as e:
+                self.lbl_env_info.configure(
+                    text=f"ℹ读取 slclient.json 失败：{str(e)}",
+                    text_color="orange"
+                )
+
+            if slclient_profile:
+
+                profile_dns = slclient_profile.get("dns", [])
+                profile_context = slclient_profile.get("context", "")
+
+                profile_ip = profile_dns[0] if isinstance(profile_dns, list) and profile_dns else ""
+
+
+                is_in_env_conf = False
+                for env_name, env_config in ENV_CONF.items():
+                    if env_config.get("ip_address") == profile_ip and env_config.get("context") == profile_context:
+                        is_in_env_conf = True
+                        break
+
+                if not is_in_env_conf:
+                    self.entry_custom_ip.delete(0, 'end')
+                    self.entry_custom_context.delete(0, 'end')
+                    self.entry_custom_ip.insert(0, profile_ip)
+                    self.entry_custom_context.insert(0, profile_context)
+                    return
+
             self._refresh_custom_inputs()
 
         else:
-            # --- 关闭编辑 ---
+
             self.entry_custom_ip.configure(state="disabled")
             self.entry_custom_context.configure(state="disabled")
             self.btn_save_custom.grid_remove()
 
-            # 关闭时，如果不保存，刚才的修改就丢弃了，显示文件里的最新值或者提示
             self.lbl_env_info.configure(
                 text=f"ℹ未保存的修改已丢弃。",
                 text_color="gray"
