@@ -35,6 +35,11 @@ ENV_CONF = {
 
 DEFAULT_ENV = "海外环境"
 
+LOGIN_TYPE_MAPPING = {
+    "账号登录": "account",
+    "IMEI登录": "serial",
+    "ICCID登录": "iccid"
+}
 
 # 关键文件路径
 PATH_YML = PROJECT_PATH / "app_out" / "apktool.yml"
@@ -447,6 +452,42 @@ class SmartKeyBackend:
         self._kill_process()
 
 
+# ==================== slclient.json处理 ====================
+
+def update_slclient_login_type(login_type_ui: str) -> bool:
+    """
+    更新slclient.json中的profile.login_mode字段
+    :param login_type_ui: UI选择的登录方式（如"账号登录"）
+    :return: 是否修改成功
+    """
+    # 1. 校验文件是否存在
+    if not PATH_SLCLIENT_JSON.exists():
+        messagebox.showerror("错误", f"slclient.json文件不存在：\n{PATH_SLCLIENT_JSON}")
+        return False
+
+    # 2. 映射UI值到JSON的login_mode值
+    login_mode_val = LOGIN_TYPE_MAPPING.get(login_type_ui, "account")
+
+    try:
+        # 3. 读取JSON文件
+        with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
+            slclient_data = json.load(f)
+
+        # 4. 核心修正：修改profile下的login_mode
+        # 确保profile节点存在，不存在则创建
+        slclient_data.setdefault("profile", {})["login_mode"] = login_mode_val
+
+        # 5. 写回JSON文件（保留格式）
+        with open(PATH_SLCLIENT_JSON, "w", encoding="utf-8") as f:
+            json.dump(slclient_data, f, indent=2, ensure_ascii=False)
+
+        return True
+
+    except Exception as e:
+        messagebox.showerror("修改失败", f"更新slclient.json出错：\n{str(e)}")
+        traceback.print_exc()
+        return False
+
 # ==================== 前端 UI 类 ====================
 
 class App(ctk.CTk):
@@ -821,6 +862,20 @@ class App(ctk.CTk):
         time.sleep(0.5)
         self.destroy()
 
+    def on_login_type_change(self, selected_val: str) -> None:
+        """登录方式切换回调：更新预览 + 修改slclient.json"""
+        self._update_preview("login_type", selected_val)
+
+        if update_slclient_login_type(selected_val):
+            self.append_log(f"[OK] 已将登录方式改为:{selected_val}\n")
+            self.status_label.configure(
+                text=f"登录方式已更新为\n"
+                     f"{selected_val}",
+                text_color="#27ae60"
+            )
+        else:
+            self.append_log(f"[Error] 未能更新slclient.json登录方式：{selected_val}\n")
+
     def on_apk_type_change(self, value: str) -> None:
         self.current_apk_type = value
         self.status_label.configure(text=f"状态：已选择 {value} APK", text_color="#d35400")
@@ -979,12 +1034,11 @@ class App(ctk.CTk):
             parent,
             values=['账号登录', 'IMEI登录', 'ICCID登录'],
 
-            command=lambda v: self._update_preview("login_type", v)
+            command=self.on_login_type_change
         )
         self.opt_login_type.set("账号登录")
         self.opt_login_type.grid(row=4, column=1, padx=5, pady=10, sticky="ew")
         # 默认选中「账号」
-        self.opt_login_type.set('账号登录')
 
         # 保存按钮（默认隐藏）
         self.btn_save_custom = ctk.CTkButton(
@@ -1485,18 +1539,27 @@ class App(ctk.CTk):
             self.build_config = {}
         self.build_config[key] = value
 
-    def load_all_configs(self):
-        """从 slclient.json 加载所有配置并填充到 UI (可选功能)"""
-        if not PATH_SLCLIENT_JSON.exists():
-            return
-        try:
-            with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+    def load_all_configs(self) -> None:
+        """加载所有配置（含slclient.json的login_mode）"""
+        # 读取slclient.json的login_mode并同步到UI
+        if PATH_SLCLIENT_JSON.exists():
+            try:
+                with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
+                    slclient_data = json.load(f)
 
-            # self.append_log("[Info] 已从 slclient.json 加载配置到界面。\n")
-        except Exception as e:
-            self.append_log(f"[Warn] 加载配置失败: {e}\n")
+                # 读取profile下的login_mode
+                login_mode_val = slclient_data.get("profile", {}).get("login_mode", "account")
 
+                # 反向映射：JSON的login_mode值 -> UI显示值
+                reverse_mapping = {v: k for k, v in LOGIN_TYPE_MAPPING.items()}
+                ui_val = reverse_mapping.get(login_mode_val, "账号登录")
+
+                # 设置到下拉框
+                self.opt_login_type.set(ui_val)
+                self._update_preview("login_type", ui_val)
+
+            except Exception as e:
+                self.append_log(f"[Warning] 读取slclient.json的login_mode失败：{e}\n")
     # TODO 打包时获取配置写入
     def apply_selected_config_to_slclient(self) -> None:
         """打包时调用：收集所有四个模块的数据并写入 JSON"""
