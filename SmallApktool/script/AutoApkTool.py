@@ -41,6 +41,46 @@ LOGIN_TYPE_MAPPING = {
     "ICCID登录": "iccid"
 }
 
+MAP_CONFIG_TEMPLATES = {
+    "百度 [国内]": {
+        "enabled": True,
+        "report": True,
+        "map_type": "baidu",
+        "provider": "baidu",
+        "coor": "bd09ll",
+        "update_period_sec": 40,
+        "report_period_sec": 40
+    },
+    "百度 [海外]": {
+        "enabled": True,
+        "report": True,
+        "map_type": "baidu",
+        "provider": "baidu",
+        "coor": "wgs84",
+        "update_period_sec": 40,
+        "report_period_sec": 40
+    },
+    "谷歌": {
+        "enabled": True,
+        "report": True,
+        "map_type": "google",
+        "provider": "google",
+        "coor": "wgs84",
+        "update_period_sec": 40,
+        "report_period_sec": 40
+    },
+    "GPS": {
+        "enabled": True,
+        "report": True,
+        "map_type": "none",
+        "provider": "default",
+        "coor": "default",
+        "update_period_sec": 40,
+        "report_period_sec": 40
+    }
+}
+
+
 # 关键文件路径
 PATH_YML = PROJECT_PATH / "app_out" / "apktool.yml"
 PATH_SLCLIENT_JSON = PROJECT_PATH / "app_out" / "assets" / "slclient.json"
@@ -488,6 +528,32 @@ def update_slclient_login_type(login_type_ui: str) -> bool:
         traceback.print_exc()
         return False
 
+def update_slclient_map_type(map_type_ui: str) -> bool:
+    if not PATH_SLCLIENT_JSON.exists():
+        messagebox.showerror("错误", f"slclient.json 文件不存在：\n{PATH_SLCLIENT_JSON}")
+        return False
+
+    if map_type_ui not in MAP_CONFIG_TEMPLATES:
+        messagebox.showerror("错误", f"未知的地图类型：{map_type_ui}")
+        return False
+
+    lbs_config = MAP_CONFIG_TEMPLATES[map_type_ui]
+
+    try:
+        with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
+            slclient_data = json.load(f)
+
+        slclient_data["lbs"] = lbs_config
+
+        with open(PATH_SLCLIENT_JSON, "w", encoding="utf-8") as f:
+            json.dump(slclient_data, f, indent=2, ensure_ascii=False)
+
+        return True
+
+    except Exception as e:
+        messagebox.showerror("修改失败", f"更新 slclient.json 出错：\n{str(e)}")
+        traceback.print_exc()
+        return False
 # ==================== 前端 UI 类 ====================
 
 class App(ctk.CTk):
@@ -1145,7 +1211,6 @@ class App(ctk.CTk):
 
 
         except FileNotFoundError:
-            # 理论上上面已经处理了不存在的情况，这里以防万一
             error_msg = "❌ 错误：找不到配置文件路径。"
             self.lbl_env_info.configure(text=error_msg, text_color="#c0392b")
             messagebox.showerror("路径错误", error_msg)
@@ -1185,15 +1250,38 @@ class App(ctk.CTk):
     def _build_map_content(self, parent):
         """构建地图配置内容"""
         # 1. 地图源
-        ctk.CTkLabel(parent, text="地图数据源:", anchor="w").grid(row=0, column=0, padx=5, pady=10, sticky="w")
-        self.opt_map = ctk.CTkOptionMenu(parent, values=["baidu","baidu[海外]","google",], command=lambda v: self._update_preview("map_provider", v))
-        self.opt_map.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
-        self.opt_map.set("baidu")
+        ctk.CTkLabel(parent, text="地图数据源:", anchor="w").grid(
+            row=0, column=0, padx=5, pady=10, sticky="w"
+        )
 
-        # 2. 卫星图层
-        ctk.CTkLabel(parent, text="默认卫星图:", anchor="w").grid(row=1, column=0, padx=5, pady=10, sticky="w")
-        self.switch_satellite = ctk.CTkSwitch(parent, text="Satellite Mode", command=lambda: self._update_preview("satellite", self.switch_satellite.get()))
-        self.switch_satellite.grid(row=1, column=1, padx=5, pady=10, sticky="w")
+        self.opt_map = ctk.CTkOptionMenu(
+            parent,
+            values=list(MAP_CONFIG_TEMPLATES.keys()),
+            command=lambda v: self._on_map_type_changed(v)
+        )
+        self.opt_map.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
+
+        self.opt_map.set("谷歌")
+
+        # # 2. 卫星图层
+        # ctk.CTkLabel(parent, text="默认卫星图:", anchor="w").grid(row=1, column=0, padx=5, pady=10, sticky="w")
+        # self.switch_satellite = ctk.CTkSwitch(parent, text="Satellite Mode", command=lambda: self._update_preview("satellite", self.switch_satellite.get()))
+        # self.switch_satellite.grid(row=1, column=1, padx=5, pady=10, sticky="w")
+
+    def _on_map_type_changed(self, map_type_ui: str):
+        """地图类型变更回调"""
+        if update_slclient_map_type(map_type_ui):
+            self._update_preview("map_provider", map_type_ui)
+            self.append_log(f"[OK] 地图类型已更新为：{map_type_ui}")
+            self.status_label.configure(
+                text=f"登录方式已更新为\n"
+                     f"{map_type_ui}",
+                text_color="#27ae60"
+            )
+        else:
+            # 更新失败，恢复原值
+            current = self.opt_map.get()
+            messagebox.showwarning("警告", "配置更新失败，已恢复原设置")
 
     def _build_other_content(self, parent):
         """构建其他设置内容"""
@@ -1442,6 +1530,11 @@ class App(ctk.CTk):
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
             self.append_log(f"[OK] 节点已切换并同步: {node_name} -> slclient.json\n")
+            self.status_label.configure(
+                text=f"登录方式已更新为\n"
+                     f"{node_name}",
+                text_color="#27ae60"
+            )
 
         except Exception as e:
             self.append_log(f"[Error] 同步节点配置到 JSON 失败: {e}\n")
