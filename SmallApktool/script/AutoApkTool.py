@@ -494,6 +494,7 @@ class SmartKeyBackend:
 
 # ==================== slclient.json处理 ====================
 
+
 def update_slclient_login_type(login_type_ui: str) -> bool:
     """
     更新slclient.json中的profile.login_mode字段
@@ -554,6 +555,8 @@ def update_slclient_map_type(map_type_ui: str) -> bool:
         messagebox.showerror("修改失败", f"更新 slclient.json 出错：\n{str(e)}")
         traceback.print_exc()
         return False
+
+
 # ==================== 前端 UI 类 ====================
 
 class App(ctk.CTk):
@@ -594,6 +597,32 @@ class App(ctk.CTk):
         self.after(500, self.initial_env_check)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
+    # ------------------辅助函数------------------------
+    def _load_slclient_json(self) -> dict:
+        """
+        【通用工具】读取 slclient.json 文件内容。
+
+        Returns:
+            dict: 解析后的 JSON 数据。如果文件不存在或解析失败，返回空字典 {}。
+        """
+        # 写死路径
+        json_path = PATH_SLCLIENT_JSON
+        data = {}
+
+        if not json_path.exists():
+            return data
+
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if content:
+                    data = json.loads(content)
+        except json.JSONDecodeError as e:
+            self.append_log(f"[Warning] JSON 格式错误，将使用空配置: {e}\n")
+        except Exception as e:
+            self.append_log(f"[Error] 读取 JSON 文件失败: {e}\n")
+
+        return data
 
     def _init_sidebar(self) -> None:
         """初始化侧边栏"""
@@ -1228,24 +1257,102 @@ class App(ctk.CTk):
     def _build_sound_content(self, parent):
         """构建声音配置内容"""
         # 1. 背景音乐音量
-        ctk.CTkLabel(parent, text="BGM 音量:", anchor="w").grid(row=0, column=0, padx=5, pady=8, sticky="w")
-        self.slider_bgm = ctk.CTkSlider(parent, from_=0, to=100, number_of_steps=100,
-                                        command=lambda v: self._update_preview("bgm", int(v)))
-        self.slider_bgm.grid(row=0, column=1, padx=5, pady=8, sticky="ew")
-        self.slider_bgm.set(80)  # 默认 80%
-
-        lbl_bgm_val = ctk.CTkLabel(parent, text="80%", width=40, anchor="w")
-        lbl_bgm_val.grid(row=0, column=2, padx=5, pady=8, sticky="w")
-        # 绑定更新标签
-        self.slider_bgm.configure(
-            command=lambda v: (self._update_preview("bgm", int(v)), lbl_bgm_val.configure(text=f"{int(v)}%")))
+        # ctk.CTkLabel(parent, text="BGM 音量:", anchor="w").grid(row=0, column=0, padx=5, pady=8, sticky="w")
+        # self.slider_bgm = ctk.CTkSlider(parent, from_=0, to=100, number_of_steps=100,
+        #                                 command=lambda v: self._update_preview("bgm", int(v)))
+        # self.slider_bgm.grid(row=0, column=1, padx=5, pady=8, sticky="ew")
+        # self.slider_bgm.set(80)  # 默认 80%
+        #
+        # lbl_bgm_val = ctk.CTkLabel(parent, text="80%", width=40, anchor="w")
+        # lbl_bgm_val.grid(row=0, column=2, padx=5, pady=8, sticky="w")
+        # # 绑定更新标签
+        # self.slider_bgm.configure(
+        #     command=lambda v: (self._update_preview("bgm", int(v)), lbl_bgm_val.configure(text=f"{int(v)}%")))
 
         # 2. 音效开关
-        ctk.CTkLabel(parent, text="开启音效:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
-        self.switch_sfx = ctk.CTkSwitch(parent, text="Enabled",
-                                        command=lambda: self._update_preview("sfx", self.switch_sfx.get()))
+        ctk.CTkLabel(parent, text="开启Tone:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
+        self.switch_sfx = ctk.CTkSwitch(parent, text=" ",
+                                        command=lambda: (
+                                            self._sync_tone_enabled_to_json(bool(self.switch_sfx.get()))
+                                        ))
         self.switch_sfx.grid(row=1, column=1, padx=5, pady=8, sticky="w")
         self.switch_sfx.select()  # 默认开启
+
+        # 3. 语音编码
+        ctk.CTkLabel(parent, text="语音编码:", anchor="w").grid(
+            row=2, column=0, padx=5, pady=10, sticky="w"
+        )
+
+        self.opt_sound = ctk.CTkOptionMenu(
+            parent,
+            values=["amrnb", "evrc8k", "opus"],
+            command=self._sync_codec_to_json
+        )
+        self.opt_sound.grid(row=2, column=1, padx=5, pady=10, sticky="ew")
+
+        self.opt_sound.set("amrnb")
+
+    def _sync_codec_to_json(self, selected_codec: str) -> None:
+        """
+        【实时保存】当语音编码改变时，立即更新 slclient.json 中的 sound.codec
+        :param selected_codec: 选中的编码字符串 (如 "amrnb", "opus")
+        """
+        try:
+            data = self._load_slclient_json()
+
+            if "sound" not in data:
+                data["sound"] = {}
+
+            current_val = data["sound"].get("codec")
+
+            if current_val != selected_codec:
+                data["sound"]["codec"] = selected_codec
+
+                with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+
+                self.append_log(f"[OK] 语音编码已切换: {selected_codec}\n")
+                self.status_label.configure(
+                    text=f"语音编码已切换为\n"
+                         f"{selected_codec}",
+                    text_color="#27ae60"
+                )
+
+            else:
+                pass
+
+        except Exception as e:
+            self.append_log(f"[Error] 保存语音编码失败: {e}\n")
+
+    def _sync_tone_enabled_to_json(self, is_enabled: bool) -> None:
+        """
+        【实时保存】确保写入的是 JSON 标准的 true/false，而不是 0/1
+        """
+        try:
+            data = self._load_slclient_json()
+
+            if "sound" not in data:
+                data["sound"] = {}
+
+            json_value = bool(is_enabled)
+
+            current_val = data["sound"].get("tone_enabled")
+            if current_val != json_value:
+                data["sound"]["tone_enabled"] = json_value
+
+                with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+
+                status = "开启" if json_value else "关闭"
+                self.append_log(f"[OK] Tone 音效已{status}\n")
+
+                self.status_label.configure(
+                    text=f"Tone 音效已{status}",
+                    text_color="#27ae60"
+                )
+
+        except Exception as e:
+            self.append_log(f"[Error] 保存 Tone 开关失败: {e}\n")
 
     def _build_map_content(self, parent):
         """构建地图配置内容"""
@@ -1509,13 +1616,7 @@ class App(ctk.CTk):
             return
 
         try:
-            json_path = PATH_SLCLIENT_JSON
-
-            # 读取现有内容
-            data = {}
-            if json_path.exists():
-                with open(json_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+            data = self._load_slclient_json()
 
             # 更新 profile 节点
             if "profile" not in data:
@@ -1526,7 +1627,7 @@ class App(ctk.CTk):
             data["profile"]["context"] = context
 
             # 写回文件
-            with open(json_path, 'w', encoding='utf-8') as f:
+            with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
             self.append_log(f"[OK] 节点已切换并同步: {node_name} -> slclient.json\n")
