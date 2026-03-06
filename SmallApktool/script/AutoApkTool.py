@@ -322,6 +322,7 @@ class SmartKeyBackend:
         except Exception:
             return False
 
+
     def _generate_standard_config(
         self, suffix: str, key_type: str, action_str: str,
         virtual_key: int, is_many: bool
@@ -733,11 +734,14 @@ class App(ctk.CTk):
         self.tab_log = self.tabview.add("实时日志")
         self.tab_config = self.tabview.add("配置列表")
         self.tab_build_config = self.tabview.add("终端配置")
+        self.tab_input_led_config = self.tabview.add("按键LED配置")
+
 
         # self.load_slclient_config()
 
         self._init_sidebar()
         self._init_build_config_page()
+        self._init_led_config_page()
 
         self.log_textbox = ctk.CTkTextbox(
             self.tab_log,
@@ -1040,6 +1044,165 @@ class App(ctk.CTk):
 
         # 初始化时加载一次默认值
         self.after(500, self.load_all_configs)
+
+    def _init_led_config_page(self) -> None:
+        """初始化按键LED配置页面 (上下平分布局)"""
+
+        # 1. 主标题
+        lbl_title = ctk.CTkLabel(
+            self.tab_input_led_config,
+            text="按键 LED 配置",
+            font=ctk.CTkFont(size=18, weight="bold")
+        )
+        lbl_title.pack(pady=(15, 10))
+
+        # 2. 主容器：使用 Grid 布局实现 上下 1:1 平分
+        # fg_color="transparent" 让背景透明，与 Tab 背景融合
+        grid_frame = ctk.CTkFrame(self.tab_input_led_config, fg_color="transparent")
+        grid_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # 【关键步骤】配置行列权重
+        # 只有 1 列 (column 0)，权重为 1 (占满宽度)
+        grid_frame.grid_columnconfigure(0, weight=1)
+
+        # 有 2 行 (row 0 和 row 1)，权重都为 1 -> 这意味着它们将平均分配高度 (50% : 50%)
+        grid_frame.grid_rowconfigure(0, weight=1)
+        grid_frame.grid_rowconfigure(1, weight=1)
+
+        # 3. 创建上下两个子模块卡片
+
+        # --- 上半部分：LED 模式/策略配置 ---
+        self.frame_led_mode = self._create_config_card(
+            parent=grid_frame,
+            title="💡 按键 配置",
+            row=0, col=0,
+            content_func=self._build_input_mode_content
+        )
+
+        # --- 下半部分：颜色与亮度配置 ---
+        self.frame_led_color = self._create_config_card(
+            parent=grid_frame,
+            title="🎨 LED 配置",
+            row=1, col=0,
+            content_func=self._build_led_color_content
+        )
+
+        # 4. 初始化加载 (可选，如果需要从文件读取默认值)
+        # self.after(500, self.load_led_configs)
+
+    def _build_input_mode_content(self, parent):
+        """构建手动配置 PTT/SOS 按键的 UI (样式统一版)"""
+
+        # --- 统一样式配置 ---
+        label_width = 80
+        entry_height = 32
+        pad_x = 10
+        pad_y = 8
+        sticky_label = "w"
+        sticky_entry = "ew"
+
+        # --- 1. 按下 PTT (Press) ---
+        ctk.CTkLabel(
+            parent,
+            text="按下 PTT:",
+            anchor="w",
+            width=label_width
+        ).grid(row=0, column=0, padx=(pad_x, 5), pady=(pad_y, 2), sticky=sticky_label)
+
+        self.entry_ptt_press = ctk.CTkEntry(
+            parent,
+            placeholder_text="Action for PTT_DOWN",
+            height=entry_height
+        )
+        self.entry_ptt_press.grid(row=0, column=1, padx=(5, pad_x), pady=(pad_y, 2), sticky=sticky_entry)
+
+        # --- 2. 抬起 PTT (Release) ---
+        ctk.CTkLabel(
+            parent,
+            text="抬起 PTT:",
+            anchor="w",
+            width=label_width
+        ).grid(row=1, column=0, padx=(pad_x, 5), pady=2, sticky=sticky_label)
+
+        self.entry_ptt_release = ctk.CTkEntry(
+            parent,
+            placeholder_text="Action for PTT_UP",
+            height=entry_height
+        )
+        self.entry_ptt_release.grid(row=1, column=1, padx=(5, pad_x), pady=2, sticky=sticky_entry)
+
+        # --- 3. SOS 按键 ---
+        ctk.CTkLabel(
+            parent,
+            text="SOS 按键:",
+            anchor="w",
+            width=label_width
+        ).grid(row=2, column=0, padx=(pad_x, 5), pady=2, sticky=sticky_label)
+
+        self.entry_sos = ctk.CTkEntry(
+            parent,
+            placeholder_text="Action for SOS",
+            height=entry_height
+        )
+        self.entry_sos.grid(row=2, column=1, padx=(5, pad_x), pady=2, sticky=sticky_entry)
+
+        # --- 4. 保存按钮 ---
+
+        btn_save = ctk.CTkButton(
+            parent,
+            text="➕ 保存配置",
+            command=self._on_save_manual_keys,
+            fg_color="#28a745",
+            hover_color="#218838",
+            height=28,
+            width=25,
+            font=ctk.CTkFont(size=13, weight="bold")
+        )
+        btn_save.grid(row=3, column=0, columnspan=2, padx=pad_x, pady=(pad_y, 10), sticky="e")
+
+        # 状态提示
+        self.lbl_env_info = ctk.CTkLabel(
+            parent,
+            text="",
+            text_color="gray",
+            font=ctk.CTkFont(size=10),
+            anchor="w"
+        )
+        self.lbl_env_info.grid(row=4, column=0, columnspan=2, padx=pad_x, pady=(pad_y, 10), sticky="w")
+
+        # --- 布局权重配置 ---
+        parent.grid_columnconfigure(1, weight=1)
+        parent.grid_columnconfigure(0, weight=0)
+
+    def _on_save_manual_keys(self):
+
+        val_press = self.entry_ptt_press.get().strip()
+        val_release = self.entry_ptt_release.get().strip()
+        val_sos = self.entry_sos.get().strip()
+
+        if not val_press and not val_release and not val_sos:
+            self.lbl_env_info.configure(
+                text="❌ 错误：按键值 不能为空！",
+                text_color="#c0392b",
+                font=ctk.CTkFont(size=12, weight="bold")
+            )
+
+
+
+
+
+
+    def _build_led_color_content(self, parent):
+        """填充下半部分：颜色和亮度"""
+        ctk.CTkLabel(parent, text="LED 颜色 (Hex):", anchor="w").grid(row=0, column=0, sticky="w", pady=5)
+        self.entry_led_color = ctk.CTkEntry(parent, placeholder_text="#FF0000")
+        self.entry_led_color.grid(row=1, column=0, sticky="ew", pady=5)
+        self.entry_led_color.insert(0, "#00FF00")
+
+        ctk.CTkLabel(parent, text="亮度 (0-255):", anchor="w").grid(row=2, column=0, sticky="w", pady=5)
+        self.slider_led_brightness = ctk.CTkSlider(parent, from_=0, to=255, number_of_steps=255)
+        self.slider_led_brightness.grid(row=3, column=0, sticky="ew", pady=5)
+        self.slider_led_brightness.set(200)
 
     def _create_config_card(self, parent, title, row, col, content_func):
         """辅助函数：创建一个带标题的卡片容器"""
@@ -1634,7 +1797,7 @@ class App(ctk.CTk):
                         self.android_attr("name"): "android.intent.category.HOME"
                     })
                     self.write_pretty_xml(tree, manifest_path)
-                    self.append_log(f" [成功] 已设置 为桌面 Launcher\n")
+                    self.append_log(f"[ok] 已设置 为桌面 Launcher\n")
                     self.status_label.configure(
                         text="设置桌面Launcher成功",
                         text_color="#27ae60"
@@ -1646,7 +1809,7 @@ class App(ctk.CTk):
                 if has_home:
                     intent_filter.remove(home_category_elem)
                     self.write_pretty_xml(tree, manifest_path)
-                    self.append_log(f" [成功] 已取消 Launcher 权限\n")
+                    self.append_log(f"[ok] 已取消 Launcher 权限\n")
                     self.status_label.configure(
                         text="取消桌面Launcher成功",
                         text_color="#27ae60"
@@ -1685,7 +1848,6 @@ class App(ctk.CTk):
 
         except Exception as e:
             self.append_log(f"[Error] 保存 Tone 开关失败: {e}\n")
-
 
     def _refresh_custom_inputs(self):
         """切换到独立部署模式时：清空历史内容，仅显示提示文字"""
