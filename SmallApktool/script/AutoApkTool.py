@@ -402,13 +402,13 @@ class SmartKeyBackend:
                 "text": True,
                 "bufsize": 1,
                 "encoding": "utf-8",
-                "errors": "ignore"
+                "errors": "ignore",
             }
             if platform.system() == "Windows":
                 kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
 
             cmd = ["adb", "-s", self.device, "logcat", "-v", "time", "*:S", "ActivityManager:I"]
-            self.process = subprocess.Popen(cmd, **kwargs)
+            self.process = subprocess.Popen(cmd, **kwargs,creationflags=subprocess.CREATE_NO_WINDOW)
             self.is_running = True
 
             while not self.stop_event.is_set():
