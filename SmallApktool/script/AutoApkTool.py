@@ -1292,6 +1292,50 @@ class App(ctk.CTk):
 
         self.opt_sound.set("amrnb")
 
+        # 4. 音频系统
+        ctk.CTkLabel(parent, text="音频系统:", anchor="w").grid(
+            row=3, column=0, padx=5, pady=10, sticky="w"
+        )
+
+        self.opt_sound = ctk.CTkOptionMenu(
+            parent,
+            values=["default", "sles", "oem"],
+            command=self._sync_soundsystem_to_json
+        )
+        self.opt_sound.grid(row=3, column=1, padx=5, pady=10, sticky="ew")
+
+        self.opt_sound.set("default")
+
+        # 5. 播放通道
+        ctk.CTkLabel(parent, text="播放通道:", anchor="w").grid(
+            row=4, column=0, padx=5, pady=10, sticky="w"
+        )
+
+        self.opt_sound = ctk.CTkOptionMenu(
+            parent,
+            values=["music", "voice"],
+            command=self._sync_play_to_json
+        )
+        self.opt_sound.grid(row=4, column=1, padx=5, pady=10, sticky="ew")
+
+        self.opt_sound.set("music")
+
+        # 6. 录制通道
+        ctk.CTkLabel(parent, text="录制通道:", anchor="w").grid(
+            row=5, column=0, padx=5, pady=10, sticky="w"
+        )
+
+        self.opt_sound = ctk.CTkOptionMenu(
+            parent,
+            values=["mic", "voice", "communication","recognition"],
+            command=self._sync_record_to_json
+        )
+        self.opt_sound.grid(row=5, column=1, padx=5, pady=10, sticky="ew")
+
+        self.opt_sound.set("recognition")
+
+
+
     def _sync_codec_to_json(self, selected_codec: str) -> None:
         """
         【实时保存】当语音编码改变时，立即更新 slclient.json 中的 sound.codec
@@ -1317,7 +1361,87 @@ class App(ctk.CTk):
                          f"{selected_codec}",
                     text_color="#27ae60"
                 )
+            else:
+                pass
 
+        except Exception as e:
+            self.append_log(f"[Error] 保存语音编码失败: {e}\n")
+
+    def _sync_soundsystem_to_json(self, selected_codec: str) -> None:
+        try:
+            data = self._load_slclient_json()
+
+            if "dsp" not in data:
+                self.append_log("错误,丢失音频节点")
+
+            current_val = data["dsp"].get("provider")
+
+            if current_val != selected_codec:
+                data["dsp"]["provider"] = selected_codec
+
+                with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+
+                self.append_log(f"[OK] 音频系统已切换: {selected_codec}\n")
+                self.status_label.configure(
+                    text=f"音频系统已切换为\n"
+                         f"{selected_codec}",
+                    text_color="#27ae60"
+                )
+            else:
+                pass
+
+        except Exception as e:
+            self.append_log(f"[Error] 保存语音编码失败: {e}\n")
+
+    def _sync_play_to_json(self, selected_codec: str) -> None:
+        try:
+            data = self._load_slclient_json()
+
+            if "dsp" not in data:
+                self.append_log("错误,丢失音频节点")
+
+            current_val = data["dsp"].get("play_stream")
+
+            if current_val != selected_codec:
+                data["dsp"]["play_stream"] = selected_codec
+
+                with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+
+                self.append_log(f"[OK] 播放通道已切换: {selected_codec}\n")
+                self.status_label.configure(
+                    text=f"播放通道已切换为\n"
+                         f"{selected_codec}",
+                    text_color="#27ae60"
+                )
+            else:
+                pass
+
+        except Exception as e:
+            self.append_log(f"[Error] 保存语音编码失败: {e}\n")
+
+    def _sync_record_to_json(self, selected_codec: str) -> None:
+        try:
+            data = self._load_slclient_json()
+
+            if "dsp" not in data:
+                self.append_log("错误,丢失音频节点")
+
+            current_val = data["dsp"].get("record_stream")
+
+            if current_val != selected_codec:
+                data["dsp"]["record_stream"] = selected_codec
+
+                with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+
+                self.append_log(f"[OK] 录制通道已切换: {selected_codec}\n")
+                self.status_label.configure(
+                    text=f"录制通道已切换为\n"
+                         f"{selected_codec}",
+                    text_color="#27ae60"
+                )
             else:
                 pass
 
