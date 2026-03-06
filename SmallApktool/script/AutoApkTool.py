@@ -13,11 +13,12 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Set, List, Any, Dict
-
 import customtkinter as ctk
 from tkinter import messagebox
 from ruamel.yaml import YAML
 from ruamel.yaml.constructor import ConstructorError
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
 
 # ==================== 全局配置常量 ====================
 
@@ -86,6 +87,10 @@ PATH_YML = PROJECT_PATH / "app_out" / "apktool.yml"
 PATH_SLCLIENT_JSON = PROJECT_PATH / "app_out" / "assets" / "slclient.json"
 PATH_INPUT_JSON_SRC = "input.json"
 PATH_INPUT_JSON_DST = PROJECT_PATH / "app_out" / "assets" / "slclient" / "input.json"
+
+# 命名空间（确保与 manifest 中一致）
+ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
+PATH_MANIFEST_XML = PROJECT_PATH / "app_out" / "AndroidManifest.xml"
 
 # 签名配置
 KEYSTORE_BIG = PROJECT_PATH / "cert" / "shanli.jks"
@@ -623,6 +628,8 @@ class App(ctk.CTk):
             self.append_log(f"[Error] 读取 JSON 文件失败: {e}\n")
 
         return data
+
+    # ------------------UI函数------------------------
 
     def _init_sidebar(self) -> None:
         """初始化侧边栏"""
@@ -1521,6 +1528,7 @@ class App(ctk.CTk):
         # self.entry_fps.grid(row=1, column=1, padx=5, pady=10, sticky="w")
         # self.entry_fps.insert(0, "60")
 
+        # --- TTS开关 ---
         ctk.CTkLabel(parent, text="开启TTS:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
         self.switch_sfx = ctk.CTkSwitch(parent, text=" ",
                                         command=lambda: (
@@ -1528,6 +1536,128 @@ class App(ctk.CTk):
                                         ))
         self.switch_sfx.grid(row=1, column=1, padx=5, pady=8, sticky="w")
         self.switch_sfx.deselect()  # 默认关闭
+
+        # --- launcher开关---
+        ctk.CTkLabel(parent, text="设置为 Launcher:", anchor="w").grid(
+            row=2, column=0, padx=5, pady=8, sticky="w"
+        )
+
+        # 创建开关
+        self.switch_launcher = ctk.CTkSwitch(
+            parent,
+            text="",
+            command=lambda: self.modify_manifest(bool(self.switch_launcher.get()))
+        )
+        self.switch_launcher.grid(row=2, column=1, padx=5, pady=8, sticky="w")
+
+
+    # -------------mainfest辅助构造函数----------
+    def android_attr(self,name):
+        return f"{{{ANDROID_NAMESPACE}}}{name}"
+
+    def write_pretty_xml(self,tree, file_path):
+        rough_string = ET.tostring(tree.getroot(), encoding='utf-8')
+        reparsed = minidom.parseString(rough_string)
+        pretty_xml = reparsed.toprettyxml(indent="    ")
+
+        # 去除多余空行
+        pretty_xml = "\n".join([line for line in pretty_xml.split('\n') if line.strip()])
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(pretty_xml)
+
+    def modify_manifest(self, is_enabled: bool):
+        """
+        根据开关状态实时修改 AndroidManifest.xml
+        :param is_enabled: True=添加 Launcher, False=移除 Launcher
+        """
+        manifest_path = PATH_MANIFEST_XML
+
+        if not os.path.exists(manifest_path):
+            self.append_log(" 错误：找不到 AndroidManifest.xml")
+            if hasattr(self, 'switch_launcher'):
+                self.switch_launcher.deselect()
+            return
+
+        try:
+            ET.register_namespace("android", ANDROID_NAMESPACE)
+            tree = ET.parse(manifest_path)
+            root = tree.getroot()
+
+            application = root.find("application")
+            if application is None:
+                self.append_log(" 错误：未找到 <application> 标签")
+                self.switch_launcher.deselect()  # 复位
+                return
+
+            # 候选 Activity 列表
+            candidate_activity_names = [
+                "com.shanli.pocstar.SplashActivity",
+                "com.shanlitech.ptt.SplashActivity",
+                "com.shanlitech.noscreen.SplashActivity"
+            ]
+
+            target_activity = None
+            found_activity_name = ""
+
+            # 查找目标 Activity
+            for activity in application.findall("activity"):
+                name = activity.attrib.get(self.android_attr("name"), "")
+                if name in candidate_activity_names:
+                    target_activity = activity
+                    found_activity_name = name
+                    break
+
+            if target_activity is None:
+                self.append_log(f" 错误：未找到目标 Activity (候选:{candidate_activity_names})")
+                self.switch_launcher.deselect()  # 复位
+                return
+
+            intent_filter = target_activity.find("intent-filter")
+            if intent_filter is None:
+                msg = f" 错误：{found_activity_name} 没有 <intent-filter>，无法操作"
+                self.append_log(msg)
+                self.switch_launcher.deselect()  # 复位
+                return
+
+            home_category_elem = None
+            for category in intent_filter.findall("category"):
+                if category.attrib.get(self.android_attr("name")) == "android.intent.category.HOME":
+                    home_category_elem = category
+                    break
+
+            has_home = (home_category_elem is not None)
+
+            if is_enabled:
+                if not has_home:
+                    ET.SubElement(intent_filter, "category", {
+                        self.android_attr("name"): "android.intent.category.HOME"
+                    })
+                    self.write_pretty_xml(tree, manifest_path)
+                    self.append_log(f" [成功] 已设置 为桌面 Launcher\n")
+                    self.status_label.configure(
+                        text="设置桌面Launcher成功",
+                        text_color="#27ae60"
+                    )
+
+                else:
+                    pass
+            else:
+                if has_home:
+                    intent_filter.remove(home_category_elem)
+                    self.write_pretty_xml(tree, manifest_path)
+                    self.append_log(f" [成功] 已取消 Launcher 权限\n")
+                    self.status_label.configure(
+                        text="取消桌面Launcher成功",
+                        text_color="#27ae60"
+                    )
+                else:
+                    pass
+
+        except Exception as e:
+            self.append_log(f" 操作失败：{e}")
+            if hasattr(self, 'switch_launcher'):
+                self.switch_launcher.deselect()
 
     def _sync_tts_enabled_to_json(self, is_enabled: bool) -> None:
         """
