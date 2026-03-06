@@ -1189,9 +1189,6 @@ class App(ctk.CTk):
             )
             return
 
-        # 2. IP 格式宽松检查 (支持 IP:Port 或纯 IP)
-        # 允许：192.168.1.1, 192.168.1.1:53, 8.8.8.8, domain.com 等
-        # 只要不是明显的乱码即可，这里只做简单提示
         ip_part = new_ip.split(':')[0]
         if not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', ip_part) and not re.match(r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
                                                                               ip_part):
@@ -1252,7 +1249,6 @@ class App(ctk.CTk):
             self.lbl_env_info.configure(text=error_msg, text_color="#c0392b")
             messagebox.showerror("未知错误", error_msg)
             print(f"Save Error Details: {e}")
-
 
     def _build_sound_content(self, parent):
         """构建声音配置内容"""
@@ -1333,8 +1329,6 @@ class App(ctk.CTk):
         self.opt_sound.grid(row=5, column=1, padx=5, pady=10, sticky="ew")
 
         self.opt_sound.set("recognition")
-
-
 
     def _sync_codec_to_json(self, selected_codec: str) -> None:
         """
@@ -1516,16 +1510,52 @@ class App(ctk.CTk):
 
     def _build_other_content(self, parent):
         """构建其他设置内容"""
-        # 1. 调试模式
-        ctk.CTkLabel(parent, text="调试模式 (Debug):", anchor="w").grid(row=0, column=0, padx=5, pady=10, sticky="w")
-        self.switch_debug = ctk.CTkSwitch(parent, text="Enable Logs", command=lambda: self._update_preview("debug", self.switch_debug.get()))
-        self.switch_debug.grid(row=0, column=1, padx=5, pady=10, sticky="w")
+        # # 1. 调试模式
+        # ctk.CTkLabel(parent, text="调试模式 (Debug):", anchor="w").grid(row=0, column=0, padx=5, pady=10, sticky="w")
+        # self.switch_debug = ctk.CTkSwitch(parent, text="Enable Logs", command=lambda: self._update_preview("debug", self.switch_debug.get()))
+        # self.switch_debug.grid(row=0, column=1, padx=5, pady=10, sticky="w")
+        #
+        # # 2. 帧率限制
+        # ctk.CTkLabel(parent, text="最大帧率 (FPS):", anchor="w").grid(row=1, column=0, padx=5, pady=10, sticky="w")
+        # self.entry_fps = ctk.CTkEntry(parent, width=60, placeholder_text="60")
+        # self.entry_fps.grid(row=1, column=1, padx=5, pady=10, sticky="w")
+        # self.entry_fps.insert(0, "60")
 
-        # 2. 帧率限制
-        ctk.CTkLabel(parent, text="最大帧率 (FPS):", anchor="w").grid(row=1, column=0, padx=5, pady=10, sticky="w")
-        self.entry_fps = ctk.CTkEntry(parent, width=60, placeholder_text="60")
-        self.entry_fps.grid(row=1, column=1, padx=5, pady=10, sticky="w")
-        self.entry_fps.insert(0, "60")
+        ctk.CTkLabel(parent, text="开启TTS:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
+        self.switch_sfx = ctk.CTkSwitch(parent, text=" ",
+                                        command=lambda: (
+                                            self._sync_tts_enabled_to_json(bool(self.switch_sfx.get()))
+                                        ))
+        self.switch_sfx.grid(row=1, column=1, padx=5, pady=8, sticky="w")
+        self.switch_sfx.deselect()  # 默认关闭
+
+    def _sync_tts_enabled_to_json(self, is_enabled: bool) -> None:
+        """
+        【实时保存】确保写入的是 JSON 标准的 true/false，而不是 0/1
+        """
+        try:
+            data = self._load_slclient_json()
+
+            json_value = bool(is_enabled)
+
+            current_val = data["tts"].get("enabled")
+            if current_val != json_value:
+                data["tts"]["enabled"] = json_value
+
+                with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+
+                status = "开启" if json_value else "关闭"
+                self.append_log(f"[OK] tts 已{status}")
+
+                self.status_label.configure(
+                    text=f"tts已{status}",
+                    text_color="#27ae60"
+                )
+
+        except Exception as e:
+            self.append_log(f"[Error] 保存 Tone 开关失败: {e}\n")
+
 
     def _refresh_custom_inputs(self):
         """切换到独立部署模式时：清空历史内容，仅显示提示文字"""
