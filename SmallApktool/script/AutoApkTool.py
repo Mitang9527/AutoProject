@@ -1257,6 +1257,7 @@ class App(ctk.CTk):
     def _on_save_manual_keys(self):
         """
         手动保存按键配置到 input.json
+        支持：仅保存 PTT、仅保存 SOS、或同时保存
         """
 
         # 1. 获取输入值
@@ -1264,17 +1265,29 @@ class App(ctk.CTk):
         val_release = self.entry_ptt_release.get().strip()
         val_sos = self.entry_sos.get().strip()
 
-        # 基础校验
-        if not val_press or not val_release:
+        # 标记是否有有效输入
+        has_ptt = bool(val_press and val_release)
+        has_sos = bool(val_sos)
+
+        # 【核心修改】组合校验：必须至少有一组有效数据
+        if not has_ptt and not has_sos:
             self.lbl_env_info.configure(
-                text="❌ 错误：PTT 的按下和抬起 Action 不能为空！",
+                text="❌ 错误：请至少填写 PTT (按下 + 抬起) 或 SOS 其中一项！",
                 text_color="#c0392b",
                 font=ctk.CTkFont(size=12, weight="bold")
             )
             return
 
-        save_sos = bool(val_sos)
+        # 如果只填了 PTT 的一部分，提示错误
+        if (val_press and not val_release) or (not val_press and val_release):
+            self.lbl_env_info.configure(
+                text="❌ 错误：请输入 PTT 的按下和抬起 Action！",
+                text_color="#c0392b",
+                font=ctk.CTkFont(size=12, weight="bold")
+            )
+            return
 
+        # 预初始化变量，防止未定义错误
         name_sos_down = None
         name_sos_up = None
         new_vkey_sos = None
@@ -1298,52 +1311,57 @@ class App(ctk.CTk):
                 except:
                     pass
 
-            # 分配 PTT 键码
-            new_vkey_ptt = -1000
-            while new_vkey_ptt in existing_codes:
-                new_vkey_ptt -= 1
+            # --- 动态分配键码 ---
+            # 只有当需要生成该配置时，才分配键码
+            if has_ptt:
+                new_vkey_ptt = -1000
+                while new_vkey_ptt in existing_codes:
+                    new_vkey_ptt -= 1
+                existing_codes.add(new_vkey_ptt)
 
-            # 分配 SOS 键码 (如果需要)
-            if save_sos:
-                new_vkey_sos = new_vkey_ptt - 1
+            if has_sos:
+                new_vkey_sos = -1000
                 while new_vkey_sos in existing_codes:
                     new_vkey_sos -= 1
 
             # 3. 构建新配置数据
             new_entries = {"stdkey": {}, "action": {}, "intent": {}}
 
-            # --- A. 构建 PTT 配置 ---
-            name_ptt_down = f"many_ptt_down_{timestamp_suffix}"
-            name_ptt_up = f"ptt_up_{timestamp_suffix}"
+            # --- A. 构建 PTT 配置 (如果有效) ---
+            if has_ptt:
+                name_ptt_down = f"many_ptt_down_{timestamp_suffix}"
+                name_ptt_up = f"ptt_up_{timestamp_suffix}"
 
-            new_entries["stdkey"][name_ptt_down] = {"event": "KEY_DOWN", "key": new_vkey_ptt}
-            new_entries["stdkey"][name_ptt_up] = {"event": "KEY_UP", "key": new_vkey_ptt}
+                new_entries["stdkey"][name_ptt_down] = {"event": "KEY_DOWN", "key": new_vkey_ptt}
+                new_entries["stdkey"][name_ptt_up] = {"event": "KEY_UP", "key": new_vkey_ptt}
 
-            new_entries["action"][name_ptt_down] = {
-                "default": [],
-                "member": [],
-                "new_call_in": []
-            }
-            new_entries["action"][name_ptt_up] = {
-                "default": [{"command": {"id": "STOP_SPEAK"}}],
-                "member": [],
-                "new_call_in": []
-            }
+                new_entries["action"][name_ptt_down] = {
+                    "default": [],
+                    "member": [],
+                    "new_call_in": []
+                }
+                new_entries["action"][name_ptt_up] = {
+                    "default": [{"command": {"id": "STOP_SPEAK"}}],
+                    "member": [],
+                    "new_call_in": []
+                }
 
-            new_entries["intent"][name_ptt_down] = {"action": val_press}
-            new_entries["intent"][name_ptt_up] = {"action": val_release}
+                new_entries["intent"][name_ptt_down] = {"action": val_press}
+                new_entries["intent"][name_ptt_up] = {"action": val_release}
 
-            # --- B. 构建 SOS 配置 ---
-            if save_sos:
+            # --- B. 构建 SOS 配置 (如果有效) ---
+            if has_sos:
+
                 name_sos_down = f"sos_down_{timestamp_suffix}"
                 name_sos_up = f"sos_up_{timestamp_suffix}"
 
-                new_entries["stdkey"][name_sos_down] = {"event": "KEY_CLICK", "key": new_vkey_sos,"time": 3000}
-                new_entries["stdkey"][name_sos_up] = {"event": "KEY_CLICK", "key": new_vkey_sos,"time": 3000}
-
+                new_entries["stdkey"][name_sos_down] = {"event": "KEY_CLICK", "key": new_vkey_sos, "time": 3000}
+                new_entries["stdkey"][name_sos_up] = {"event": "KEY_CLICK", "key": new_vkey_sos, "time": 3000}
 
                 new_entries["intent"][name_sos_down] = {"action": val_sos}
                 new_entries["intent"][name_sos_up] = {"action": val_sos}
+
+
 
             # 4. 读取并合并 input.json
             data = {}
@@ -1371,12 +1389,11 @@ class App(ctk.CTk):
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
             # 6. 成功反馈
-            msg_lines = [f"✅ 配置已保存至 {JSON_FILE}"]
-            msg_lines.append(f"   PTT Key: {new_vkey_ptt} ({name_ptt_down}, {name_ptt_up})")
-
-            # 【修正点 2】安全地构建 SOS 日志消息
-            if save_sos and name_sos_down and name_sos_up and new_vkey_sos is not None:
-                msg_lines.append(f"   SOS Key: {new_vkey_sos} ({name_sos_down}, {name_sos_up})")
+            msg_lines = [f"✅ 配置已保存"]
+            if has_ptt:
+                msg_lines.append(f"   🟢 PTT Key: {new_vkey_ptt} ({name_ptt_down}, {name_ptt_up})")
+            if has_sos:
+                msg_lines.append(f"   🔴 SOS Key: {new_vkey_sos} ({name_sos_down}, {name_sos_up})")
 
             final_msg = "\n".join(msg_lines)
 
@@ -1388,7 +1405,9 @@ class App(ctk.CTk):
             self.append_log(f"[Manual Save] {final_msg}\n")
             messagebox.showinfo("成功", final_msg)
 
-            if hasattr(self, 'refresh_config_view'):
+            if hasattr(self, '_safe_refresh_config_view'):
+                self._safe_refresh_config_view()
+            elif hasattr(self, 'refresh_config_view'):
                 self.refresh_config_view()
 
         except Exception as e:
@@ -1400,7 +1419,6 @@ class App(ctk.CTk):
             )
             self.append_log(f"[Error] _on_save_manual_keys: {e}\n")
             messagebox.showerror("错误", error_msg)
-
 
 
 
