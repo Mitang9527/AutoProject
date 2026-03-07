@@ -886,15 +886,19 @@ class App(ctk.CTk):
         self.after(0, self._safe_refresh_config_view)
 
     def _safe_refresh_config_view(self) -> None:
+        """刷新配置列表，并按虚拟键码(key)升序排列)"""
         if not self.winfo_exists():
             return
+
         try:
+            # 1. 清空现有列表
             for widget in self.scroll_frame.winfo_children():
                 try:
                     widget.destroy()
                 except Exception:
                     pass
 
+            # 2. 加载数据
             data = {}
             if self.backend and hasattr(self.backend, "data"):
                 data = self.backend.data
@@ -907,59 +911,135 @@ class App(ctk.CTk):
 
             intents = data.get("intent", {})
             stdkeys = data.get("stdkey", {})
+            actions_data = data.get("action", {})
 
             if not intents and not stdkeys:
-                lbl = ctk.CTkLabel(self.scroll_frame, text="暂无配置数据。", text_color="gray")
-                lbl.grid(row=0, column=0, pady=20)
+                lbl = ctk.CTkLabel(
+                    self.scroll_frame,
+                    text="暂无配置数据。\n请点击“手动保存”添加配置。",
+                    text_color="gray",
+                    font=ctk.CTkFont(size=14)
+                )
+                lbl.grid(row=0, column=0, pady=40, columnspan=5)
                 return
 
-            headers = ["键名", "事件类型", "键值", "Action", "命令"]
+            # 3. 绘制表头
+            headers = ["键名 (Key Name)", "事件类型", "虚拟keycode", "Intent Action", "默认命令"]
             for i, h in enumerate(headers):
                 ctk.CTkLabel(
                     self.scroll_frame,
                     text=h,
-                    font=ctk.CTkFont(weight="bold"),
+                    font=ctk.CTkFont(weight="bold", size=13),
                     anchor="w"
-                ).grid(row=0, column=i, padx=10, pady=10, sticky="w")
+                ).grid(row=0, column=i, padx=15, pady=15, sticky="w")
 
+            # 4. 核心排序逻辑
+            # 获取所有共有的键名 (确保数据完整)
+            valid_names = set(stdkeys.keys()) & set(intents.keys())
+
+            sortable_items = []
+            for name in valid_names:
+                sk = stdkeys.get(name, {})
+                key_val = sk.get("key")
+
+                if isinstance(key_val, int):
+                    sort_key = key_val
+                else:
+                    sort_key = float('inf')
+
+                sortable_items.append((name, sort_key))
+
+            # 排序：升序 (Reverse=False)
+            # 逻辑：新生成的 key 是更小的负数 (如 -1005)，旧的是较大的负数 (如 -1000)
+            # 升序排列结果：-1005, -1004, ..., -1000 -> 新配置在最上面
+            sortable_items.sort(key=lambda x: x[1], reverse=False)
+
+            # 5. 渲染列表
             row_idx = 1
-            all_keys = set(stdkeys.keys()) | set(intents.keys())
-            actions_data = data.get("action", {})
-
-            for name in all_keys:
+            for name, _ in sortable_items:
                 if not self.winfo_exists():
                     return
+
                 sk = stdkeys.get(name, {})
                 ac = actions_data.get(name, {})
                 info = intents.get(name, {})
 
-                ctk.CTkLabel(self.scroll_frame, text=name, anchor="w").grid(
-                    row=row_idx, column=0, padx=10, pady=5, sticky="w"
-                )
-                ctk.CTkLabel(self.scroll_frame, text=sk.get("event", "N/A"), anchor="w").grid(
-                    row=row_idx, column=1, padx=10, pady=5, sticky="w"
-                )
-                ctk.CTkLabel(self.scroll_frame, text=str(sk.get("key", "N/A")), anchor="w").grid(
-                    row=row_idx, column=2, padx=10, pady=5, sticky="w"
-                )
+                # 提取数据
+                event_str = sk.get("event", "N/A")
+                key_val = sk.get("key", "N/A")
+                action_str = info.get("action", "-")
+
+                # 提取命令 ID
+                cmds = ac.get("default", [])
+                if isinstance(cmds, list):
+                    cmd_ids = [c.get("command", {}).get("id", "") for c in cmds if isinstance(c, dict)]
+                    cmd_str = ", ".join(filter(None, cmd_ids))
+                else:
+                    cmd_str = "-"
+
+                if not cmd_str:
+                    cmd_str = "-"
+
+                # 绘制行
+                # 键名
                 ctk.CTkLabel(
                     self.scroll_frame,
-                    text=info.get("action", "-"),
+                    text=name,
                     anchor="w",
-                    text_color="#3498db"
-                ).grid(row=row_idx, column=3, padx=10, pady=5, sticky="w")
+                    font=ctk.CTkFont(family="Consolas", size=12)  # 使用等宽字体方便阅读长名
+                ).grid(row=row_idx, column=0, padx=15, pady=8, sticky="w")
 
-                cmds = ac.get("default", [])
-                cmd_str = ", ".join([c.get("command", {}).get("id", "") for c in cmds]) if cmds else "-"
+                # 事件类型
+                ctk.CTkLabel(
+                    self.scroll_frame,
+                    text=event_str,
+                    anchor="w",
+                    text_color="#7f8c8d"
+                ).grid(row=row_idx, column=1, padx=15, pady=8, sticky="w")
+
+                # 虚拟键码 (高亮显示)
+                ctk.CTkLabel(
+                    self.scroll_frame,
+                    text=str(key_val),
+                    anchor="w",
+                    font=ctk.CTkFont(weight="bold"),
+                    text_color="#e67e22"
+                ).grid(row=row_idx, column=2, padx=15, pady=8, sticky="w")
+
+                # Intent Action (蓝色)
+                ctk.CTkLabel(
+                    self.scroll_frame,
+                    text=action_str,
+                    anchor="w",
+                    text_color="#3498db",
+                    font=ctk.CTkFont(size=12)
+                ).grid(row=row_idx, column=3, padx=15, pady=8, sticky="w")
+
+                # 默认命令 (灰色)
                 ctk.CTkLabel(
                     self.scroll_frame,
                     text=cmd_str,
                     anchor="w",
-                    text_color="gray"
-                ).grid(row=row_idx, column=4, padx=10, pady=5, sticky="w")
+                    text_color="#95a5a6",
+                    font=ctk.CTkFont(size=12)
+                ).grid(row=row_idx, column=4, padx=15, pady=8, sticky="w")
+
                 row_idx += 1
-        except Exception:
-            pass
+
+            # 可选：如果没有数据但循环没执行（理论上不会到这里）
+            if row_idx == 1:
+                ctk.CTkLabel(self.scroll_frame, text="未找到有效的完整配置项。", text_color="gray").grid(row=1, column=0,
+                                                                                                        columnspan=5)
+
+        except Exception as e:
+            print(f"刷新配置视图出错: {e}")
+            if self.winfo_exists():
+                err_lbl = ctk.CTkLabel(
+                    self.scroll_frame,
+                    text=f"加载失败: {str(e)}",
+                    text_color="#c0392b"
+                )
+                err_lbl.grid(row=0, column=0, pady=20)
 
     def on_closing(self) -> None:
         if self.backend and self.is_listening:
@@ -1051,7 +1131,7 @@ class App(ctk.CTk):
         # 1. 主标题
         lbl_title = ctk.CTkLabel(
             self.tab_input_led_config,
-            text="按键 LED 配置",
+            text="按键LED 配置",
             font=ctk.CTkFont(size=18, weight="bold")
         )
         lbl_title.pack(pady=(15, 10))
@@ -1175,19 +1255,151 @@ class App(ctk.CTk):
         parent.grid_columnconfigure(0, weight=0)
 
     def _on_save_manual_keys(self):
+        """
+        手动保存按键配置到 input.json
+        """
 
+        # 1. 获取输入值
         val_press = self.entry_ptt_press.get().strip()
         val_release = self.entry_ptt_release.get().strip()
         val_sos = self.entry_sos.get().strip()
 
-        if not val_press and not val_release and not val_sos:
+        # 基础校验
+        if not val_press or not val_release:
             self.lbl_env_info.configure(
-                text="❌ 错误：按键值 不能为空！",
+                text="❌ 错误：PTT 的按下和抬起 Action 不能为空！",
                 text_color="#c0392b",
                 font=ctk.CTkFont(size=12, weight="bold")
             )
+            return
+
+        save_sos = bool(val_sos)
+
+        name_sos_down = None
+        name_sos_up = None
+        new_vkey_sos = None
+        name_ptt_down = None
+        name_ptt_up = None
+        new_vkey_ptt = None
+
+        try:
+            # 2. 生成唯一标识
+            timestamp_suffix = datetime.now().strftime("%Y%m%d%H%M%S")
+
+            # 虚拟键码生成逻辑
+            existing_codes = set()
+            if os.path.exists(JSON_FILE):
+                try:
+                    with open(JSON_FILE, 'r', encoding='utf-8') as f:
+                        temp_data = json.load(f)
+                        for k, v in temp_data.get("stdkey", {}).items():
+                            if isinstance(v.get("key"), int):
+                                existing_codes.add(v["key"])
+                except:
+                    pass
+
+            # 分配 PTT 键码
+            new_vkey_ptt = -1000
+            while new_vkey_ptt in existing_codes:
+                new_vkey_ptt -= 1
+
+            # 分配 SOS 键码 (如果需要)
+            if save_sos:
+                new_vkey_sos = new_vkey_ptt - 1
+                while new_vkey_sos in existing_codes:
+                    new_vkey_sos -= 1
+
+            # 3. 构建新配置数据
+            new_entries = {"stdkey": {}, "action": {}, "intent": {}}
+
+            # --- A. 构建 PTT 配置 ---
+            name_ptt_down = f"many_ptt_down_{timestamp_suffix}"
+            name_ptt_up = f"ptt_up_{timestamp_suffix}"
+
+            new_entries["stdkey"][name_ptt_down] = {"event": "KEY_DOWN", "key": new_vkey_ptt}
+            new_entries["stdkey"][name_ptt_up] = {"event": "KEY_UP", "key": new_vkey_ptt}
+
+            new_entries["action"][name_ptt_down] = {
+                "default": [],
+                "member": [],
+                "new_call_in": []
+            }
+            new_entries["action"][name_ptt_up] = {
+                "default": [{"command": {"id": "STOP_SPEAK"}}],
+                "member": [],
+                "new_call_in": []
+            }
+
+            new_entries["intent"][name_ptt_down] = {"action": val_press}
+            new_entries["intent"][name_ptt_up] = {"action": val_release}
+
+            # --- B. 构建 SOS 配置 ---
+            if save_sos:
+                name_sos_down = f"sos_down_{timestamp_suffix}"
+                name_sos_up = f"sos_up_{timestamp_suffix}"
+
+                new_entries["stdkey"][name_sos_down] = {"event": "KEY_CLICK", "key": new_vkey_sos,"time": 3000}
+                new_entries["stdkey"][name_sos_up] = {"event": "KEY_CLICK", "key": new_vkey_sos,"time": 3000}
 
 
+                new_entries["intent"][name_sos_down] = {"action": val_sos}
+                new_entries["intent"][name_sos_up] = {"action": val_sos}
+
+            # 4. 读取并合并 input.json
+            data = {}
+            if os.path.exists(JSON_FILE):
+                try:
+                    with open(JSON_FILE, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                except json.JSONDecodeError:
+                    data = {"stdkey": {}, "action": {}, "intent": {}, "custom": []}
+            else:
+                data = {"stdkey": {}, "action": {}, "intent": {}, "custom": []}
+
+            for k in ["stdkey", "action", "intent"]:
+                if k not in data:
+                    data[k] = {}
+            if "custom" not in data:
+                data["custom"] = []
+
+            data["stdkey"].update(new_entries["stdkey"])
+            data["action"].update(new_entries["action"])
+            data["intent"].update(new_entries["intent"])
+
+            # 5. 写回文件
+            with open(JSON_FILE, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+
+            # 6. 成功反馈
+            msg_lines = [f"✅ 配置已保存至 {JSON_FILE}"]
+            msg_lines.append(f"   PTT Key: {new_vkey_ptt} ({name_ptt_down}, {name_ptt_up})")
+
+            # 【修正点 2】安全地构建 SOS 日志消息
+            if save_sos and name_sos_down and name_sos_up and new_vkey_sos is not None:
+                msg_lines.append(f"   SOS Key: {new_vkey_sos} ({name_sos_down}, {name_sos_up})")
+
+            final_msg = "\n".join(msg_lines)
+
+            self.lbl_env_info.configure(
+                text="✅ 保存成功!",
+                text_color="#27ae60",
+                font=ctk.CTkFont(size=12, weight="bold")
+            )
+            self.append_log(f"[Manual Save] {final_msg}\n")
+            messagebox.showinfo("成功", final_msg)
+
+            if hasattr(self, 'refresh_config_view'):
+                self.refresh_config_view()
+
+        except Exception as e:
+            error_msg = f"❌ 保存失败：{str(e)}"
+            self.lbl_env_info.configure(
+                text=error_msg,
+                text_color="#c0392b",
+                font=ctk.CTkFont(size=12, weight="bold")
+            )
+            self.append_log(f"[Error] _on_save_manual_keys: {e}\n")
+            messagebox.showerror("错误", error_msg)
 
 
 
