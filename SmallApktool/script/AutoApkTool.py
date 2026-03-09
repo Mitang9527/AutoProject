@@ -384,7 +384,9 @@ class SmartKeyBackend:
     def _reader_thread(self, key_type: str) -> None:
         """监听线程主循环"""
         re_standard = re.compile(r"Sending.*broadcast\s+([\w\.]+)\s+from")
+
         re_easytalk = re.compile(r"sendEasytalkBroadCast\s+action\s*=\s*(\S+)")
+
         re_keycode = re.compile(r"keyCode=(\d+)")
 
         last_process_time = 0
@@ -405,10 +407,10 @@ class SmartKeyBackend:
                 "errors": "ignore",
             }
             if platform.system() == "Windows":
-                kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+                kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
 
             cmd = ["adb", "-s", self.device, "logcat", "-v", "time", "*:S", "ActivityManager:I"]
-            self.process = subprocess.Popen(cmd, **kwargs,creationflags=subprocess.CREATE_NO_WINDOW)
+            self.process = subprocess.Popen(cmd, **kwargs)
             self.is_running = True
 
             while not self.stop_event.is_set():
@@ -734,7 +736,7 @@ class App(ctk.CTk):
         self.tab_log = self.tabview.add("实时日志")
         self.tab_config = self.tabview.add("配置列表")
         self.tab_build_config = self.tabview.add("终端配置")
-        self.tab_input_led_config = self.tabview.add("按键LED配置")
+        self.tab_input_led_config = self.tabview.add("按键配置")
 
 
         # self.load_slclient_config()
@@ -1131,7 +1133,7 @@ class App(ctk.CTk):
         # 1. 主标题
         lbl_title = ctk.CTkLabel(
             self.tab_input_led_config,
-            text="按键LED 配置",
+            text="按键配置",
             font=ctk.CTkFont(size=18, weight="bold")
         )
         lbl_title.pack(pady=(15, 10))
@@ -1162,7 +1164,7 @@ class App(ctk.CTk):
         # --- 下半部分：颜色与亮度配置 ---
         self.frame_led_color = self._create_config_card(
             parent=grid_frame,
-            title="🎨 LED 配置",
+            title="🎨  其他配置",
             row=1, col=0,
             content_func=self._build_led_color_content
         )
@@ -1388,6 +1390,14 @@ class App(ctk.CTk):
             with open(JSON_FILE, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
+            # 保存成功后清空输入框
+            if has_ptt:
+                self.entry_ptt_press.delete(0, "end")
+                self.entry_ptt_release.delete(0, "end")
+
+            if has_sos:
+                self.entry_sos.delete(0, "end")
+
             # 6. 成功反馈
             msg_lines = [f"✅ 配置已保存"]
             if has_ptt:
@@ -1424,15 +1434,17 @@ class App(ctk.CTk):
 
     def _build_led_color_content(self, parent):
         """填充下半部分：颜色和亮度"""
-        ctk.CTkLabel(parent, text="LED 颜色 (Hex):", anchor="w").grid(row=0, column=0, sticky="w", pady=5)
-        self.entry_led_color = ctk.CTkEntry(parent, placeholder_text="#FF0000")
-        self.entry_led_color.grid(row=1, column=0, sticky="ew", pady=5)
-        self.entry_led_color.insert(0, "#00FF00")
 
-        ctk.CTkLabel(parent, text="亮度 (0-255):", anchor="w").grid(row=2, column=0, sticky="w", pady=5)
-        self.slider_led_brightness = ctk.CTkSlider(parent, from_=0, to=255, number_of_steps=255)
-        self.slider_led_brightness.grid(row=3, column=0, sticky="ew", pady=5)
-        self.slider_led_brightness.set(200)
+
+        # ctk.CTkLabel(parent, text="LED 颜色 (Hex):", anchor="w").grid(row=0, column=0, sticky="w", pady=5)
+        # self.entry_led_color = ctk.CTkEntry(parent, placeholder_text="#FF0000")
+        # self.entry_led_color.grid(row=1, column=0, sticky="ew", pady=5)
+        # self.entry_led_color.insert(0, "#00FF00")
+        #
+        # ctk.CTkLabel(parent, text="亮度 (0-255):", anchor="w").grid(row=2, column=0, sticky="w", pady=5)
+        # self.slider_led_brightness = ctk.CTkSlider(parent, from_=0, to=255, number_of_steps=255)
+        # self.slider_led_brightness.grid(row=3, column=0, sticky="ew", pady=5)
+        # self.slider_led_brightness.set(200)
 
     def _create_config_card(self, parent, title, row, col, content_func):
         """辅助函数：创建一个带标题的卡片容器"""
@@ -1619,6 +1631,10 @@ class App(ctk.CTk):
             # 4. 写回文件
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
+
+            self.entry_custom_ip.delete(0,"end")
+            self.entry_custom_context.delete(0, "end")
+
 
 
             # 6. 成功反馈
@@ -1897,7 +1913,7 @@ class App(ctk.CTk):
         """地图类型变更回调"""
         if update_slclient_map_type(map_type_ui):
             self._update_preview("map_provider", map_type_ui)
-            self.append_log(f"[OK] 地图类型已更新为：{map_type_ui}")
+            self.append_log(f"[OK] 地图类型已更新为：{map_type_ui}\n")
             self.status_label.configure(
                 text=f"登录方式已更新为\n"
                      f"{map_type_ui}",
@@ -2069,7 +2085,7 @@ class App(ctk.CTk):
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
                 status = "开启" if json_value else "关闭"
-                self.append_log(f"[OK] tts 已{status}")
+                self.append_log(f"[OK] tts 已{status}\n")
 
                 self.status_label.configure(
                     text=f"tts已{status}",
@@ -2306,7 +2322,7 @@ class App(ctk.CTk):
             with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
-            self.append_log(f"[OK] 节点已切换并同步: {node_name} -> slclient.json\n")
+            self.append_log(f"[OK] 节点已切换: {node_name}\n")
             self.status_label.configure(
                 text=f"登录方式已更新为\n"
                      f"{node_name}",
