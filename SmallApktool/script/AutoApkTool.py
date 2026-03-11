@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Set, List, Any, Dict
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from ruamel.yaml import YAML
 from ruamel.yaml.constructor import ConstructorError
 import xml.etree.ElementTree as ET
@@ -395,7 +395,8 @@ class SmartKeyBackend:
 
         self.log_callback(f"\n--- 启动监听 (模式：{mode_name}) ---\n")
         if self._clear_logcat():
-            self.log_callback("[Info] 日志缓冲区已清空。\n")
+            self.log_callback("[Info] 日志缓冲区已清空。\n"
+                              "[tip]  如按下按键后无日志输出，已知键值请到终端配置中自行输入!!!")
 
         try:
             kwargs = {
@@ -582,6 +583,8 @@ class App(ctk.CTk):
         self.is_listening: bool = False
         self.env_checker: EnvChecker = EnvChecker(self)
         self.current_apk_type: str = "大屏"
+        self.custom_apk_path = None
+
 
         # 事件绑定
         self.bind("<<EnvRetry>>", lambda e: self.on_env_retry())
@@ -695,19 +698,26 @@ class App(ctk.CTk):
         self.clear_log_btn.grid(row=8, column=0, padx=20, pady=10)
 
         # APK 选择区域
-        self.apk_select_label = ctk.CTkLabel(self.sidebar_frame, text="APK 类型:", anchor="w")
+        self.apk_select_label = ctk.CTkLabel(self.sidebar_frame, text="选择 APK:", anchor="w")
         self.apk_select_label.grid(row=9, column=0, padx=20, pady=(15, 0))
+
+        self.build_apk_btn = ctk.CTkButton(
+            self.sidebar_frame,
+            text="上传自定义apk",
+            command=self.upload_apk
+        )
+        self.build_apk_btn.grid(row=10, column=0, padx=20, pady=10)
 
         self.apk_type_seg = ctk.CTkSegmentedButton(
             self.sidebar_frame,
-            values=["大屏", "小屏"],
+            values=["大屏", "小屏","自定义apk"],
             command=self.on_apk_type_change,
             height=30,
             fg_color="#3498db",
             selected_color="#27ae60",
             unselected_color="gray"
         )
-        self.apk_type_seg.grid(row=10, column=0, padx=20, pady=5, sticky="ew")
+        self.apk_type_seg.grid(row=11, column=0, padx=20, pady=5, sticky="ew")
         self.apk_type_seg.set("大屏")
 
         self.build_apk_btn = ctk.CTkButton(
@@ -717,7 +727,7 @@ class App(ctk.CTk):
             hover_color="#e67e22",
             command=self.build_apk
         )
-        self.build_apk_btn.grid(row=11, column=0, padx=20, pady=10)
+        self.build_apk_btn.grid(row=12, column=0, padx=20, pady=10)
 
         # 底部状态栏
         self.status_label = ctk.CTkLabel(
@@ -1066,7 +1076,7 @@ class App(ctk.CTk):
 
     def on_apk_type_change(self, value: str) -> None:
         self.current_apk_type = value
-        self.status_label.configure(text=f"状态：已选择 {value} APK", text_color="#d35400")
+        self.status_label.configure(text=f"状态：已选择 {value}", text_color="#d35400")
         self.append_log(f"[Info] APK 类型切换为：{value}\n")
 
     def _init_build_config_page(self) -> None:
@@ -1168,6 +1178,7 @@ class App(ctk.CTk):
             row=1, col=0,
             content_func=self._build_led_color_content
         )
+
 
         # 4. 初始化加载 (可选，如果需要从文件读取默认值)
         # self.after(500, self.load_led_configs)
@@ -1434,7 +1445,11 @@ class App(ctk.CTk):
 
     def _build_led_color_content(self, parent):
         """填充下半部分：颜色和亮度"""
-
+        ctk.CTkLabel(
+            parent,
+            text="（功能设计开发中…）",
+            text_color="gray"
+        ).grid(row=2, column=0, padx=10, pady=(0, 10), sticky="w")
 
         # ctk.CTkLabel(parent, text="LED 颜色 (Hex):", anchor="w").grid(row=0, column=0, sticky="w", pady=5)
         # self.entry_led_color = ctk.CTkEntry(parent, placeholder_text="#FF0000")
@@ -2644,6 +2659,16 @@ class App(ctk.CTk):
         exit_code = self.run_with_live_output(command)
         return exit_code == 0
 
+    def upload_apk(self):
+        file_path = filedialog.askopenfilename(
+            title="选择APK文件",
+            filetypes=[("APK Files", "*.apk")]
+        )
+
+        if file_path:
+            self.custom_apk_path = file_path
+            messagebox.showinfo("提示", f"已选择APK:\n{file_path}")
+
     def build_apk(self) -> None:
         """主打包入口"""
         output_dir: str = "app_out"
@@ -2651,11 +2676,19 @@ class App(ctk.CTk):
         apk_type = self.apk_type_seg.get()
         self.current_apk_type = apk_type
 
-        apk_path = "LargeApp.apk" if apk_type == "大屏" else "SmallApp.apk"
+        if apk_type == "大屏":
+            apk_path = "LargeApp.apk"
 
-        if not os.path.exists(apk_path):
-            messagebox.showerror("错误", f"找不到 APK 文件：{apk_path}\n请确保该文件在当前目录下。")
-            return
+        elif apk_type == "小屏":
+            apk_path = "SmallApp.apk"
+
+        elif apk_type == "自定义apk":
+            if not self.custom_apk_path:
+                messagebox.askyesno("错误", "请先上传自定义APK")
+                return
+            apk_path = self.custom_apk_path
+
+
 
         # 禁用按钮防止重复点击
         self.build_apk_btn.configure(state="disabled", text="打包中...")
@@ -2663,6 +2696,7 @@ class App(ctk.CTk):
 
         def task():
             try:
+                self.append_log(f"\n===选中的apk{apk_path}===\n")
                 self.append_log(f"\n=== 开始打包流程 ({apk_type}) ===\n")
 
                 # 1. 反编译
