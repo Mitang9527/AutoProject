@@ -573,7 +573,7 @@ class App(ctk.CTk):
 
     def __init__(self):
         super().__init__()
-        self.title("App Adaptation_1.0")
+        self.title("App Adaptation_1.2")
         self.geometry("1200x700")
 
         # 状态变量
@@ -2352,7 +2352,8 @@ class App(ctk.CTk):
             )
 
         except Exception as e:
-            self.append_log(f"[Error] 同步节点配置到 JSON 失败: {e}\n")
+            # self.append_log(f"[Error] 同步节点配置到 JSON 失败: {e}\n")
+            return
 
     def _on_env_selected(self, selected_name):
         """当下拉菜单选择改变时触发 - 核心路由"""
@@ -2806,7 +2807,7 @@ class App(ctk.CTk):
                 self.append_log(f"\n[SUCCESS] ✅ 打包完成!\n文件位置：{output_apk_path}\n")
                 self.status_label.configure(text="状态：打包成功", text_color="green")
                 # 删除app_out文件夹
-                # shutil.rmtree(output_dir, ignore_errors=True)
+                shutil.rmtree(output_dir, ignore_errors=True)
                 messagebox.showinfo("成功", f"APK 打包成功！\n保存在：{output_apk_path}")
 
             except Exception as e:
