@@ -698,15 +698,22 @@ class App(ctk.CTk):
         self.clear_log_btn.grid(row=8, column=0, padx=20, pady=10)
 
         # APK 选择区域
-        self.apk_select_label = ctk.CTkLabel(self.sidebar_frame, text="选择 APK:", anchor="w")
+        self.apk_select_label = ctk.CTkLabel(self.sidebar_frame, text="选择解压APK类型:", anchor="w")
         self.apk_select_label.grid(row=9, column=0, padx=20, pady=(15, 0))
 
         self.build_apk_btn = ctk.CTkButton(
             self.sidebar_frame,
-            text="上传自定义apk",
-            command=self.upload_apk
+            text="解压apk",
+            command=self.decompile_apk
         )
-        self.build_apk_btn.grid(row=10, column=0, padx=20, pady=10)
+        self.build_apk_btn.grid(row=12, column=0, padx=20, pady=10)
+
+        # self.build_apk_btn = ctk.CTkButton(
+        #     self.sidebar_frame,
+        #     text="上传自定义apk",
+        #     command=self.upload_apk
+        # )
+        # self.build_apk_btn.grid(row=11, column=0, padx=20, pady=10)
 
         self.apk_type_seg = ctk.CTkSegmentedButton(
             self.sidebar_frame,
@@ -727,7 +734,7 @@ class App(ctk.CTk):
             hover_color="#e67e22",
             command=self.build_apk
         )
-        self.build_apk_btn.grid(row=12, column=0, padx=20, pady=10)
+        self.build_apk_btn.grid(row=13, column=0, padx=20, pady=10)
 
         # 底部状态栏
         self.status_label = ctk.CTkLabel(
@@ -2337,7 +2344,7 @@ class App(ctk.CTk):
             with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
-            self.append_log(f"[OK] 节点已切换: {node_name}\n")
+            # self.append_log(f"[OK] 节点已切换: {node_name}\n")
             self.status_label.configure(
                 text=f"登录方式已更新为\n"
                      f"{node_name}",
@@ -2647,7 +2654,26 @@ class App(ctk.CTk):
             traceback.print_exc()
             return -1
 
-    def decompile_apk(self, apk_path: str, output_dir: str = "app_out") -> bool:
+    def decompile_apk(self, output_dir: str = "app_out") -> bool:
+        apk_type = self.apk_type_seg.get()
+        self.current_apk_type = apk_type
+
+        if apk_type == "大屏":
+            apk_path = "LargeApp.apk"
+
+        elif apk_type == "小屏":
+            apk_path = "SmallApp.apk"
+
+        elif apk_type == "自定义apk":
+
+            if not self.custom_apk_path:
+                choice = messagebox.askyesno("错误", "请先选择自定义APK")
+                if choice:
+                    self.upload_apk()
+                else:
+                    return
+            apk_path = self.custom_apk_path
+
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir, ignore_errors=True)
             self.append_log(f"[Info] 已清理旧目录：{output_dir}\n")
@@ -2670,7 +2696,9 @@ class App(ctk.CTk):
             messagebox.showinfo("提示", f"已选择APK:\n{file_path}")
 
     def build_apk(self) -> None:
-        """主打包入口"""
+        """主打包入口
+            解压只要打包app_out即可
+        """
         output_dir: str = "app_out"
 
         apk_type = self.apk_type_seg.get()
@@ -2699,13 +2727,13 @@ class App(ctk.CTk):
                 self.append_log(f"\n===选中的apk{apk_path}===\n")
                 self.append_log(f"\n=== 开始打包流程 ({apk_type}) ===\n")
 
-                # 1. 反编译
-                self.append_log("[Step 1] 正在反编译 APK...\n")
-                if not self.decompile_apk(apk_path, TEMP_DIR):
-                    raise Exception("反编译失败")
-
-                else:
-                    self.append_log("[Step 2] 编译成功\n")
+                # # 1. 反编译
+                # self.append_log("[Step 1] 正在反编译 APK...\n")
+                # if not self.decompile_apk(TEMP_DIR):
+                #     raise Exception("反编译失败")
+                #
+                # else:
+                #     self.append_log("[Step 2] 编译成功\n")
 
                 # 2. 更新版本信息
                 # self.append_log("[Step 2] 正在更新版本信息...\n")
