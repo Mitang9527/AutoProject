@@ -136,7 +136,7 @@ def is_adb_installed() -> bool:
             ["adb", "version"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            timeout=3
+            timeout=15
         )
         return result.returncode == 0
     except Exception:
@@ -152,7 +152,7 @@ def is_java_installed() -> bool:
             ["java", "-version"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            timeout=3
+            timeout=15
         )
         return result.returncode == 0
     except Exception:
@@ -573,7 +573,7 @@ class App(ctk.CTk):
 
     def __init__(self):
         super().__init__()
-        self.title("App Adaptation_1.2")
+        self.title("App Adaptation_1.3")
         self.geometry("1200x700")
 
         # 状态变量
