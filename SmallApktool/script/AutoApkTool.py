@@ -109,8 +109,11 @@ APKSIGNER_BAT = PROJECT_PATH / "win" / "apksigner.bat"
 # 业务常量
 LAUNCHER_MODULE_PATH = ["ui", "launcherModule"]
 DEFAULT_CUSTOM_LIST = [
-    "join_next_group", "switch_group_name_tts", "switch_group_click",
-    "join_prev_group", "new_call_in"
+    "join_next_group",
+    "switch_group_name_tts",
+    "switch_group_click",
+    "join_prev_group",
+    "new_call_in"
 ]
 SKIP_FEEDBACK_INTERVAL = 5
 DEBOUNCE_SECONDS = 1.5
@@ -136,7 +139,8 @@ def is_adb_installed() -> bool:
             ["adb", "version"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            timeout=15
+            timeout=15,
+            creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
         )
         return result.returncode == 0
     except Exception:
@@ -152,7 +156,8 @@ def is_java_installed() -> bool:
             ["java", "-version"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            timeout=15
+            timeout=15,
+            creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
         )
         return result.returncode == 0
     except Exception:
@@ -295,7 +300,8 @@ class SmartKeyBackend:
                 subprocess.call(
                     ["taskkill", "/F", "/T", "/PID", str(self.process.pid)],
                     stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
                 )
             else:
                 self.process.terminate()
@@ -316,7 +322,8 @@ class SmartKeyBackend:
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                timeout=5
+                timeout=5,
+                creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
             )
             return True
         except Exception:
@@ -573,7 +580,7 @@ class App(ctk.CTk):
 
     def __init__(self):
         super().__init__()
-        self.title("App Adaptation_1.3")
+        self.title("App Adaptation_1.4")
         self.geometry("1200x700")
 
         # 状态变量
@@ -583,7 +590,7 @@ class App(ctk.CTk):
         self.is_listening: bool = False
         self.env_checker: EnvChecker = EnvChecker(self)
         self.current_apk_type: str = "大屏"
-        self.custom_apk_path = None
+
 
 
         # 事件绑定
@@ -604,8 +611,8 @@ class App(ctk.CTk):
         self._init_main_area()
 
         # 启动定时任务
-        self.after(100, self.process_log_queue)
-        self.after(500, self.initial_env_check)
+        self.after(50, self.process_log_queue)
+        self.after(200, self.initial_env_check)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     # ------------------辅助函数------------------------
@@ -808,7 +815,9 @@ class App(ctk.CTk):
             return
 
         try:
-            out = subprocess.check_output(["adb", "devices"], text=True, stderr=subprocess.DEVNULL)
+            out = subprocess.check_output(["adb", "devices"], text=True, stderr=subprocess.DEVNULL,
+                                          creationflags=subprocess.CREATE_NO_WINDOW
+                                          )
             devs = [
                 line.split()[0] for line in out.splitlines()
                 if "\tdevice" in line and not line.startswith("List")
@@ -893,7 +902,7 @@ class App(ctk.CTk):
                     break
         except Exception:
             pass
-        self.after(100, self.process_log_queue)
+        self.after(50, self.process_log_queue)
 
     def clear_log(self) -> None:
         if self.log_textbox.winfo_exists():
@@ -2340,7 +2349,6 @@ class App(ctk.CTk):
             data["profile"]["dns"] = [ip_address]
             data["profile"]["context"] = context
 
-            # 写回文件
             with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
@@ -2469,7 +2477,8 @@ class App(ctk.CTk):
 
             except Exception as e:
                 self.append_log(f"[Warning] 读取slclient.json的login_mode失败：{e}\n")
-    # TODO 打包时获取配置写入
+
+
     def apply_selected_config_to_slclient(self) -> None:
         """打包时调用：收集所有四个模块的数据并写入 JSON"""
         if not PATH_SLCLIENT_JSON.exists():
@@ -2591,7 +2600,7 @@ class App(ctk.CTk):
             try:
                 if os.path.exists(file_path):
                     os.remove(file_path)
-                    self.append_log(f"[OK] 已删除临时文件")
+                    self.append_log(f"[OK] 已删除临时文件\n")
                     return True
             except PermissionError:
                 self.append_log(f"[Warn] 文件被占用，等待 0.5 秒后重试... ({i + 1}/{retries})\n")
@@ -2601,88 +2610,161 @@ class App(ctk.CTk):
                 return False
         return False
 
-    def run_with_live_output(self, command: List[str]) -> int:
+    def run_with_live_output(
+            self,
+            command: List[str],
+            timeout: Optional[float] = None,
+            encoding: Optional[str] = None
+    ) -> int:
         """
-        【核心修复】双线程读取 stdout/stderr，防止死锁，并实时推送到 GUI
+        【核心改进】双线程读取 stdout/stderr，防止死锁，并实时推送到 GUI
+        Args:
+            command (List[str]): 要执行的命令列表。
+            timeout (Optional[float], optional): 命令执行超时时间（秒）。None表示无限制。
+            encoding (Optional[str], optional): 指定输出流的编码。None表示使用系统默认。
+
+        Returns:
+            int: 子进程的返回码。如果发生异常或超时，则返回 -1。
         """
+        start_time = time.time()
         self.append_log(f"[CMD] {' '.join(command)}\n")
 
-        try:
-            startupinfo = None
-            if platform.system() == "Windows":
-                startupinfo = subprocess.STARTUPINFO()
-                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        # 准备跨平台的启动选项
+        startupinfo = None
+        creationflags = 0
+        if platform.system() == "Windows":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+            creationflags = subprocess.CREATE_NO_WINDOW
 
+        #  启动子进程
+        try:
             process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1,
-                universal_newlines=True,
+                bufsize=1,  # 行缓冲
+                universal_newlines=True,  # 确保返回字符串
                 startupinfo=startupinfo,
-                creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
+                creationflags=creationflags,
+                # 明确指定编码，处理乱码问题
+                encoding=encoding
             )
-
-            log_queue = queue.Queue()
-
-            def reader_thread(stream, prefix=""):
-                for line in iter(stream.readline, ""):
-                    if line:
-                        log_queue.put(prefix + line.strip())
-                stream.close()
-
-            t_out = threading.Thread(target=reader_thread, args=(process.stdout, ""), daemon=True)
-            t_err = threading.Thread(target=reader_thread, args=(process.stderr, "[ERR] "), daemon=True)
-            t_out.start()
-            t_err.start()
-
-            while t_out.is_alive() or t_err.is_alive():
-                try:
-                    line = log_queue.get(timeout=0.5)
-                    self.after(0, self.append_log, line + "\n")
-                except queue.Empty:
-                    continue
-
-            t_out.join()
-            t_err.join()
-            returncode = process.wait()
-            self.append_log(f"[Result] 命令执行完毕，返回码：{returncode}\n")
-            return returncode
-
+        except FileNotFoundError:
+            self.append_log(f"[ERROR] 找不到命令或文件: {command[0]}\n")
+            return -1
         except Exception as e:
-            self.append_log(f"[CRITICAL] 执行命令发生严重错误：{e}\n")
-            traceback.print_exc()
+            self.append_log(f"[CRITICAL] 启动进程失败: {e}\n")
             return -1
 
+        #  创建线程安全队列用于接收子进程输出
+        log_queue = queue.Queue(maxsize=1000)  # 限制队列大小，防止内存爆炸
+
+        def reader_thread(stream, prefix: str = ""):
+            """读取子进程的一个输出流，并放入队列"""
+            try:
+                for line in iter(stream.readline, ""):
+                    if line:
+                        log_queue.put((prefix, line.rstrip('\n\r')))  # 将前缀和内容作为元组放入队列
+                stream.close()
+            except Exception as e:
+                self.append_log(f"[ERROR] 读取子进程输出流时出错: {e}\n")
+            finally:
+                # 发送一个哨兵值，表示该流已读完
+                log_queue.put((None, None))
+
+        # 启动两个守护线程，分别读取 stdout 和 stderr
+        t_out = threading.Thread(target=reader_thread, args=(process.stdout, ""), daemon=True)
+        t_err = threading.Thread(target=reader_thread, args=(process.stderr, "[ERR] "), daemon=True)
+        t_out.start()
+        t_err.start()
+
+        # 引入计时器
+        streams_to_read = 2
+
+        #  主循环：从队列中获取输出并更新GUI
+        last_update_time = time.time()
+        while streams_to_read > 0:
+            try:
+                item = log_queue.get(timeout=0.1)
+
+                if item[0] is None and item[1] is None:
+                    streams_to_read -= 1
+                    continue
+
+                prefix, line_content = item
+                # 使用 after 方法将更新操作调度到主线程执行
+                self.after(0, self.append_log, f"{prefix}{line_content}\n")
+
+            except queue.Empty:
+                # 检查主进程是否已经结束，如果结束则退出循环
+                if process.poll() is not None:
+                    # 主进程已结束，但线程可能还在读取最后的数据
+                    # 再等待一段时间，直到所有流都读完
+                    remaining_timeout = timeout - (time.time() - start_time) if timeout else None
+                    if remaining_timeout and remaining_timeout <= 0:
+                        break
+                    continue
+
+                if timeout is not None and (time.time() - start_time) > timeout:
+                    self.append_log(f"[TIMEOUT] 命令执行超时 ({timeout}s)，正在终止...\n")
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)  # 给予5秒时间优雅关闭
+                    except subprocess.TimeoutExpired:
+                        process.kill()  # 强制杀死
+                    return -1
+            except Exception as e:
+                self.append_log(f"[ERROR] 处理子进程输出时出错: {e}\n")
+                traceback.print_exc()
+
+        # 6. 等待读取线程完成
+        t_out.join()
+        t_err.join()
+
+        # 7. 获取最终返回码
+        returncode = process.wait()
+        total_time = time.time() - start_time
+        self.append_log(f"[Result] 命令执行完毕，返回码：{returncode}，耗时 {total_time:.2f}s\n")
+        return returncode
+
     def decompile_apk(self, output_dir: str = "app_out") -> bool:
+        self.custom_apk_path = None
+
         apk_type = self.apk_type_seg.get()
         self.current_apk_type = apk_type
 
         if apk_type == "大屏":
             apk_path = "LargeApp.apk"
-
         elif apk_type == "小屏":
             apk_path = "SmallApp.apk"
-
         elif apk_type == "自定义apk":
-
             if not self.custom_apk_path:
                 choice = messagebox.askyesno("错误", "请先选择自定义APK")
                 if choice:
                     self.upload_apk()
                 else:
-                    return
+                    return False
             apk_path = self.custom_apk_path
+        else:
+            self.append_log("[Error] 未知的APK类型，请检查选择。\n")
+            return False
 
+        # 清理旧目录
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir, ignore_errors=True)
             self.append_log(f"[Info] 已清理旧目录：{output_dir}\n")
+
+        self.append_log("正在解压...\n")
+        self.after(0, lambda: None)
 
         command = [
             "java", "-jar", str(APKTOOL_JAR),
             "d", apk_path, "-s", "-o", output_dir
         ]
+
         exit_code = self.run_with_live_output(command)
         return exit_code == 0
 
