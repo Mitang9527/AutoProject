@@ -591,15 +591,20 @@ class App(ctk.CTk):
 
         # 打包配置状态管理
         self.build_config = {
-            "env_type": "",      # 默认环境类型
-            "map_source": "baidu",    # 默认地图
-            "encoding": "amrnb"       # 默认编码
+            "env_type": "",
+            "map_source": "baidu",
+            "encoding": "amrnb"
         }
+        self.slclient_options = {}
 
-        self.slclient_options = {}  # 存储从 slclient.json 解析出的可选值
+        # --- 新增：用于存储 Tab 的 Frame 引用 ---
+        self.tab_frames = {}
+
+        # --- 新增：SegmentedButton 的变量 ---
+        self.selected_tab = ctk.StringVar(value="")
 
         self._init_sidebar()
-        self._init_main_area()
+        self._init_main_area()  # 这是我们重构的重点
 
         # 启动定时任务
         self.after(100, self.process_log_queue)
@@ -749,8 +754,35 @@ class App(ctk.CTk):
             self.append_log(f"[Info] Language switched to {selection}\n")
 
     def refresh_ui_texts(self):
-        """遍历并更新主要组件的文本"""
-        # TODO 需要手动添加所有需要更新的组件
+        """遍历并更新主要组件的文本 (已更新：支持 SegmentedButton 实时刷新)"""
+        # 1. 更新 SegmentedButton (核心改进点)
+        new_tab_names = {
+            "log": _("msg_tab_log"),
+            "config": _("msg_tab_config"),
+            "build": _("msg_tab_build"),
+            "led": _("msg_tab_led")
+        }
+
+        # 获取当前选中的键 (通过反向查找)
+        current_display = self.selected_tab.get()
+        current_key = None
+        for k, v in self.tab_names.items():
+            if v == current_display:
+                current_key = k
+                break
+
+        # 更新内部映射
+        self.tab_names = new_tab_names
+
+        # 重新配置 SegmentedButton 的选项
+        # 注意：configure(values=...) 会触发 command，但我们上面的 _on_tab_switch 有防护
+        self.tab_selector.configure(values=list(self.tab_names.values()))
+
+        # 如果之前有选中项，尝试恢复选中状态
+        if current_key:
+            self._show_tab(current_key)
+
+        # 2. 更新其他组件 (保持原样)
         self.title(_("app_title"))
         self.logo_label.configure(text=_("sidebar_logo"))
         self.device_label.configure(text=_("lbl_device"))
@@ -759,51 +791,134 @@ class App(ctk.CTk):
         self.mode_label.configure(text=_("lbl_mode"))
         self.clear_log_btn.configure(text=_("clear_log"))
         self.apk_select_label.configure(text=_("lbl_apk_type"))
-        self.apk_type_seg.configure(values=[
-            _("type_large_screen"),
-            _("type_small_screen")
-        ])
+
+        # 注意：这里不再需要更新 Tabview 的 Tab 名字了，因为我们用的是 SegmentedButton
         self.build_apk_btn.configure(text=_("btn_build"))
         self.status_label.configure(text=_("status_init"))
 
     def _init_main_area(self) -> None:
-        """初始化主内容区"""
-
-        # 主内容区域
+        """初始化主内容区 (使用 SegmentedButton 模拟 Tab)"""
         self.main_frame = ctk.CTkFrame(self)
-        self.main_frame.grid(row=0, column=1, sticky="nsew")
-
-        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+        self.main_frame.grid_rowconfigure(1, weight=1)  # 内容区域扩展
         self.main_frame.grid_columnconfigure(0, weight=1)
 
-        # TabView
-        self.tabview = ctk.CTkTabview(self.main_frame)
-        self.tabview.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        # --- 1. 创建 SegmentedButton (充当 Tab Header) ---
+        # 定义 Tab 名称映射 (为了实时翻译，我们存储键，显示值)
+        # --- 1. 创建 SegmentedButton (充当 Tab Header) ---
+        # 定义 Tab 名称映射
+        self.tab_names = {
+            "log": _("msg_tab_log"),
+            "config": _("msg_tab_config"),
+            "build": _("msg_tab_build"),
+            "led": _("msg_tab_led")
+        }
 
-        # Tabs
-        self.tab_log = self.tabview.add(_("msg_tab_log"))
-        self.tab_config = self.tabview.add(_("msg_tab_config"))
-        self.tab_build_config = self.tabview.add(_("msg_tab_build"))
-        self.tab_input_led_config = self.tabview.add(_("msg_tab_led"))
-        # 初始化子页面
-        self._init_build_config_page()
-        self._init_led_config_page()
+        self.tab_selector = ctk.CTkSegmentedButton(
+            self.main_frame,
+            values=list(self.tab_names.values()),
+            variable=self.selected_tab,
+            command=self._on_tab_switch,
 
-        # Log 窗口
+            # --- 1. 尺寸与圆角优化 ---
+            height=32,  # 缩小高度 (原40 -> 32)，更紧凑
+            width=100,  # 限制宽度，避免按钮过宽
+            corner_radius=8,  # 增加圆角 (原默认较小)，让按钮更柔和
+            font=ctk.CTkFont(size=13),  # 字体稍微调小一点以适配新高度
+
+            # --- 2. 颜色与间隔优化 ---
+            # 背景色：设置为透明或与父容器一致，这样按钮之间会有“缝隙”感
+            # fg_color="transparent",
+
+            # 选中项：使用品牌色，圆角由 corner_radius 控制
+            selected_color="#3498db",
+            selected_hover_color="#2980b9",
+
+            # 未选中项：使用浅灰色，与背景形成对比
+            unselected_color="green",
+            unselected_hover_color="gray",
+
+            # --- 3. 边框优化 ---
+            # 如果需要整体外边框，可以加这个，但通常透明背景更现代
+            # border_width=0,
+        )
+        self.tab_selector.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="ew")
+
+        # --- 2. 创建 Container Frame (充当 Tab Content 显示区) ---
+        self.content_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.content_container.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+        self.content_container.grid_rowconfigure(0, weight=1)
+        self.content_container.grid_columnconfigure(0, weight=1)
+
+        # --- 3. 初始化所有 Tab 的 Frame (隐藏状态) ---
+        self._create_tab_frames()
+
+        # --- 4. 默认显示第一个 Tab ---
+        if self.tab_names:
+            first_tab_key = list(self.tab_names.keys())[0]
+            self._show_tab(first_tab_key)
+
+    def _create_tab_frames(self):
+        """创建所有 Tab 对应的 Frame，但不直接显示"""
+        # 使用一个字典来映射 "内部键" -> Frame
+        # 注意：这里的键必须和 self.tab_names 的键对应
+
+        # Tab 1: Log (保持原样)
+        frame_log = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.log_textbox = ctk.CTkTextbox(
-            self.tab_log,
-            font=ctk.CTkFont(family="Consolas", size=12)
+            frame_log, font=ctk.CTkFont(family="Consolas", size=12)
         )
         self.log_textbox.pack(fill="both", expand=True, padx=10, pady=10)
+        self.tab_frames["log"] = frame_log
 
-        # Key Config
+        # Tab 2: Config (保持原样)
+        frame_config = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.scroll_frame = ctk.CTkScrollableFrame(
-            self.tab_config,
-            label_text="当前已收录的键位映射 (input.json)"
+            frame_config, label_text="当前已收录的键位映射 (input.json)"
         )
         self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
         self.scroll_frame.grid_columnconfigure(0, weight=1)
-    # ==================== 事件处理回调 ====================
+        self.tab_frames["config"] = frame_config
+
+        # Tab 3: Build Config (保持原样)
+        frame_build = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        self._init_build_config_page(frame_build)  # 注意：我们将原函数改造成接受父容器参数
+        self.tab_frames["build"] = frame_build
+
+        # Tab 4: LED Config (保持原样)
+        frame_led = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        self._init_led_config_page(frame_led)  # 注意：同上
+        self.tab_frames["led"] = frame_led
+
+        # --- 将所有 Frame 放入容器，但先隐藏 ---
+        for frame in self.tab_frames.values():
+            frame.grid(row=0, column=0, sticky="nsew")
+
+    def _on_tab_switch(self, value):
+        """当 SegmentedButton 选项改变时触发"""
+        # 这里 value 是显示的文本，我们需要反向查找键
+        # 由于我们存储了 self.tab_names，我们可以遍历查找
+        target_key = None
+        for key, display_text in self.tab_names.items():
+            if display_text == value:
+                target_key = key
+                break
+        if target_key:
+            self._show_tab(target_key)
+
+    def _show_tab(self, tab_key):
+        """隐藏所有 Frame，显示指定的 Frame"""
+        for key, frame in self.tab_frames.items():
+            frame.grid_remove()  # 隐藏但不销毁
+
+        # 显示目标
+        if tab_key in self.tab_frames:
+            self.tab_frames[tab_key].grid()
+
+            # 更新 SegmentedButton 的状态 (防止因代码触发导致 UI 不同步)
+            display_text = self.tab_names.get(tab_key, "")
+            self.selected_tab.set(display_text)
+# ==================== 事件处理回调 ====================
 
     def initial_env_check(self) -> None:
 
@@ -1115,29 +1230,26 @@ class App(ctk.CTk):
         self.status_label.configure(text=f"状态：已选择 {value} APK", text_color="#d35400")
         self.append_log(f"[Info] APK type switched to：{value}\n")
 
-    def _init_build_config_page(self) -> None:
-        """初始化打包配置页面"""
-
+    def _init_build_config_page(self, parent):
+        """初始化打包配置页面 (修复版)"""
         # 主标题
         lbl_title = ctk.CTkLabel(
-            self.tab_build_config,
-            text="APK属性配置",
-            font=ctk.CTkFont(size=18, weight="bold")
+            parent, text="APK属性配置", font=ctk.CTkFont(size=18, weight="bold")
         )
         lbl_title.pack(pady=(15, 10))
 
         # --- 主容器：使用 Grid 布局实现 2x2 ---
-        grid_frame = ctk.CTkFrame(self.tab_build_config, fg_color="transparent")
+        # 错误修复：这里原来是 self.tab_build_config，现在改为使用传入的 parent
+        grid_frame = ctk.CTkFrame(parent, fg_color="transparent")
         grid_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # 配置行列权重，确保四等分 (weight=1 表示平均分配空间)
+        # 配置行列权重，确保四等分
         grid_frame.grid_columnconfigure(0, weight=1)
         grid_frame.grid_columnconfigure(1, weight=1)
         grid_frame.grid_rowconfigure(0, weight=1)
         grid_frame.grid_rowconfigure(1, weight=1)
 
         # --- 创建四个子模块卡片 ---
-
         # 1. 左上：环境配置
         self.frame_env = self._create_config_card(
             parent=grid_frame,
@@ -1145,7 +1257,6 @@ class App(ctk.CTk):
             row=0, col=0,
             content_func=self._build_env_content
         )
-
         # 2. 右上：声音配置
         self.frame_sound = self._create_config_card(
             parent=grid_frame,
@@ -1153,15 +1264,13 @@ class App(ctk.CTk):
             row=0, col=1,
             content_func=self._build_sound_content
         )
-
         # 3. 左下：地图配置
         self.frame_map = self._create_config_card(
             parent=grid_frame,
-            title="🗺️地图配置 (Map)",
+            title="🗺️ 地图配置 (Map)",
             row=1, col=0,
             content_func=self._build_map_content
         )
-
         # 4. 右下：其他设置
         self.frame_other = self._create_config_card(
             parent=grid_frame,
@@ -1173,32 +1282,25 @@ class App(ctk.CTk):
         # 初始化时加载一次默认值
         self.after(500, self.load_all_configs)
 
-    def _init_led_config_page(self) -> None:
-        """初始化按键LED配置页面 (上下平分布局)"""
-
+    def _init_led_config_page(self, parent):
+        """初始化按键LED配置页面 (修复版)"""
         # 1. 主标题
         lbl_title = ctk.CTkLabel(
-            self.tab_input_led_config,
-            text="按键配置",
-            font=ctk.CTkFont(size=18, weight="bold")
+            parent, text="按键配置", font=ctk.CTkFont(size=18, weight="bold")
         )
         lbl_title.pack(pady=(15, 10))
 
         # 2. 主容器：使用 Grid 布局实现 上下 1:1 平分
-        # fg_color="transparent" 让背景透明，与 Tab 背景融合
-        grid_frame = ctk.CTkFrame(self.tab_input_led_config, fg_color="transparent")
+        # 错误修复：这里原来是 self.tab_input_led_config，现在改为使用传入的 parent
+        grid_frame = ctk.CTkFrame(parent, fg_color="transparent")
         grid_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
         # 【关键步骤】配置行列权重
-        # 只有 1 列 (column 0)，权重为 1 (占满宽度)
         grid_frame.grid_columnconfigure(0, weight=1)
-
-        # 有 2 行 (row 0 和 row 1)，权重都为 1 -> 这意味着它们将平均分配高度 (50% : 50%)
         grid_frame.grid_rowconfigure(0, weight=1)
         grid_frame.grid_rowconfigure(1, weight=1)
 
         # 3. 创建上下两个子模块卡片
-
         # --- 上半部分：LED 模式/策略配置 ---
         self.frame_led_mode = self._create_config_card(
             parent=grid_frame,
@@ -1206,16 +1308,15 @@ class App(ctk.CTk):
             row=0, col=0,
             content_func=self._build_input_mode_content
         )
-
         # --- 下半部分：颜色与亮度配置 ---
         self.frame_led_color = self._create_config_card(
             parent=grid_frame,
-            title="🎨  其他配置",
+            title="🎨 其他配置",
             row=1, col=0,
             content_func=self._build_led_color_content
         )
 
-        # 4. 初始化加载 (可选，如果需要从文件读取默认值)
+        # 4. 初始化加载 (可选)
         # self.after(500, self.load_led_configs)
 
     def _build_input_mode_content(self, parent):
