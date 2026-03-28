@@ -22,7 +22,7 @@ class AdbTest:
         return self.package_name
 
     def get_screenshot(self):
-        pic_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_screenshot.jpeg"
+        pic_name = datetime.now().strftime("%Y%m%d_%H%M%S") + "_screenshot.png"
         png_folder_path = Path(self.local_pth) / 'png'
         png_folder_path.mkdir(parents=True, exist_ok=True)
         os.system(f"adb -s {self.device_name} exec-out screencap -p > {os.path.join(png_folder_path, pic_name)}")

@@ -580,7 +580,7 @@ class App(ctk.CTk):
 
     def __init__(self):
         super().__init__()
-        self.title("App Adaptation_1.4")
+        self.title("App_Adaptation_1.6")
         self.geometry("1200x700")
 
         # 状态变量
@@ -2204,8 +2204,6 @@ class App(ctk.CTk):
 
     def _save_custom_env_to_file(self):
         """将当前输入的独立部署配置保存到 slclient.json"""
-        import json
-        import os
 
         ip = self.entry_custom_ip.get().strip()
         context = self.entry_custom_context.get().strip()
@@ -2571,12 +2569,10 @@ class App(ctk.CTk):
 
                 print(f"✅ 已从 slclient.json 加载 profile 配置到 '海外环境'。")
 
-            # 如果有其他节点也可以在这里解析添加到 ENV_CONF
         except Exception as e:
             print(f"❌ 加载 slclient.json 失败: {e}")
 
-    # 在 App.__init__ 中，在初始化 UI 之前调用
-    # self.load_slclient_config() (如果定义为类方法) 或直接调用 load_slclient_config()
+
 
     # ==================== APK 工具链逻辑 ====================
 
@@ -2617,17 +2613,17 @@ class App(ctk.CTk):
             encoding: Optional[str] = None
     ) -> int:
         """
-        【核心改进】双线程读取 stdout/stderr，防止死锁，并实时推送到 GUI
+        【核心改进】双线程读取 stdout/stderr 字节流，防止死锁，并实时推送到 GUI
         Args:
             command (List[str]): 要执行的命令列表。
             timeout (Optional[float], optional): 命令执行超时时间（秒）。None表示无限制。
-            encoding (Optional[str], optional): 指定输出流的编码。None表示使用系统默认。
+            encoding (Optional[str], optional): 用于解码输出流的首选编码。默认为 'utf-8'。
 
         Returns:
             int: 子进程的返回码。如果发生异常或超时，则返回 -1。
         """
         start_time = time.time()
-        self.append_log(f"[CMD] {' '.join(command)}\n")
+        # self.append_log(f"[CMD] {' '.join(command)}\n")
 
         # 准备跨平台的启动选项
         startupinfo = None
@@ -2660,7 +2656,7 @@ class App(ctk.CTk):
             return -1
 
         #  创建线程安全队列用于接收子进程输出
-        log_queue = queue.Queue(maxsize=1000)  # 限制队列大小，防止内存爆炸
+        log_queue = queue.Queue(maxsize=1000)
 
         def reader_thread(stream, prefix: str = ""):
             """读取子进程的一个输出流，并放入队列"""
@@ -2699,10 +2695,8 @@ class App(ctk.CTk):
                 self.after(0, self.append_log, f"{prefix}{line_content}\n")
 
             except queue.Empty:
-                # 检查主进程是否已经结束，如果结束则退出循环
+                # 检查主进程是否已经结束
                 if process.poll() is not None:
-                    # 主进程已结束，但线程可能还在读取最后的数据
-                    # 再等待一段时间，直到所有流都读完
                     remaining_timeout = timeout - (time.time() - start_time) if timeout else None
                     if remaining_timeout and remaining_timeout <= 0:
                         break
