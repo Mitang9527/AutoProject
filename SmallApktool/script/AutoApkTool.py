@@ -166,14 +166,15 @@ def is_java_installed() -> bool:
 
 def show_env_error_dialog(parent: ctk.CTk, missing_list: List[str]) -> None:
     """显示环境缺失的弹窗"""
-    msg = "系统环境检查未通过，缺少以下组件：\n\n"
+    msg = "System environment check failed：\n\n"
     if "ADB" in missing_list:
         msg += "❌ ADB (Android Debug Bridge)\n   " \
-               "解决：解压Env中的ADB压缩包并进行安装，设置系统变量。\n"
+               "Decompress and install ADB compressed package in Env\n" \
+               ", and set system variables.。\n"
     if "JAVA" in missing_list:
         msg += "❌ Java (JDK/JRE)\n   " \
-               "解决：解压Env中的JDK压缩包并进行安装\n"
-    msg += "\n请安装缺失组件后点击【重试检测】。"
+               "Solution: extract the JDK compressed package in Env and install it.\n"
+    msg += "\nPlease install the missing components and click [Retry Detection].。"
 
     dialog = ctk.CTkToplevel(parent)
     dialog.title("环境缺失警告")
@@ -600,15 +601,20 @@ class App(ctk.CTk):
 
         # 打包配置状态管理
         self.build_config = {
-            "env_type": "",      # 默认环境类型
-            "map_source": "baidu",    # 默认地图
-            "encoding": "amrnb"       # 默认编码
+            "env_type": "",
+            "map_source": "baidu",
+            "encoding": "amrnb"
         }
+        self.slclient_options = {}
 
-        self.slclient_options = {}  # 存储从 slclient.json 解析出的可选值
+        # --- 新增：用于存储 Tab 的 Frame 引用 ---
+        self.tab_frames = {}
+
+        # --- 新增：SegmentedButton 的变量 ---
+        self.selected_tab = ctk.StringVar(value="")
 
         self._init_sidebar()
-        self._init_main_area()
+        self._init_main_area()  # 这是我们重构的重点
 
         # 启动定时任务
         self.after(50, self.process_log_queue)
@@ -636,9 +642,9 @@ class App(ctk.CTk):
                 if content:
                     data = json.loads(content)
         except json.JSONDecodeError as e:
-            self.append_log(f"[Warning] JSON 格式错误，将使用空配置: {e}\n")
+            self.append_log(f"[Warning] JSON error, empty configuration  be used: {e}\n")
         except Exception as e:
-            self.append_log(f"[Error] 读取 JSON 文件失败: {e}\n")
+            self.append_log(f"[Error] Failed to read JSON file: {e}\n")
 
         return data
 
@@ -659,9 +665,9 @@ class App(ctk.CTk):
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
         # 设备选择
-        self.device_label = ctk.CTkLabel(self.sidebar_frame, text="ADB 设备:", anchor="w")
+        self.device_label = ctk.CTkLabel(self.sidebar_frame, text=_("lbl_device"), anchor="w")
         self.device_label.grid(row=1, column=0, padx=20, pady=(10, 0))
-        self.device_var = ctk.StringVar(value="检测中...")
+        self.device_var = ctk.StringVar(value=(_("status_detecting")))
         self.device_menu = ctk.CTkOptionMenu(
             self.sidebar_frame,
             variable=self.device_var,
@@ -671,14 +677,14 @@ class App(ctk.CTk):
         self.device_menu.grid(row=2, column=0, padx=20, pady=5)
         self.refresh_btn = ctk.CTkButton(
             self.sidebar_frame,
-            text="刷新设备",
+            text=_("btn_refresh"),
             command=self.refresh_devices,
             height=30
         )
         self.refresh_btn.grid(row=3, column=0, padx=20, pady=5)
 
         # 监听模式
-        self.mode_label = ctk.CTkLabel(self.sidebar_frame, text="监听模式:", anchor="w")
+        self.mode_label = ctk.CTkLabel(self.sidebar_frame, text=_("lbl_mode"), anchor="w")
         self.mode_label.grid(row=4, column=0, padx=20, pady=(5, 0))
         self.mode_var = ctk.StringVar(value="ptt")
         self.mode_menu = ctk.CTkOptionMenu(
@@ -691,21 +697,21 @@ class App(ctk.CTk):
         # 控制按钮
         self.start_btn = ctk.CTkButton(
             self.sidebar_frame,
-            text="开始监听",
+            text=_("btn_start_listen"),
             fg_color="green",
             command=self.toggle_listen
         )
         self.start_btn.grid(row=7, column=0, padx=20, pady=10)
         self.clear_log_btn = ctk.CTkButton(
             self.sidebar_frame,
-            text="清空日志",
+            text=_("clear_log"),
             fg_color="gray",
             command=self.clear_log
         )
         self.clear_log_btn.grid(row=8, column=0, padx=20, pady=10)
 
         # APK 选择区域
-        self.apk_select_label = ctk.CTkLabel(self.sidebar_frame, text="选择解压APK类型:", anchor="w")
+        self.apk_select_label = ctk.CTkLabel(self.sidebar_frame, text=_("lbl_apk_type"), anchor="w")
         self.apk_select_label.grid(row=9, column=0, padx=20, pady=(15, 0))
 
         self.build_apk_btn = ctk.CTkButton(
@@ -724,7 +730,11 @@ class App(ctk.CTk):
 
         self.apk_type_seg = ctk.CTkSegmentedButton(
             self.sidebar_frame,
-            values=["大屏", "小屏","自定义apk"],
+            values=[
+                _("type_large_screen"),
+                _("type_small_screen"),
+                "自定义apk"
+            ],
             command=self.on_apk_type_change,
             height=30,
             fg_color="#3498db",
@@ -732,11 +742,11 @@ class App(ctk.CTk):
             unselected_color="gray"
         )
         self.apk_type_seg.grid(row=11, column=0, padx=20, pady=5, sticky="ew")
-        self.apk_type_seg.set("大屏")
+        self.apk_type_seg.set(_("type_large_screen"))
 
         self.build_apk_btn = ctk.CTkButton(
             self.sidebar_frame,
-            text="打包 APK",
+            text=_("btn_build"),
             fg_color="#d35400",
             hover_color="#e67e22",
             command=self.build_apk
@@ -746,45 +756,197 @@ class App(ctk.CTk):
         # 底部状态栏
         self.status_label = ctk.CTkLabel(
             self.sidebar_frame,
-            text="状态：初始化...",
+            text=_("status_init"),
             anchor="w",
             text_color="gray"
         )
         self.status_label.grid(row=100, column=0, padx=20, pady=(0, 20), sticky="s")
 
+        # 语言选择
+        self.lang_var = ctk.StringVar(value="English")
+        self.lang_menu = ctk.CTkOptionMenu(
+            self.sidebar_frame,
+            variable=self.lang_var,
+            values=["中文", "English"],
+            command=self.on_language_change
+        )
+        self.lang_menu.grid(row=101, column=0, padx=20, pady=8)
+
+    def on_language_change(self, selection):
+        lang_code = "zh" if selection == "中文" else "en"
+        if i18n.load_language(lang_code):
+            self.refresh_ui_texts()
+            self.append_log(f"[Info] Language switched to {selection}\n")
+
+    def refresh_ui_texts(self):
+        """遍历并更新主要组件的文本 (已更新：支持 SegmentedButton 实时刷新)"""
+        # 1. 更新 SegmentedButton (核心改进点)
+        new_tab_names = {
+            "log": _("msg_tab_log"),
+            "config": _("msg_tab_config"),
+            "build": _("msg_tab_build"),
+            "led": _("msg_tab_led")
+        }
+
+        # 获取当前选中的键 (通过反向查找)
+        current_display = self.selected_tab.get()
+        current_key = None
+        for k, v in self.tab_names.items():
+            if v == current_display:
+                current_key = k
+                break
+
+        # 更新内部映射
+        self.tab_names = new_tab_names
+
+        # 重新配置 SegmentedButton 的选项
+        # 注意：configure(values=...) 会触发 command，但我们上面的 _on_tab_switch 有防护
+        self.tab_selector.configure(values=list(self.tab_names.values()))
+
+        # 如果之前有选中项，尝试恢复选中状态
+        if current_key:
+            self._show_tab(current_key)
+
+        # 2. 更新其他组件 (保持原样)
+        self.title(_("app_title"))
+        self.logo_label.configure(text=_("sidebar_logo"))
+        self.device_label.configure(text=_("lbl_device"))
+        self.refresh_btn.configure(text=_("btn_refresh"))
+        self.start_btn.configure(text=_("btn_start_listen") if not self.is_listening else _("btn_stop_listen"))
+        self.mode_label.configure(text=_("lbl_mode"))
+        self.clear_log_btn.configure(text=_("clear_log"))
+        self.apk_select_label.configure(text=_("lbl_apk_type"))
+
+        # 注意：这里不再需要更新 Tabview 的 Tab 名字了，因为我们用的是 SegmentedButton
+        self.build_apk_btn.configure(text=_("btn_build"))
+        self.status_label.configure(text=_("status_init"))
+
     def _init_main_area(self) -> None:
-        """初始化主内容区"""
-        self.tabview = ctk.CTkTabview(self)
-        self.tabview.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
+        """初始化主内容区 (使用 SegmentedButton 模拟 Tab)"""
+        self.main_frame = ctk.CTkFrame(self)
+        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+        self.main_frame.grid_rowconfigure(1, weight=1)  # 内容区域扩展
+        self.main_frame.grid_columnconfigure(0, weight=1)
 
-        self.tab_log = self.tabview.add("实时日志")
-        self.tab_config = self.tabview.add("配置列表")
-        self.tab_build_config = self.tabview.add("终端配置")
-        self.tab_input_led_config = self.tabview.add("按键配置")
+        # --- 1. 创建 SegmentedButton (充当 Tab Header) ---
+        # 定义 Tab 名称映射 (为了实时翻译，我们存储键，显示值)
+        # --- 1. 创建 SegmentedButton (充当 Tab Header) ---
+        # 定义 Tab 名称映射
+        self.tab_names = {
+            "log": _("msg_tab_log"),
+            "config": _("msg_tab_config"),
+            "build": _("msg_tab_build"),
+            "led": _("msg_tab_led")
+        }
 
+        self.tab_selector = ctk.CTkSegmentedButton(
+            self.main_frame,
+            values=list(self.tab_names.values()),
+            variable=self.selected_tab,
+            command=self._on_tab_switch,
 
-        # self.load_slclient_config()
+            # --- 1. 尺寸与圆角优化 ---
+            height=32,  # 缩小高度 (原40 -> 32)，更紧凑
+            width=100,  # 限制宽度，避免按钮过宽
+            corner_radius=8,  # 增加圆角 (原默认较小)，让按钮更柔和
+            font=ctk.CTkFont(size=13),  # 字体稍微调小一点以适配新高度
 
-        self._init_sidebar()
-        self._init_build_config_page()
-        self._init_led_config_page()
+            # --- 2. 颜色与间隔优化 ---
+            # 背景色：设置为透明或与父容器一致，这样按钮之间会有“缝隙”感
+            # fg_color="transparent",
 
+            # 选中项：使用品牌色，圆角由 corner_radius 控制
+            selected_color="#3498db",
+            selected_hover_color="#2980b9",
+
+            # 未选中项：使用浅灰色，与背景形成对比
+            unselected_color="green",
+            unselected_hover_color="gray",
+
+            # --- 3. 边框优化 ---
+            # 如果需要整体外边框，可以加这个，但通常透明背景更现代
+            # border_width=0,
+        )
+        self.tab_selector.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="ew")
+
+        # --- 2. 创建 Container Frame (充当 Tab Content 显示区) ---
+        self.content_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.content_container.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+        self.content_container.grid_rowconfigure(0, weight=1)
+        self.content_container.grid_columnconfigure(0, weight=1)
+
+        # --- 3. 初始化所有 Tab 的 Frame (隐藏状态) ---
+        self._create_tab_frames()
+
+        # --- 4. 默认显示第一个 Tab ---
+        if self.tab_names:
+            first_tab_key = list(self.tab_names.keys())[0]
+            self._show_tab(first_tab_key)
+
+    def _create_tab_frames(self):
+        """创建所有 Tab 对应的 Frame，但不直接显示"""
+        # 使用一个字典来映射 "内部键" -> Frame
+        # 注意：这里的键必须和 self.tab_names 的键对应
+
+        # Tab 1: Log (保持原样)
+        frame_log = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.log_textbox = ctk.CTkTextbox(
-            self.tab_log,
-            font=ctk.CTkFont(family="Consolas", size=12)
+            frame_log, font=ctk.CTkFont(family="Consolas", size=12)
         )
         self.log_textbox.pack(fill="both", expand=True, padx=10, pady=10)
+        self.tab_frames["log"] = frame_log
 
+        # Tab 2: Config (保持原样)
+        frame_config = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.scroll_frame = ctk.CTkScrollableFrame(
-            self.tab_config,
-            label_text="当前已收录的键位映射 (input.json)"
+            frame_config, label_text="当前已收录的键位映射 (input.json)"
         )
         self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
         self.scroll_frame.grid_columnconfigure(0, weight=1)
+        self.tab_frames["config"] = frame_config
 
-    # ==================== 事件处理回调 ====================
+        # Tab 3: Build Config (保持原样)
+        frame_build = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        self._init_build_config_page(frame_build)  # 注意：我们将原函数改造成接受父容器参数
+        self.tab_frames["build"] = frame_build
+
+        # Tab 4: LED Config (保持原样)
+        frame_led = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        self._init_led_config_page(frame_led)  # 注意：同上
+        self.tab_frames["led"] = frame_led
+
+        # --- 将所有 Frame 放入容器，但先隐藏 ---
+        for frame in self.tab_frames.values():
+            frame.grid(row=0, column=0, sticky="nsew")
+
+    def _on_tab_switch(self, value):
+        """当 SegmentedButton 选项改变时触发"""
+        # 这里 value 是显示的文本，我们需要反向查找键
+        # 由于我们存储了 self.tab_names，我们可以遍历查找
+        target_key = None
+        for key, display_text in self.tab_names.items():
+            if display_text == value:
+                target_key = key
+                break
+        if target_key:
+            self._show_tab(target_key)
+
+    def _show_tab(self, tab_key):
+        """隐藏所有 Frame，显示指定的 Frame"""
+        for key, frame in self.tab_frames.items():
+            frame.grid_remove()  # 隐藏但不销毁
+
+        # 显示目标
+        if tab_key in self.tab_frames:
+            self.tab_frames[tab_key].grid()
+
+            # 更新 SegmentedButton 的状态 (防止因代码触发导致 UI 不同步)
+            display_text = self.tab_names.get(tab_key, "")
+            self.selected_tab.set(display_text)
+# ==================== 事件处理回调 ====================
 
     def initial_env_check(self) -> None:
+
         if not self.env_checker.check_all(show_dialog=True):
             self.status_label.configure(text="状态：环境缺失", text_color="red")
             self.device_var.set("等待环境修复")
@@ -797,10 +959,10 @@ class App(ctk.CTk):
             self.after(100, self.refresh_config_view)
 
     def on_env_retry(self) -> None:
-        self.append_log("\n[Info] 正在重新检测环境...\n")
+        self.append_log("\n[Info] Detecting environment...\n")
         if self.env_checker.check_all(show_dialog=False):
-            self.append_log("[OK] 环境检测通过！\n")
-            self.status_label.configure(text="状态：环境就绪", text_color="green")
+            self.append_log("[OK] Environmental passed.！\n")
+            self.status_label.configure(text=(_("status_env_ready")), text_color="green")
             self.start_btn.configure(state="normal")
             self.refresh_devices()
             self.after(100, self.refresh_config_view)
@@ -823,7 +985,7 @@ class App(ctk.CTk):
                 if "\tdevice" in line and not line.startswith("List")
             ]
             current_val = self.device_var.get()
-            self.device_menu.configure(values=devs if devs else ["未检测到设备"])
+            self.device_menu.configure(values=devs if devs else ["no devices"])
 
             if devs:
                 if current_val not in devs or current_val in ["未连接", "未检测到设备", "检测中...", "等待环境修复"]:
@@ -833,9 +995,9 @@ class App(ctk.CTk):
                     self.current_device = current_val
                 self.status_label.configure(text=f"状态：已连接\n{self.current_device}", text_color="green")
             else:
-                self.device_var.set("未检测到设备")
+                self.device_var.set("no devices")
                 self.current_device = ""
-                self.status_label.configure(text="状态：无设备", text_color="red")
+                self.status_label.configure(text="no devices", text_color="red")
         except Exception:
             if self.winfo_exists():
                 self.device_menu.configure(values=["ADB 错误"])
@@ -862,7 +1024,7 @@ class App(ctk.CTk):
             if self.backend:
                 self.backend.stop_capture()
             self.is_listening = False
-            self.start_btn.configure(text="开始监听", fg_color="green")
+            self.start_btn.configure(text=_("btn_start_listen"), fg_color="green")
             self.status_label.configure(text="状态：已停止", text_color="orange")
             self.mode_menu.configure(state="normal")
             self.device_menu.configure(state="normal")
@@ -877,7 +1039,7 @@ class App(ctk.CTk):
                 if not messagebox.askyesno("警告", "读取配置失败，是否使用空配置继续？"):
                     return
             self.is_listening = True
-            self.start_btn.configure(text="停止监听", fg_color="red")
+            self.start_btn.configure(text=_("btn_stop_listen"), fg_color="red")
             self.status_label.configure(text="状态：监听中", text_color="green")
             self.mode_menu.configure(state="disabled")
             self.device_menu.configure(state="disabled")
@@ -1071,7 +1233,7 @@ class App(ctk.CTk):
 
     def on_closing(self) -> None:
         if self.backend and self.is_listening:
-            self.append_log("\n[Info] 正在停止监听以关闭程序...\n")
+            self.append_log("\n[Info] Stopping listening to close the program....\n")
             self.backend.stop_capture()
         time.sleep(0.5)
         self.destroy()
@@ -1081,43 +1243,40 @@ class App(ctk.CTk):
         self._update_preview("login_type", selected_val)
 
         if update_slclient_login_type(selected_val):
-            self.append_log(f"[OK] 已将登录方式改为:{selected_val}\n")
+            self.append_log(f"[OK] The login method  changed to:{selected_val}\n")
             self.status_label.configure(
                 text=f"登录方式已更新为\n"
                      f"{selected_val}",
                 text_color="#27ae60"
             )
         else:
-            self.append_log(f"[Error] 未能更新slclient.json登录方式：{selected_val}\n")
+            self.append_log(f"[Error] Failed to update the login mode: {selected_val}\n")
 
     def on_apk_type_change(self, value: str) -> None:
         self.current_apk_type = value
-        self.status_label.configure(text=f"状态：已选择 {value}", text_color="#d35400")
-        self.append_log(f"[Info] APK 类型切换为：{value}\n")
+        self.status_label.configure(text=f"状态：已选择 {value} APK", text_color="#d35400")
+        self.append_log(f"[Info] APK type switched to：{value}\n")
 
-    def _init_build_config_page(self) -> None:
+    def _init_build_config_page(self, parent):
         """初始化打包配置页面"""
-
         # 主标题
         lbl_title = ctk.CTkLabel(
-            self.tab_build_config,
-            text="APK属性配置",
-            font=ctk.CTkFont(size=18, weight="bold")
+            parent, text="APK属性配置", font=ctk.CTkFont(size=18, weight="bold")
         )
         lbl_title.pack(pady=(15, 10))
 
         # --- 主容器：使用 Grid 布局实现 2x2 ---
-        grid_frame = ctk.CTkFrame(self.tab_build_config, fg_color="transparent")
+        # 错误修复：这里原来是 self.tab_build_config，现在改为使用传入的 parent
+        grid_frame = ctk.CTkFrame(parent, fg_color="transparent")
         grid_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # 配置行列权重，确保四等分 (weight=1 表示平均分配空间)
+        # 配置行列权重，确保四等分
         grid_frame.grid_columnconfigure(0, weight=1)
         grid_frame.grid_columnconfigure(1, weight=1)
         grid_frame.grid_rowconfigure(0, weight=1)
         grid_frame.grid_rowconfigure(1, weight=1)
 
         # --- 创建四个子模块卡片 ---
-
         # 1. 左上：环境配置
         self.frame_env = self._create_config_card(
             parent=grid_frame,
@@ -1125,7 +1284,6 @@ class App(ctk.CTk):
             row=0, col=0,
             content_func=self._build_env_content
         )
-
         # 2. 右上：声音配置
         self.frame_sound = self._create_config_card(
             parent=grid_frame,
@@ -1133,15 +1291,13 @@ class App(ctk.CTk):
             row=0, col=1,
             content_func=self._build_sound_content
         )
-
         # 3. 左下：地图配置
         self.frame_map = self._create_config_card(
             parent=grid_frame,
-            title="🗺️地图配置 (Map)",
+            title="🗺️ 地图配置 (Map)",
             row=1, col=0,
             content_func=self._build_map_content
         )
-
         # 4. 右下：其他设置
         self.frame_other = self._create_config_card(
             parent=grid_frame,
@@ -1153,32 +1309,25 @@ class App(ctk.CTk):
         # 初始化时加载一次默认值
         self.after(500, self.load_all_configs)
 
-    def _init_led_config_page(self) -> None:
-        """初始化按键LED配置页面 (上下平分布局)"""
-
+    def _init_led_config_page(self, parent):
+        """初始化按键LED配置页面 (修复版)"""
         # 1. 主标题
         lbl_title = ctk.CTkLabel(
-            self.tab_input_led_config,
-            text="按键配置",
-            font=ctk.CTkFont(size=18, weight="bold")
+            parent, text="按键配置", font=ctk.CTkFont(size=18, weight="bold")
         )
         lbl_title.pack(pady=(15, 10))
 
         # 2. 主容器：使用 Grid 布局实现 上下 1:1 平分
-        # fg_color="transparent" 让背景透明，与 Tab 背景融合
-        grid_frame = ctk.CTkFrame(self.tab_input_led_config, fg_color="transparent")
+        # 错误修复：这里原来是 self.tab_input_led_config，现在改为使用传入的 parent
+        grid_frame = ctk.CTkFrame(parent, fg_color="transparent")
         grid_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
         # 【关键步骤】配置行列权重
-        # 只有 1 列 (column 0)，权重为 1 (占满宽度)
         grid_frame.grid_columnconfigure(0, weight=1)
-
-        # 有 2 行 (row 0 和 row 1)，权重都为 1 -> 这意味着它们将平均分配高度 (50% : 50%)
         grid_frame.grid_rowconfigure(0, weight=1)
         grid_frame.grid_rowconfigure(1, weight=1)
 
         # 3. 创建上下两个子模块卡片
-
         # --- 上半部分：LED 模式/策略配置 ---
         self.frame_led_mode = self._create_config_card(
             parent=grid_frame,
@@ -1186,17 +1335,15 @@ class App(ctk.CTk):
             row=0, col=0,
             content_func=self._build_input_mode_content
         )
-
         # --- 下半部分：颜色与亮度配置 ---
         self.frame_led_color = self._create_config_card(
             parent=grid_frame,
-            title="🎨  其他配置",
+            title="🎨 其他配置",
             row=1, col=0,
             content_func=self._build_led_color_content
         )
 
-
-        # 4. 初始化加载 (可选，如果需要从文件读取默认值)
+        # 4. 初始化加载 (可选)
         # self.after(500, self.load_led_configs)
 
     def _build_input_mode_content(self, parent):
@@ -1796,7 +1943,7 @@ class App(ctk.CTk):
                 with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
-                self.append_log(f"[OK] 语音编码已切换: {selected_codec}\n")
+                self.append_log(f"[OK] Voice coding switched.: {selected_codec}\n")
                 self.status_label.configure(
                     text=f"语音编码已切换为\n"
                          f"{selected_codec}",
@@ -1806,14 +1953,14 @@ class App(ctk.CTk):
                 pass
 
         except Exception as e:
-            self.append_log(f"[Error] 保存语音编码失败: {e}\n")
+            self.append_log(f"[Error] Failed to save speech coding.: {e}\n")
 
     def _sync_soundsystem_to_json(self, selected_codec: str) -> None:
         try:
             data = self._load_slclient_json()
 
             if "dsp" not in data:
-                self.append_log("错误,丢失音频节点")
+                self.append_log("Error, SOUND node is missing")
 
             current_val = data["dsp"].get("provider")
 
@@ -1823,7 +1970,7 @@ class App(ctk.CTk):
                 with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
-                self.append_log(f"[OK] 音频系统已切换: {selected_codec}\n")
+                self.append_log(f"[OK] The audio system  switched.: {selected_codec}\n")
                 self.status_label.configure(
                     text=f"音频系统已切换为\n"
                          f"{selected_codec}",
@@ -1833,14 +1980,14 @@ class App(ctk.CTk):
                 pass
 
         except Exception as e:
-            self.append_log(f"[Error] 保存语音编码失败: {e}\n")
+            self.append_log(f"[Error] Failed to save speech code: {e}\n")
 
     def _sync_play_to_json(self, selected_codec: str) -> None:
         try:
             data = self._load_slclient_json()
 
             if "dsp" not in data:
-                self.append_log("错误,丢失音频节点")
+                self.append_log("Error, DSP node is missing")
 
             current_val = data["dsp"].get("play_stream")
 
@@ -1850,7 +1997,7 @@ class App(ctk.CTk):
                 with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
-                self.append_log(f"[OK] 播放通道已切换: {selected_codec}\n")
+                self.append_log(f"[OK] Playback channel switched: {selected_codec}\n")
                 self.status_label.configure(
                     text=f"播放通道已切换为\n"
                          f"{selected_codec}",
@@ -1860,14 +2007,14 @@ class App(ctk.CTk):
                 pass
 
         except Exception as e:
-            self.append_log(f"[Error] 保存语音编码失败: {e}\n")
+            self.append_log(f"[Error] Failed to save speech code: {e}\n")
 
     def _sync_record_to_json(self, selected_codec: str) -> None:
         try:
             data = self._load_slclient_json()
 
             if "dsp" not in data:
-                self.append_log("错误,丢失音频节点")
+                self.append_log("Error, DSP node is missing")
 
             current_val = data["dsp"].get("record_stream")
 
@@ -1877,9 +2024,9 @@ class App(ctk.CTk):
                 with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
-                self.append_log(f"[OK] 录制通道已切换: {selected_codec}\n")
+                self.append_log(f"[OK] Recording channels switched: {selected_codec}\n")
                 self.status_label.configure(
-                    text=f"录制通道已切换为\n"
+                    text=f"Recording channel switched to\n"
                          f"{selected_codec}",
                     text_color="#27ae60"
                 )
@@ -1887,7 +2034,7 @@ class App(ctk.CTk):
                 pass
 
         except Exception as e:
-            self.append_log(f"[Error] 保存语音编码失败: {e}\n")
+            self.append_log(f"[Error] Failed to save speech code: {e}\n")
 
     def _sync_tone_enabled_to_json(self, is_enabled: bool) -> None:
         """
@@ -1909,7 +2056,7 @@ class App(ctk.CTk):
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
                 status = "开启" if json_value else "关闭"
-                self.append_log(f"[OK] Tone 音效已{status}\n")
+                self.append_log(f"[OK] Tone sound effects have been{status}\n")
 
                 self.status_label.configure(
                     text=f"Tone 音效已{status}",
@@ -1917,7 +2064,7 @@ class App(ctk.CTk):
                 )
 
         except Exception as e:
-            self.append_log(f"[Error] 保存 Tone 开关失败: {e}\n")
+            self.append_log(f"[Error] Failed to save Tone switch: {e}\n")
 
     def _build_map_content(self, parent):
         """构建地图配置内容"""
@@ -1944,7 +2091,7 @@ class App(ctk.CTk):
         """地图类型变更回调"""
         if update_slclient_map_type(map_type_ui):
             self._update_preview("map_provider", map_type_ui)
-            self.append_log(f"[OK] 地图类型已更新为：{map_type_ui}\n")
+            self.append_log(f"[OK] Map type has been updated to：{map_type_ui}\n")
             self.status_label.configure(
                 text=f"登录方式已更新为\n"
                      f"{map_type_ui}",
@@ -2014,7 +2161,7 @@ class App(ctk.CTk):
         manifest_path = PATH_MANIFEST_XML
 
         if not os.path.exists(manifest_path):
-            self.append_log(" 错误：找不到 AndroidManifest.xml")
+            self.append_log(" Error: Unable to find AndroidManifest.xml")
             if hasattr(self, 'switch_launcher'):
                 self.switch_launcher.deselect()
             return
@@ -2026,7 +2173,7 @@ class App(ctk.CTk):
 
             application = root.find("application")
             if application is None:
-                self.append_log(" 错误：未找到 <application> 标签")
+                self.append_log(" Error: Unable to find the <application>tag")
                 self.switch_launcher.deselect()  # 复位
                 return
 
@@ -2049,13 +2196,13 @@ class App(ctk.CTk):
                     break
 
             if target_activity is None:
-                self.append_log(f" 错误：未找到目标 Activity (候选:{candidate_activity_names})")
+                self.append_log(f" Error: Target Activity not found (candidate:{candidate_activity_names})")
                 self.switch_launcher.deselect()  # 复位
                 return
 
             intent_filter = target_activity.find("intent-filter")
             if intent_filter is None:
-                msg = f" 错误：{found_activity_name} 没有 <intent-filter>，无法操作"
+                msg = f" Error：{found_activity_name} No<intent-filter>, cannot operate"
                 self.append_log(msg)
                 self.switch_launcher.deselect()  # 复位
                 return
@@ -2074,7 +2221,7 @@ class App(ctk.CTk):
                         self.android_attr("name"): "android.intent.category.HOME"
                     })
                     self.write_pretty_xml(tree, manifest_path)
-                    self.append_log(f"[ok] 已设置 为桌面 Launcher\n")
+                    self.append_log(f"[ok]  set to desktop as Launcher\n")
                     self.status_label.configure(
                         text="设置桌面Launcher成功",
                         text_color="#27ae60"
@@ -2086,7 +2233,7 @@ class App(ctk.CTk):
                 if has_home:
                     intent_filter.remove(home_category_elem)
                     self.write_pretty_xml(tree, manifest_path)
-                    self.append_log(f"[ok] 已取消 Launcher 权限\n")
+                    self.append_log(f"[ok] Launcher has  cancelled\n")
                     self.status_label.configure(
                         text="取消桌面Launcher成功",
                         text_color="#27ae60"
@@ -2095,7 +2242,7 @@ class App(ctk.CTk):
                     pass
 
         except Exception as e:
-            self.append_log(f" 操作失败：{e}")
+            self.append_log(f" operation failed：{e}")
             if hasattr(self, 'switch_launcher'):
                 self.switch_launcher.deselect()
 
@@ -2116,15 +2263,15 @@ class App(ctk.CTk):
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
                 status = "开启" if json_value else "关闭"
-                self.append_log(f"[OK] tts 已{status}\n")
+                self.append_log(f"[OK] tts  {status}\n")
 
                 self.status_label.configure(
-                    text=f"tts已{status}",
+                    text=f"tts {status}",
                     text_color="#27ae60"
                 )
 
         except Exception as e:
-            self.append_log(f"[Error] 保存 Tone 开关失败: {e}\n")
+            self.append_log(f"[Error] Failed to save Tone switch: {e}\n")
 
     def _refresh_custom_inputs(self):
         """切换到独立部署模式时：清空历史内容，仅显示提示文字"""
@@ -2333,7 +2480,7 @@ class App(ctk.CTk):
         context = config.get("context", "")
 
         if not ip_address or not context:
-            self.append_log(f"[Warn] 节点 {node_name} 配置不完整，跳过写入。\n")
+            self.append_log(f"[Warn] Node {node_name} configuration is incomplete, writing is skipped。\n")
             return
 
         try:
@@ -2347,18 +2494,19 @@ class App(ctk.CTk):
             data["profile"]["dns"] = [ip_address]
             data["profile"]["context"] = context
 
+            # 写回文件
             with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
-            # self.append_log(f"[OK] 节点已切换: {node_name}\n")
+            # self.append_log(f"[OK] Node switched: {node_name}\n")
             self.status_label.configure(
-                text=f"登录方式已更新为\n"
+                text=f"Login method updated to\n"
                      f"{node_name}",
                 text_color="#27ae60"
             )
 
         except Exception as e:
-            # self.append_log(f"[Error] 同步节点配置到 JSON 失败: {e}\n")
+            # self.append_log(f"[Error] Failed to synchronize node configuration: {e}\n")
             return
 
     def _on_env_selected(self, selected_name):
@@ -2474,13 +2622,12 @@ class App(ctk.CTk):
                 self._update_preview("login_type", ui_val)
 
             except Exception as e:
-                self.append_log(f"[Warning] 读取slclient.json的login_mode失败：{e}\n")
-
-
+                self.append_log(f"[Warning] Failed to read login_mode：{e}\n")
+    # TODO 打包时获取配置写入
     def apply_selected_config_to_slclient(self) -> None:
         """打包时调用：收集所有四个模块的数据并写入 JSON"""
         if not PATH_SLCLIENT_JSON.exists():
-            self.append_log("[Error] slclient.json 不存在，无法写入配置。\n")
+            self.append_log("[Error] json does not exist, cannot be written。\n")
             return
 
         try:
@@ -2488,7 +2635,7 @@ class App(ctk.CTk):
                 data = json.load(f)
 
             if not hasattr(self, 'current_env_config'):
-                self.append_log("[Error] 环境配置未初始化。\n")
+                self.append_log("[Error] Environment configuration not initialized。\n")
                 return
 
             cfg = self.current_env_config
@@ -2496,10 +2643,10 @@ class App(ctk.CTk):
             # 如果是独立部署模式，校验输入是否为空
             if cfg.get('is_custom'):
                 if not cfg['ip'] or not cfg['context']:
-                    self.append_log("[Error] 独立部署模式下，IP 和 Context 不能为空！请填写或关闭独立部署开关。\n")
+                    self.append_log("[Error] IP and Context cannot be empty! Please fill in or turn off the Independent Deployment Switch。\n")
                     # 可以选择弹窗提示或阻止打包
                     return
-                self.append_log(f"[Info] 使用独立部署配置: {cfg['ip']}\n")
+                self.append_log(f"[Info] Use stand-alone deployment configuration: {cfg['ip']}\n")
 
             # 写入逻辑 (与之前一致)
             if "network" not in data: data["network"] = {}
@@ -2538,10 +2685,10 @@ class App(ctk.CTk):
             with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
-            self.append_log("[OK] 所有配置 (环境/声音/地图/其他) 已成功写入 slclient.json\n")
+            self.append_log("[OK] All configurations have been successfully written to slclient.json\n")
 
         except Exception as e:
-            self.append_log(f"[Error] 写入 slclient.json 失败: {e}\n")
+            self.append_log(f"[Error] Failed to write json: {e}\n")
             import traceback
             traceback.print_exc()
 
@@ -2549,7 +2696,7 @@ class App(ctk.CTk):
     def load_slclient_config(self):
         """启动时从 slclient.json 加载配置更新 ENV_CONF"""
         if not PATH_SLCLIENT_JSON.exists():
-            print(f"⚠️ 未找到 {PATH_SLCLIENT_JSON}，使用默认硬编码配置。")
+            print(f"⚠️ not found {PATH_SLCLIENT_JSON}，Use default hard-coded configuration。")
             return
 
         try:
@@ -2596,13 +2743,13 @@ class App(ctk.CTk):
             try:
                 if os.path.exists(file_path):
                     os.remove(file_path)
-                    self.append_log(f"[OK] 已删除临时文件\n")
+                    self.append_log(f"[OK] Temporary file has been deleted")
                     return True
             except PermissionError:
-                self.append_log(f"[Warn] 文件被占用，等待 0.5 秒后重试... ({i + 1}/{retries})\n")
+                self.append_log(f"[Warn] File is occupied, wait 0.5 seconds and try again... ({i + 1}/{retries})\n")
                 time.sleep(0.5)
             except Exception as e:
-                self.append_log(f"[Error] 删除文件失败：{e}\n")
+                self.append_log(f"[Error] Failed to delete file：{e}\n")
                 return False
         return False
 
@@ -2721,7 +2868,7 @@ class App(ctk.CTk):
         # 7. 获取最终返回码
         returncode = process.wait()
         total_time = time.time() - start_time
-        self.append_log(f"[Result] 命令执行完毕，返回码：{returncode}，耗时 {total_time:.2f}s\n")
+        self.append_log(f"[Result] Command execution completed,  code：{returncode}\n")
         return returncode
 
     def decompile_apk(self, output_dir: str = "app_out") -> bool:
@@ -2749,10 +2896,9 @@ class App(ctk.CTk):
         # 清理旧目录
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir, ignore_errors=True)
-            self.append_log(f"[Info] 已清理旧目录：{output_dir}\n")
+            self.append_log(f"[Info] Clean up old catalog：{output_dir}\n")
 
         self.append_log("正在解压...\n")
-        self.after(0, lambda: None)
 
         command = [
             "java", "-jar", str(APKTOOL_JAR),
@@ -2801,16 +2947,15 @@ class App(ctk.CTk):
 
         def task():
             try:
-                self.append_log(f"\n===选中的apk{apk_path}===\n")
-                self.append_log(f"\n=== 开始打包流程 ({apk_type}) ===\n")
+                self.append_log(f"\n=== Start  package process ({apk_type}) ===\n")
 
                 # # 1. 反编译
-                # self.append_log("[Step 1] 正在反编译 APK...\n")
-                # if not self.decompile_apk(TEMP_DIR):
-                #     raise Exception("反编译失败")
+                # self.append_log("[Step 1] Decompiling APK...\n")
+                # if not self.decompile_apk(apk_path, TEMP_DIR):
+                #     raise Exception("Decompilation failed")
                 #
                 # else:
-                #     self.append_log("[Step 2] 编译成功\n")
+                #     self.append_log("[Step 2] successfully compiled\n")
 
                 # 2. 更新版本信息
                 # self.append_log("[Step 2] 正在更新版本信息...\n")
@@ -2823,27 +2968,27 @@ class App(ctk.CTk):
                 self.copy_files(PATH_INPUT_JSON_SRC,PATH_INPUT_JSON_DST)
 
                 # 3. 构建未签名 APK
-                self.append_log("\n[Step 3] 正在打包 APK...\n")
+                self.append_log("\n[Step 3] Packing APK...\n")
                 apktool_cmd = [
                     "java", "-jar", str(APKTOOL_JAR),
                     "b", TEMP_DIR, "-o", "app-unsigned-unaligned.apk"
                 ]
                 if self.run_with_live_output(apktool_cmd) != 0:
-                    raise Exception("APK 打包失败")
+                    raise Exception("APK packaging failed")
 
                 # 4. Zipalign 对齐
-                self.append_log("[Step 4] 正在对齐APK...\n")
+                self.append_log("[Step 4] Aligning APK...\n")
                 zipalign_cmd = [
                     str(ZIPALIGN_EXE), "-v", "-p", "4",
                     "app-unsigned-unaligned.apk", "app-unsigned.apk"
                 ]
                 if self.run_with_live_output(zipalign_cmd) != 0:
-                    raise Exception("APK 对齐失败")
+                    raise Exception("APK alignment failed")
 
                 self.safe_remove("app-unsigned-unaligned.apk")
 
                 # 5. 签名
-                self.append_log("[Step 5] 正在签名 APK...\n")
+                self.append_log("[Step 5] Signing APK...\n")
                 value_map = {"大屏": "large", "中屏": "middle", "小屏": "small"}
                 key = value_map.get(apk_type, "large")
 
@@ -2851,14 +2996,14 @@ class App(ctk.CTk):
                 json_val = self.get_json_field(PATH_SLCLIENT_JSON, LAUNCHER_MODULE_PATH)
                 if json_val and json_val in KEYSTORE_CONFIG:
                     key = json_val
-                    self.append_log(f"[Info] 检测到 JSON 配置，使用签名类型：{key}\n")
+                    self.append_log(f"[Info] JSON configuration detected, signature type used：{key}\n")
 
                 ks_info = KEYSTORE_CONFIG.get(key, KEYSTORE_CONFIG["large"])
                 ks_path = ks_info["path"]
                 ks_pass = ks_info["password"]
 
                 if not os.path.exists(ks_path):
-                    raise Exception(f"签名文件不存在：{ks_path}")
+                    raise Exception(f"Signature file does not exist：{ks_path}")
 
                 date_str = time.strftime("%Y_%m_%d", time.localtime())
                 output_dir_path = PROJECT_PATH / date_str
@@ -2876,11 +3021,11 @@ class App(ctk.CTk):
                 ]
 
                 if self.run_with_live_output(apksigner_cmd) != 0:
-                    raise Exception("APK 签名失败")
+                    raise Exception("APK signing failed")
 
                 self.safe_remove("app-unsigned.apk")
 
-                self.append_log(f"\n[SUCCESS] ✅ 打包完成!\n文件位置：{output_apk_path}\n")
+                self.append_log(f"\n[SUCCESS] ✅  file location: {output_apk_path}\n")
                 self.status_label.configure(text="状态：打包成功", text_color="green")
                 # 删除app_out文件夹
                 shutil.rmtree(output_dir, ignore_errors=True)
@@ -2892,7 +3037,7 @@ class App(ctk.CTk):
                 self.status_label.configure(text="状态：打包失败", text_color="red")
                 messagebox.showerror("错误", error_msg)
             finally:
-                self.build_apk_btn.configure(state="normal", text="打包 APK")
+                self.build_apk_btn.configure(state="normal", text=_("btn_build"))
 
         threading.Thread(target=task, daemon=True).start()
 
@@ -2902,9 +3047,9 @@ class App(ctk.CTk):
 
         try:
             shutil.copy2(source_dir_color, target_dir_color)
-            self.append_log(f"已覆盖文件：{source_dir_color} -> {target_dir_color}")
+            self.append_log(f"overwritten file：{source_dir_color} -> {target_dir_color}")
         except Exception as e:
-            self.append_log(f"覆盖失败：{e}")
+            self.append_log(f"coverage failure：{e}")
 
     # ==================== 版本管理辅助函数 ====================
 
@@ -2915,7 +3060,7 @@ class App(ctk.CTk):
         new_version_name = re.sub(pattern, rf"\1{timestamp}", version_name)
 
         if new_version_name == version_name:
-            self.append_log(f"[Warn] 未匹配到 POCSTARS_ 结尾的数字格式，原始：{version_name}\n")
+            self.append_log(f"[Warn] Number format that does not match to the end：{version_name}\n")
             return f"{version_name}_{timestamp}"
         return new_version_name
 
@@ -2933,7 +3078,7 @@ class App(ctk.CTk):
             with open(yml_path, "r", encoding="utf-8") as f:
                 return yaml.load(f)
         except Exception as e:
-            self.append_log(f"[Error] 加载 YAML 失败：{e}\n")
+            self.append_log(f"[Error]Failed to load YAML：{e}\n")
             return None
 
     def update_version_info(self, yml_path: Path) -> None:
@@ -2953,7 +3098,7 @@ class App(ctk.CTk):
         old_name = version_info.get("versionName")
 
         if not old_code or not old_name:
-            self.append_log("[Warn] 无法获取版本信息，跳过更新\n")
+            self.append_log("[Warn]Unable to obtain version information, skipping update\n")
             return
 
         new_code = self.increment_version_code(old_code)
@@ -2965,7 +3110,7 @@ class App(ctk.CTk):
         with open(yml_path, "w", encoding="utf-8") as f:
             yaml.dump(data, f)
 
-        self.append_log(f"[Version] 更新成功：{old_name}->{new_name}, Code: {old_code}->{new_code}\n")
+        self.append_log(f"[Version]update successful：{old_name}->{new_name}, Code: {old_code}->{new_code}\n")
 
     def build_newname(self, yml_path: Path) -> str:
         try:
@@ -2981,6 +3126,44 @@ class App(ctk.CTk):
         if data:
             return data.get(field_name, {})
         return {}
+
+# ==================== 国际化多语言支持 ====================
+
+class I18N:
+    def __init__(self):
+        self.current_lang = "en"  # 默认中文
+        self.translations = {}
+        self.locales_dir = "locales"
+        self.load_language("en")
+
+    def load_language(self, lang_code):
+        """加载指定语言的 JSON 文件"""
+        file_path = os.path.join(self.locales_dir, f"{lang_code}.json")
+        if not os.path.exists(file_path):
+            print(f"Warning: Language file {file_path} not found.")
+            return False
+
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                self.translations = json.load(f)
+            self.current_lang = lang_code
+            return True
+        except Exception as e:
+            print(f"Error loading language file: {e}")
+            return False
+
+    def get(self, key, default=None):
+        """获取翻译文本"""
+        return self.translations.get(key, default if default else key)
+
+
+# 全局实例
+i18n = I18N()
+
+
+def _(key):
+    """快捷翻译函数"""
+    return i18n.get(key)
 
 
 if __name__ == "__main__":
