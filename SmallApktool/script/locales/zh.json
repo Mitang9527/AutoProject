@@ -1,5 +1,5 @@
 {
-  "app_title": "App Adaptation_1.0",
+  "app_title": "App Adaptation_1.7",
   "sidebar_logo": "App\nAdaptation",
   "lbl_device": "设备选择",
   "btn_refresh": "刷新设备",
@@ -11,6 +11,13 @@
   "type_large_screen": "大屏",
   "type_small_screen": "小屏",
   "btn_build": "打包 APK",
+  "btn_decompile": "解压apk",
+  "type_custom_apk": "自定义apk",
+
+
+
+
+
 
   "status_init": "状态：初始化中...",
   "status_detecting": "检测中...",

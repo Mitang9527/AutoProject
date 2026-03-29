@@ -581,7 +581,7 @@ class App(ctk.CTk):
 
     def __init__(self):
         super().__init__()
-        self.title("App_Adaptation_1.6")
+        self.title(_("app_title"))
         self.geometry("1200x700")
 
         # 状态变量
@@ -714,12 +714,12 @@ class App(ctk.CTk):
         self.apk_select_label = ctk.CTkLabel(self.sidebar_frame, text=_("lbl_apk_type"), anchor="w")
         self.apk_select_label.grid(row=9, column=0, padx=20, pady=(15, 0))
 
-        self.build_apk_btn = ctk.CTkButton(
+        self.decompile_apk_btn = ctk.CTkButton(
             self.sidebar_frame,
-            text="解压apk",
+            text=_("btn_decompile"),
             command=self.decompile_apk
         )
-        self.build_apk_btn.grid(row=12, column=0, padx=20, pady=10)
+        self.decompile_apk_btn.grid(row=12, column=0, padx=20, pady=10)
 
         # self.build_apk_btn = ctk.CTkButton(
         #     self.sidebar_frame,
@@ -733,7 +733,7 @@ class App(ctk.CTk):
             values=[
                 _("type_large_screen"),
                 _("type_small_screen"),
-                "自定义apk"
+                _("type_custom_apk")
             ],
             command=self.on_apk_type_change,
             height=30,
@@ -753,14 +753,14 @@ class App(ctk.CTk):
         )
         self.build_apk_btn.grid(row=13, column=0, padx=20, pady=10)
 
-        # 底部状态栏
-        self.status_label = ctk.CTkLabel(
-            self.sidebar_frame,
-            text=_("status_init"),
-            anchor="w",
-            text_color="gray"
-        )
-        self.status_label.grid(row=100, column=0, padx=20, pady=(0, 20), sticky="s")
+        # # 底部状态栏
+        # self.status_label = ctk.CTkLabel(
+        #     self.sidebar_frame,
+        #     text=_("status_init"),
+        #     anchor="w",
+        #     text_color="gray"
+        # )
+        # self.status_label.grid(row=100, column=0, padx=20, pady=(0, 20), sticky="s")
 
         # 语言选择
         self.lang_var = ctk.StringVar(value="English")
@@ -776,7 +776,7 @@ class App(ctk.CTk):
         lang_code = "zh" if selection == "中文" else "en"
         if i18n.load_language(lang_code):
             self.refresh_ui_texts()
-            self.append_log(f"[Info] Language switched to {selection}\n")
+            # self.append_log(f"[Info] Language switched to {selection}\n")
 
     def refresh_ui_texts(self):
         """遍历并更新主要组件的文本 (已更新：支持 SegmentedButton 实时刷新)"""
@@ -799,10 +799,41 @@ class App(ctk.CTk):
         # 更新内部映射
         self.tab_names = new_tab_names
 
+        # --- 新增：更新 APK 类型选择器 ---
+        # 1. 记录当前选中的值 (防止切换后选中状态丢失)
+        current_selection = self.apk_type_seg.get()
+
+        # 2. 重新构建 values 列表 (再次调用 _() 获取最新语言)
+        new_values = [
+            _("type_large_screen"),
+            _("type_small_screen"),
+            _("type_custom_apk")
+        ]
+
+        # 3. 更新控件
+        self.apk_type_seg.configure(values=new_values)
+
+        # 4. 尝试恢复选中状态
+        # 注意：如果 current_selection 是旧语言的文本，这里可能需要映射逻辑
+        # 但通常 SegmentedButton 只要文本还在列表里，set 就能生效
+        # 如果切换语言导致文本变了（比如 "Large" -> "大屏"），set("Large") 会失效
+        # 所以最好的办法是：根据索引恢复，或者根据逻辑变量恢复
+
+        if self.current_apk_type == "大屏":
+            self.apk_type_seg.set(_("type_large_screen"))
+        elif self.current_apk_type == "小屏":
+            self.apk_type_seg.set(_("type_small_screen"))
+        else:
+            self.apk_type_seg.set("自定义apk")
+
+        # 方案 B：如果没有逻辑变量，只能尝试按索引恢复 (如果顺序没变)
+        # if current_selection in new_values:
+        #     self.apk_type_seg.set(current_selection)
+
+
         # 重新配置 SegmentedButton 的选项
         # 注意：configure(values=...) 会触发 command，但我们上面的 _on_tab_switch 有防护
         self.tab_selector.configure(values=list(self.tab_names.values()))
-
         # 如果之前有选中项，尝试恢复选中状态
         if current_key:
             self._show_tab(current_key)
@@ -817,9 +848,8 @@ class App(ctk.CTk):
         self.clear_log_btn.configure(text=_("clear_log"))
         self.apk_select_label.configure(text=_("lbl_apk_type"))
 
-        # 注意：这里不再需要更新 Tabview 的 Tab 名字了，因为我们用的是 SegmentedButton
         self.build_apk_btn.configure(text=_("btn_build"))
-        self.status_label.configure(text=_("status_init"))
+        self.decompile_apk_btn.configure(text=_("btn_decompile"))
 
     def _init_main_area(self) -> None:
         """初始化主内容区 (使用 SegmentedButton 模拟 Tab)"""
@@ -899,7 +929,7 @@ class App(ctk.CTk):
         # Tab 2: Config (保持原样)
         frame_config = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.scroll_frame = ctk.CTkScrollableFrame(
-            frame_config, label_text="当前已收录的键位映射 (input.json)"
+            frame_config, label_text="当前已收录的键位映射"
         )
         self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
         self.scroll_frame.grid_columnconfigure(0, weight=1)
@@ -948,12 +978,12 @@ class App(ctk.CTk):
     def initial_env_check(self) -> None:
 
         if not self.env_checker.check_all(show_dialog=True):
-            self.status_label.configure(text="状态：环境缺失", text_color="red")
+            # self.status_label.configure(text="状态：环境缺失", text_color="red")
             self.device_var.set("等待环境修复")
             self.device_menu.configure(values=[])
             self.start_btn.configure(state="disabled")
         else:
-            self.status_label.configure(text="状态：环境就绪", text_color="green")
+            # self.status_label.configure(text="状态：环境就绪", text_color="green")
             self.start_btn.configure(state="normal")
             self.refresh_devices()
             self.after(100, self.refresh_config_view)
@@ -962,7 +992,7 @@ class App(ctk.CTk):
         self.append_log("\n[Info] Detecting environment...\n")
         if self.env_checker.check_all(show_dialog=False):
             self.append_log("[OK] Environmental passed.！\n")
-            self.status_label.configure(text=(_("status_env_ready")), text_color="green")
+            # self.status_label.configure(text=(_("status_env_ready")), text_color="green")
             self.start_btn.configure(state="normal")
             self.refresh_devices()
             self.after(100, self.refresh_config_view)
@@ -993,11 +1023,11 @@ class App(ctk.CTk):
                     self.current_device = devs[0]
                 else:
                     self.current_device = current_val
-                self.status_label.configure(text=f"状态：已连接\n{self.current_device}", text_color="green")
+                # self.status_label.configure(text=f"状态：已连接\n{self.current_device}", text_color="green")
             else:
                 self.device_var.set("no devices")
                 self.current_device = ""
-                self.status_label.configure(text="no devices", text_color="red")
+                # self.status_label.configure(text="no devices", text_color="red")
         except Exception:
             if self.winfo_exists():
                 self.device_menu.configure(values=["ADB 错误"])
@@ -1006,17 +1036,17 @@ class App(ctk.CTk):
     def on_device_change(self, selection: str) -> None:
         if selection not in ["未检测到设备", "ADB 错误"]:
             self.current_device = selection
-        self.status_label.configure(text=f"状态：已切换\n{selection}", text_color="green")
+        # self.status_label.configure(text=f"状态：已切换\n{selection}", text_color="green")
 
     def toggle_listen(self) -> None:
         if not self.winfo_exists():
             return
         if not is_adb_installed():
-            messagebox.showerror("错误", "ADB 环境丢失！")
+            messagebox.showerror("ERR", "ADB 环境丢失！")
             self.env_checker.check_all(show_dialog=True)
             return
         if not self.current_device or self.current_device in ["未检测到设备", "ADB 错误", "未连接"]:
-            messagebox.showerror("错误", "请先选择有效的 ADB 设备！")
+            messagebox.showerror("ERR", "请先选择有效的 ADB 设备！")
             self.refresh_devices()
             return
 
@@ -1025,7 +1055,7 @@ class App(ctk.CTk):
                 self.backend.stop_capture()
             self.is_listening = False
             self.start_btn.configure(text=_("btn_start_listen"), fg_color="green")
-            self.status_label.configure(text="状态：已停止", text_color="orange")
+            # self.status_label.configure(text="状态：已停止", text_color="orange")
             self.mode_menu.configure(state="normal")
             self.device_menu.configure(state="normal")
         else:
@@ -1040,7 +1070,7 @@ class App(ctk.CTk):
                     return
             self.is_listening = True
             self.start_btn.configure(text=_("btn_stop_listen"), fg_color="red")
-            self.status_label.configure(text="状态：监听中", text_color="green")
+            # self.status_label.configure(text="状态：监听中", text_color="green")
             self.mode_menu.configure(state="disabled")
             self.device_menu.configure(state="disabled")
             self.backend.start_capture(mode)
@@ -1244,17 +1274,17 @@ class App(ctk.CTk):
 
         if update_slclient_login_type(selected_val):
             self.append_log(f"[OK] The login method  changed to:{selected_val}\n")
-            self.status_label.configure(
-                text=f"登录方式已更新为\n"
-                     f"{selected_val}",
-                text_color="#27ae60"
-            )
+            # self.status_label.configure(
+            #     text=f"登录方式已更新为\n"
+            #          f"{selected_val}",
+            #     text_color="#27ae60"
+            # )
         else:
             self.append_log(f"[Error] Failed to update the login mode: {selected_val}\n")
 
     def on_apk_type_change(self, value: str) -> None:
         self.current_apk_type = value
-        self.status_label.configure(text=f"状态：已选择 {value} APK", text_color="#d35400")
+        # self.status_label.configure(text=f"状态：已选择 {value} APK", text_color="#d35400")
         self.append_log(f"[Info] APK type switched to：{value}\n")
 
     def _init_build_config_page(self, parent):
@@ -1944,11 +1974,11 @@ class App(ctk.CTk):
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
                 self.append_log(f"[OK] Voice coding switched.: {selected_codec}\n")
-                self.status_label.configure(
-                    text=f"语音编码已切换为\n"
-                         f"{selected_codec}",
-                    text_color="#27ae60"
-                )
+                # self.status_label.configure(
+                #     text=f"语音编码已切换为\n"
+                #          f"{selected_codec}",
+                #     text_color="#27ae60"
+                # )
             else:
                 pass
 
@@ -1971,11 +2001,11 @@ class App(ctk.CTk):
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
                 self.append_log(f"[OK] The audio system  switched.: {selected_codec}\n")
-                self.status_label.configure(
-                    text=f"音频系统已切换为\n"
-                         f"{selected_codec}",
-                    text_color="#27ae60"
-                )
+                # self.status_label.configure(
+                #     text=f"音频系统已切换为\n"
+                #          f"{selected_codec}",
+                #     text_color="#27ae60"
+                # )
             else:
                 pass
 
@@ -1998,11 +2028,11 @@ class App(ctk.CTk):
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
                 self.append_log(f"[OK] Playback channel switched: {selected_codec}\n")
-                self.status_label.configure(
-                    text=f"播放通道已切换为\n"
-                         f"{selected_codec}",
-                    text_color="#27ae60"
-                )
+                # self.status_label.configure(
+                #     text=f"播放通道已切换为\n"
+                #          f"{selected_codec}",
+                #     text_color="#27ae60"
+                # )
             else:
                 pass
 
@@ -2025,11 +2055,11 @@ class App(ctk.CTk):
                     json.dump(data, f, indent=4, ensure_ascii=False)
 
                 self.append_log(f"[OK] Recording channels switched: {selected_codec}\n")
-                self.status_label.configure(
-                    text=f"Recording channel switched to\n"
-                         f"{selected_codec}",
-                    text_color="#27ae60"
-                )
+                # self.status_label.configure(
+                #     text=f"Recording channel switched to\n"
+                #          f"{selected_codec}",
+                #     text_color="#27ae60"
+                # )
             else:
                 pass
 
@@ -2058,10 +2088,10 @@ class App(ctk.CTk):
                 status = "开启" if json_value else "关闭"
                 self.append_log(f"[OK] Tone sound effects have been{status}\n")
 
-                self.status_label.configure(
-                    text=f"Tone 音效已{status}",
-                    text_color="#27ae60"
-                )
+                # self.status_label.configure(
+                #     text=f"Tone 音效已{status}",
+                #     text_color="#27ae60"
+                # )
 
         except Exception as e:
             self.append_log(f"[Error] Failed to save Tone switch: {e}\n")
@@ -2092,11 +2122,11 @@ class App(ctk.CTk):
         if update_slclient_map_type(map_type_ui):
             self._update_preview("map_provider", map_type_ui)
             self.append_log(f"[OK] Map type has been updated to：{map_type_ui}\n")
-            self.status_label.configure(
-                text=f"登录方式已更新为\n"
-                     f"{map_type_ui}",
-                text_color="#27ae60"
-            )
+            # self.status_label.configure(
+            #     text=f"登录方式已更新为\n"
+            #          f"{map_type_ui}",
+            #     text_color="#27ae60"
+            # )
         else:
             # 更新失败，恢复原值
             current = self.opt_map.get()
@@ -2222,10 +2252,10 @@ class App(ctk.CTk):
                     })
                     self.write_pretty_xml(tree, manifest_path)
                     self.append_log(f"[ok]  set to desktop as Launcher\n")
-                    self.status_label.configure(
-                        text="设置桌面Launcher成功",
-                        text_color="#27ae60"
-                    )
+                    # self.status_label.configure(
+                    #     text="设置桌面Launcher成功",
+                    #     text_color="#27ae60"
+                    # )
 
                 else:
                     pass
@@ -2234,10 +2264,10 @@ class App(ctk.CTk):
                     intent_filter.remove(home_category_elem)
                     self.write_pretty_xml(tree, manifest_path)
                     self.append_log(f"[ok] Launcher has  cancelled\n")
-                    self.status_label.configure(
-                        text="取消桌面Launcher成功",
-                        text_color="#27ae60"
-                    )
+                    # self.status_label.configure(
+                    #     text="取消桌面Launcher成功",
+                    #     text_color="#27ae60"
+                    # )
                 else:
                     pass
 
@@ -2265,10 +2295,10 @@ class App(ctk.CTk):
                 status = "开启" if json_value else "关闭"
                 self.append_log(f"[OK] tts  {status}\n")
 
-                self.status_label.configure(
-                    text=f"tts {status}",
-                    text_color="#27ae60"
-                )
+                # self.status_label.configure(
+                #     text=f"tts {status}",
+                #     text_color="#27ae60"
+                # )
 
         except Exception as e:
             self.append_log(f"[Error] Failed to save Tone switch: {e}\n")
@@ -2499,11 +2529,11 @@ class App(ctk.CTk):
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
             # self.append_log(f"[OK] Node switched: {node_name}\n")
-            self.status_label.configure(
-                text=f"Login method updated to\n"
-                     f"{node_name}",
-                text_color="#27ae60"
-            )
+            # self.status_label.configure(
+            #     text=f"Login method updated to\n"
+            #          f"{node_name}",
+            #     text_color="#27ae60"
+            # )
 
         except Exception as e:
             # self.append_log(f"[Error] Failed to synchronize node configuration: {e}\n")
@@ -2877,11 +2907,11 @@ class App(ctk.CTk):
         apk_type = self.apk_type_seg.get()
         self.current_apk_type = apk_type
 
-        if apk_type == "大屏":
+        if apk_type in ["大屏", "Large Screen"]:
             apk_path = "LargeApp.apk"
-        elif apk_type == "小屏":
+        elif apk_type in ["小屏", "Small Screen"]:
             apk_path = "SmallApp.apk"
-        elif apk_type == "自定义apk":
+        elif apk_type in ["自定义apk", "Custom apk"]:
             if not self.custom_apk_path:
                 choice = messagebox.askyesno("错误", "请先选择自定义APK")
                 if choice:
@@ -2890,7 +2920,7 @@ class App(ctk.CTk):
                     return False
             apk_path = self.custom_apk_path
         else:
-            self.append_log("[Error] 未知的APK类型，请检查选择。\n")
+            self.append_log("[Error] Unknown APK type, please check your selection\n")
             return False
 
         # 清理旧目录
@@ -2898,7 +2928,7 @@ class App(ctk.CTk):
             shutil.rmtree(output_dir, ignore_errors=True)
             self.append_log(f"[Info] Clean up old catalog：{output_dir}\n")
 
-        self.append_log("正在解压...\n")
+        self.append_log("Extracting...\n")
 
         command = [
             "java", "-jar", str(APKTOOL_JAR),
@@ -2943,7 +2973,7 @@ class App(ctk.CTk):
 
         # 禁用按钮防止重复点击
         self.build_apk_btn.configure(state="disabled", text="打包中...")
-        self.status_label.configure(text="状态：正在打包...", text_color="#d35400")
+        # self.status_label.configure(text="状态：正在打包...", text_color="#d35400")
 
         def task():
             try:
@@ -3026,7 +3056,7 @@ class App(ctk.CTk):
                 self.safe_remove("app-unsigned.apk")
 
                 self.append_log(f"\n[SUCCESS] ✅  file location: {output_apk_path}\n")
-                self.status_label.configure(text="状态：打包成功", text_color="green")
+                # self.status_label.configure(text="状态：打包成功", text_color="green")
                 # 删除app_out文件夹
                 shutil.rmtree(output_dir, ignore_errors=True)
                 messagebox.showinfo("成功", f"APK 打包成功！\n保存在：{output_apk_path}")
@@ -3034,7 +3064,7 @@ class App(ctk.CTk):
             except Exception as e:
                 error_msg = f"[FAIL] ❌ 打包失败：{str(e)}"
                 self.append_log(f"\n{error_msg}\n")
-                self.status_label.configure(text="状态：打包失败", text_color="red")
+                # self.status_label.configure(text="状态：打包失败", text_color="red")
                 messagebox.showerror("错误", error_msg)
             finally:
                 self.build_apk_btn.configure(state="normal", text=_("btn_build"))
