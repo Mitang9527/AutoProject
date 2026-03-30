@@ -37,9 +37,9 @@ ENV_CONF = {
 DEFAULT_ENV = "海外环境"
 
 LOGIN_TYPE_MAPPING = {
-    "账号登录": "account",
-    "IMEI登录": "serial",
-    "ICCID登录": "iccid"
+    "account": {"zh": "账号登录", "en": "Account Login"},
+    "serial":  {"zh": "IMEI登录", "en": "IMEI Login"},
+    "iccid":   {"zh": "ICCID登录", "en": "ICCID Login"}
 }
 
 MAP_CONFIG_TEMPLATES = {
@@ -524,7 +524,11 @@ def update_slclient_login_type(login_type_ui: str) -> bool:
         return False
 
     # 2. 映射UI值到JSON的login_mode值
-    login_mode_val = LOGIN_TYPE_MAPPING.get(login_type_ui, "account")
+    login_mode_val = "account" # 默认值
+    for storage_key, names_dict in LOGIN_TYPE_MAPPING.items():
+        if names_dict.get("zh") == login_type_ui or names_dict.get("en") == login_type_ui:
+            login_mode_val = storage_key
+            break
 
     try:
         # 3. 读取JSON文件
@@ -903,7 +907,14 @@ class App(ctk.CTk):
 
     def refresh_ui_texts(self):
         """遍历并更新主要组件的文本 (已更新：支持 SegmentedButton 实时刷新)"""
-        # 1. 更新 SegmentedButton (核心改进点)
+        # 1. ⭐【关键】重新加载语言包，确保 _(...) 生效
+        # 这个调用至关重要，必须在所有 _("key") 调用之前
+        if self.on_language_change == "中文":
+            i18n.load_language("zh")
+        elif self.on_language_change == "English":
+            i18n.load_language("en")
+
+        # 2. 更新 SegmentedButton (核心改进点)
         self._safe_refresh_config_view()
         new_tab_names = {
             "log": _("msg_tab_log"),
@@ -937,7 +948,6 @@ class App(ctk.CTk):
         # 3. 更新控件
         self.apk_type_seg.configure(values=new_values)
 
-
         # 4. 尝试恢复选中状态
         # 注意：如果 current_selection 是旧语言的文本，这里可能需要映射逻辑
         # 但通常 SegmentedButton 只要文本还在列表里，set 就能生效
@@ -949,9 +959,7 @@ class App(ctk.CTk):
         elif self.current_apk_type == "小屏":
             self.apk_type_seg.set(_("type_small_screen"))
         else:
-            self.apk_type_seg.set("自定义apk")
             self.apk_type_seg.set(_("type_custom_apk"))
-
 
         # 重新配置 SegmentedButton 的选项
         # 注意：configure(values=...) 会触发 command，但我们上面的 _on_tab_switch 有防护
@@ -960,7 +968,11 @@ class App(ctk.CTk):
         if current_key:
             self._show_tab(current_key)
 
-        # 2. 更新其他组件 (保持原样)
+        # 3. ⭐⭐⭐【新增】更新所有 CTkOptionMenu ⭐⭐⭐
+        # 这是解决下拉框不切换的核心
+        self.update_option_menus_on_language_change()
+
+        # 4. 更新其他组件 (保持原样)
         self.title(_("app_title"))
         self.logo_label.configure(text=_("sidebar_logo"))
         self.device_label.configure(text=_("lbl_device"))
@@ -978,8 +990,6 @@ class App(ctk.CTk):
         if hasattr(self, 'map_title_label'):
             self.map_title_label.configure(text=i18n.get("msg_card_map"))
 
-
-
         self.lbl_title.configure(text=_("msg_card_apk_properties"))
         self.lbl_input_title.configure(text=_("msg_tab_input"))
         self.title_led_mode.configure(text=_("msg_card_input"))
@@ -994,7 +1004,7 @@ class App(ctk.CTk):
         self.lbl_map_source.configure(text=_("lbl_map_source"))
 
         self.lbl_ptt_press.configure(text=_("lbl_ptt_press"))
-        self.lbl_ptt_release.configure(text=_("lbl_ptt_press"))
+        self.lbl_ptt_release.configure(text=_("lbl_ptt_release"))
         self.lbl_sos_key.configure(text=_("lbl_sos_key"))
         self.btn_save_config.configure(text=_("btn_save_config"))
         self.btn_save_custom.configure(text=_("msg_save_btn"))
@@ -1003,12 +1013,41 @@ class App(ctk.CTk):
         self.play_channel.configure(text=_("play_channel"))
         self.rec_channel.configure(text=_("rec_channel"))
 
+    def update_option_menus_on_language_change(self):
+        """
+        专门用于在语言切换时更新 CTkOptionMenu 的选项和选中值
+        """
+        # --- 更新登录方式下拉框 ---
+        if hasattr(self, 'opt_login_type'):
+            # a. 重新生成当前语言下的选项列表
+            login_type_display_names = [LOGIN_TYPE_MAPPING[key][i18n.current_lang] for key in LOGIN_TYPE_MAPPING.keys()]
+            self.opt_login_type.configure(values=login_type_display_names)
 
+            # b. 根据存储的原始键，恢复当前选中的显示名称
+            # 首先需要知道当前应该选中哪个存储键 (例如 "account", "serial")
+            # 假设 slclient.json 文件中的值是权威的存储键
+            current_login_mode_key = "account"  # 默认值
+            if PATH_SLCLIENT_JSON.exists():
+                try:
+                    with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
+                        slclient_data = json.load(f)
+                    current_login_mode_key = slclient_data.get("profile", {}).get("login_mode", "account")
+                except Exception as e:
+                    print(f"[Warning] Failed to read login_mode for update: {e}")
 
+            # c. 根据存储键，获取新语言下的显示名称，并设置
+            new_display_name = LOGIN_TYPE_MAPPING.get(current_login_mode_key, {}).get(i18n.current_lang, "账号登录")
+            self.opt_login_type.set(new_display_name)
+            # 可能还需要更新预览，取决于你的逻辑
+            self._update_preview("login_type", new_display_name)
 
-
-        # ==================== 事件处理回调 ====================
-
+        # --- 如果还有其他 OptionMenu，也需要在这里更新 ---
+        # 例如：
+        # if hasattr(self, 'some_other_option_menu'):
+        #     new_values = [i18n.get("key1"), i18n.get("key2")]
+        #     self.some_other_option_menu.configure(values=new_values)
+        #     # 然后根据该控件的逻辑状态恢复选中项
+        #     # self.some_other_option_menu.set(...)
     def initial_env_check(self) -> None:
 
         if not self.env_checker.check_all(show_dialog=True):
@@ -1697,22 +1736,18 @@ class App(ctk.CTk):
         card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
 
         card.grid_columnconfigure(0, weight=1)
-        card.grid_rowconfigure(1, weight=1)
+        card.grid_rowconfigure(1, weight=1)  # 内容区域扩展
 
         # ✅ 每个卡片自带标题标签，永远可以更新
         card.title_label = ctk.CTkLabel(
-            card, text=title,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            anchor="w"
+            card, text=title, font=ctk.CTkFont(size=14, weight="bold"), anchor="w"
         )
         card.title_label.grid(row=0, column=0, padx=15, pady=10, sticky="w")
 
         content_frame = ctk.CTkFrame(card, fg_color="transparent")
         content_frame.grid(row=1, column=0, padx=15, pady=(0, 15), sticky="nsew")
         content_frame.grid_columnconfigure(1, weight=1)
-
         content_func(content_frame)
-
         return card
 
     def get_env_names(self):
@@ -1787,10 +1822,10 @@ class App(ctk.CTk):
             row=4, column=0, padx=5, pady=10, sticky="w"
         )
 
+        login_type_display_names = [LOGIN_TYPE_MAPPING[key][i18n.current_lang] for key in LOGIN_TYPE_MAPPING.keys()]
         self.opt_login_type = ctk.CTkOptionMenu(
             parent,
-            values=['账号登录', 'IMEI登录', 'ICCID登录'],
-
+            values=login_type_display_names,  # 使用动态生成的列表
             command=self.on_login_type_change
         )
         self.opt_login_type.set("账号登录")
@@ -2681,7 +2716,6 @@ class App(ctk.CTk):
 
     def load_all_configs(self) -> None:
         """加载所有配置（含slclient.json的login_mode）"""
-        # 读取slclient.json的login_mode并同步到UI
         if PATH_SLCLIENT_JSON.exists():
             try:
                 with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
@@ -2690,17 +2724,16 @@ class App(ctk.CTk):
                 # 读取profile下的login_mode
                 login_mode_val = slclient_data.get("profile", {}).get("login_mode", "account")
 
-                # 反向映射：JSON的login_mode值 -> UI显示值
-                reverse_mapping = {v: k for k, v in LOGIN_TYPE_MAPPING.items()}
-                ui_val = reverse_mapping.get(login_mode_val, "账号登录")
+                # 从存储的键获取当前语言下的UI显示名称
+                # 从 LOGIN_TYPE_MAPPING 中查找
+                ui_val = LOGIN_TYPE_MAPPING.get(login_mode_val, {}).get(i18n.current_lang, "账号登录")
 
                 # 设置到下拉框
                 self.opt_login_type.set(ui_val)
                 self._update_preview("login_type", ui_val)
 
             except Exception as e:
-                self.append_log(f"[Warning] Failed to read login_mode：{e}\n")
-    # TODO 打包时获取配置写入
+                self.append_log(f"[Warning] Failed to read login_mode：{e}\n")    # TODO 打包时获取配置写入
     def apply_selected_config_to_slclient(self) -> None:
         """打包时调用：收集所有四个模块的数据并写入 JSON"""
         if not PATH_SLCLIENT_JSON.exists():
