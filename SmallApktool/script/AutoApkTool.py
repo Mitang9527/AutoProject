@@ -778,79 +778,6 @@ class App(ctk.CTk):
             self.refresh_ui_texts()
             # self.append_log(f"[Info] Language switched to {selection}\n")
 
-    def refresh_ui_texts(self):
-        """遍历并更新主要组件的文本 (已更新：支持 SegmentedButton 实时刷新)"""
-        # 1. 更新 SegmentedButton (核心改进点)
-        new_tab_names = {
-            "log": _("msg_tab_log"),
-            "config": _("msg_tab_config"),
-            "build": _("msg_tab_build"),
-            "led": _("msg_tab_led")
-        }
-
-        # 获取当前选中的键 (通过反向查找)
-        current_display = self.selected_tab.get()
-        current_key = None
-        for k, v in self.tab_names.items():
-            if v == current_display:
-                current_key = k
-                break
-
-        # 更新内部映射
-        self.tab_names = new_tab_names
-
-        # --- 新增：更新 APK 类型选择器 ---
-        # 1. 记录当前选中的值 (防止切换后选中状态丢失)
-        current_selection = self.apk_type_seg.get()
-
-        # 2. 重新构建 values 列表 (再次调用 _() 获取最新语言)
-        new_values = [
-            _("type_large_screen"),
-            _("type_small_screen"),
-            _("type_custom_apk")
-        ]
-
-        # 3. 更新控件
-        self.apk_type_seg.configure(values=new_values)
-
-        # 4. 尝试恢复选中状态
-        # 注意：如果 current_selection 是旧语言的文本，这里可能需要映射逻辑
-        # 但通常 SegmentedButton 只要文本还在列表里，set 就能生效
-        # 如果切换语言导致文本变了（比如 "Large" -> "大屏"），set("Large") 会失效
-        # 所以最好的办法是：根据索引恢复，或者根据逻辑变量恢复
-
-        if self.current_apk_type == "大屏":
-            self.apk_type_seg.set(_("type_large_screen"))
-        elif self.current_apk_type == "小屏":
-            self.apk_type_seg.set(_("type_small_screen"))
-        else:
-            self.apk_type_seg.set("自定义apk")
-
-        # 方案 B：如果没有逻辑变量，只能尝试按索引恢复 (如果顺序没变)
-        # if current_selection in new_values:
-        #     self.apk_type_seg.set(current_selection)
-
-
-        # 重新配置 SegmentedButton 的选项
-        # 注意：configure(values=...) 会触发 command，但我们上面的 _on_tab_switch 有防护
-        self.tab_selector.configure(values=list(self.tab_names.values()))
-        # 如果之前有选中项，尝试恢复选中状态
-        if current_key:
-            self._show_tab(current_key)
-
-        # 2. 更新其他组件 (保持原样)
-        self.title(_("app_title"))
-        self.logo_label.configure(text=_("sidebar_logo"))
-        self.device_label.configure(text=_("lbl_device"))
-        self.refresh_btn.configure(text=_("btn_refresh"))
-        self.start_btn.configure(text=_("btn_start_listen") if not self.is_listening else _("btn_stop_listen"))
-        self.mode_label.configure(text=_("lbl_mode"))
-        self.clear_log_btn.configure(text=_("clear_log"))
-        self.apk_select_label.configure(text=_("lbl_apk_type"))
-
-        self.build_apk_btn.configure(text=_("btn_build"))
-        self.decompile_apk_btn.configure(text=_("btn_decompile"))
-
     def _init_main_area(self) -> None:
         """初始化主内容区 (使用 SegmentedButton 模拟 Tab)"""
         self.main_frame = ctk.CTkFrame(self)
@@ -929,7 +856,7 @@ class App(ctk.CTk):
         # Tab 2: Config (保持原样)
         frame_config = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self.scroll_frame = ctk.CTkScrollableFrame(
-            frame_config, label_text="当前已收录的键位映射"
+            frame_config, label_text=_("msg_config_list_title")
         )
         self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
         self.scroll_frame.grid_columnconfigure(0, weight=1)
@@ -973,7 +900,114 @@ class App(ctk.CTk):
             # 更新 SegmentedButton 的状态 (防止因代码触发导致 UI 不同步)
             display_text = self.tab_names.get(tab_key, "")
             self.selected_tab.set(display_text)
-# ==================== 事件处理回调 ====================
+
+    def refresh_ui_texts(self):
+        """遍历并更新主要组件的文本 (已更新：支持 SegmentedButton 实时刷新)"""
+        # 1. 更新 SegmentedButton (核心改进点)
+        self._safe_refresh_config_view()
+        new_tab_names = {
+            "log": _("msg_tab_log"),
+            "config": _("msg_tab_config"),
+            "build": _("msg_tab_build"),
+            "led": _("msg_tab_led")
+        }
+
+        # 获取当前选中的键 (通过反向查找)
+        current_display = self.selected_tab.get()
+        current_key = None
+        for k, v in self.tab_names.items():
+            if v == current_display:
+                current_key = k
+                break
+
+        # 更新内部映射
+        self.tab_names = new_tab_names
+
+        # --- 新增：更新 APK 类型选择器 ---
+        # 1. 记录当前选中的值 (防止切换后选中状态丢失)
+        current_selection = self.apk_type_seg.get()
+
+        # 2. 重新构建 values 列表 (再次调用 _() 获取最新语言)
+        new_values = [
+            _("type_large_screen"),
+            _("type_small_screen"),
+            _("type_custom_apk")
+        ]
+
+        # 3. 更新控件
+        self.apk_type_seg.configure(values=new_values)
+
+
+        # 4. 尝试恢复选中状态
+        # 注意：如果 current_selection 是旧语言的文本，这里可能需要映射逻辑
+        # 但通常 SegmentedButton 只要文本还在列表里，set 就能生效
+        # 如果切换语言导致文本变了（比如 "Large" -> "大屏"），set("Large") 会失效
+        # 所以最好的办法是：根据索引恢复，或者根据逻辑变量恢复
+
+        if self.current_apk_type == "大屏":
+            self.apk_type_seg.set(_("type_large_screen"))
+        elif self.current_apk_type == "小屏":
+            self.apk_type_seg.set(_("type_small_screen"))
+        else:
+            self.apk_type_seg.set("自定义apk")
+            self.apk_type_seg.set(_("type_custom_apk"))
+
+
+        # 重新配置 SegmentedButton 的选项
+        # 注意：configure(values=...) 会触发 command，但我们上面的 _on_tab_switch 有防护
+        self.tab_selector.configure(values=list(self.tab_names.values()))
+        # 如果之前有选中项，尝试恢复选中状态
+        if current_key:
+            self._show_tab(current_key)
+
+        # 2. 更新其他组件 (保持原样)
+        self.title(_("app_title"))
+        self.logo_label.configure(text=_("sidebar_logo"))
+        self.device_label.configure(text=_("lbl_device"))
+        self.refresh_btn.configure(text=_("btn_refresh"))
+        self.start_btn.configure(text=_("btn_start_listen") if not self.is_listening else _("btn_stop_listen"))
+        self.mode_label.configure(text=_("lbl_mode"))
+        self.clear_log_btn.configure(text=_("clear_log"))
+        self.apk_select_label.configure(text=_("lbl_apk_type"))
+        self.build_apk_btn.configure(text=_("btn_build"))
+        self.decompile_apk_btn.configure(text=_("btn_decompile"))
+        self.scroll_frame.configure(label_text=i18n.get("msg_config_list_title"))
+
+        if hasattr(self, 'sound_title_label'):
+            self.sound_title_label.configure(text=i18n.get("msg_card_sound"))
+        if hasattr(self, 'map_title_label'):
+            self.map_title_label.configure(text=i18n.get("msg_card_map"))
+
+
+
+        self.lbl_title.configure(text=_("msg_card_apk_properties"))
+        self.lbl_input_title.configure(text=_("msg_tab_input"))
+        self.title_led_mode.configure(text=_("msg_card_input"))
+        self.lbl_other.configure(text=_("msg_feature_dev"))
+        self.frame_led_color.title_label.configure(text=_("msg_card_other"))
+        self.frame_env.title_label.configure(text=_("msg_card_env"))
+        self.frame_sound.title_label.configure(text=_("msg_card_sound"))
+        self.frame_map.title_label.configure(text=_("msg_card_map"))
+        self.frame_other.title_label.configure(text=_("msg_card_other"))
+        self.lbl_server_node.configure(text=_("lbl_server_node"))
+        self.lbl_login_type.configure(text=_("lbl_login_type"))
+        self.lbl_map_source.configure(text=_("lbl_map_source"))
+
+        self.lbl_ptt_press.configure(text=_("lbl_ptt_press"))
+        self.lbl_ptt_release.configure(text=_("lbl_ptt_press"))
+        self.lbl_sos_key.configure(text=_("lbl_sos_key"))
+        self.btn_save_config.configure(text=_("btn_save_config"))
+        self.btn_save_custom.configure(text=_("msg_save_btn"))
+        self.codec.configure(text=_("codec"))
+        self.audio.configure(text=_("audio"))
+        self.play_channel.configure(text=_("play_channel"))
+        self.rec_channel.configure(text=_("rec_channel"))
+
+
+
+
+
+        # ==================== 事件处理回调 ====================
 
     def initial_env_check(self) -> None:
 
@@ -1030,8 +1064,8 @@ class App(ctk.CTk):
                 # self.status_label.configure(text="no devices", text_color="red")
         except Exception:
             if self.winfo_exists():
-                self.device_menu.configure(values=["ADB 错误"])
-            self.device_var.set("ADB 错误")
+                self.device_menu.configure(values=["ADB Error"])
+            self.device_var.set("ADB Error")
 
     def on_device_change(self, selection: str) -> None:
         if selection not in ["未检测到设备", "ADB 错误"]:
@@ -1133,18 +1167,14 @@ class App(ctk.CTk):
             stdkeys = data.get("stdkey", {})
             actions_data = data.get("action", {})
 
-            if not intents and not stdkeys:
-                lbl = ctk.CTkLabel(
-                    self.scroll_frame,
-                    text="暂无配置数据。\n请点击“手动保存”添加配置。",
-                    text_color="gray",
-                    font=ctk.CTkFont(size=14)
-                )
-                lbl.grid(row=0, column=0, pady=40, columnspan=5)
-                return
-
-            # 3. 绘制表头
-            headers = ["键名 (Key Name)", "事件类型", "虚拟keycode", "Intent Action", "默认命令"]
+            # 3. 绘制表头 (国际化)
+            headers = [
+                i18n.get("msg_header_key_name"),  # "键名 (Key Name)"
+                i18n.get("msg_header_event"),  # "事件类型"
+                i18n.get("msg_header_vkey"),  # "虚拟keycode"
+                i18n.get("msg_header_action"),  # "Intent Action"
+                i18n.get("msg_header_cmd")  # "默认命令"
+            ]
             for i, h in enumerate(headers):
                 ctk.CTkLabel(
                     self.scroll_frame,
@@ -1184,10 +1214,10 @@ class App(ctk.CTk):
                 ac = actions_data.get(name, {})
                 info = intents.get(name, {})
 
-                # 提取数据
-                event_str = sk.get("event", "N/A")
-                key_val = sk.get("key", "N/A")
-                action_str = info.get("action", "-")
+                # 提取数据 (国际化 N/A)
+                event_str = sk.get("event", i18n.get("msg_not_available"))  # "N/A" -> "不可用" 或 "N/A"
+                key_val = sk.get("key", i18n.get("msg_not_available"))  # "N/A" -> "不可用" 或 "N/A"
+                action_str = info.get("action", i18n.get("msg_default_placeholder"))  # "-" -> "默认占位符" 或 "-"
 
                 # 提取命令 ID
                 cmds = ac.get("default", [])
@@ -1195,10 +1225,10 @@ class App(ctk.CTk):
                     cmd_ids = [c.get("command", {}).get("id", "") for c in cmds if isinstance(c, dict)]
                     cmd_str = ", ".join(filter(None, cmd_ids))
                 else:
-                    cmd_str = "-"
+                    cmd_str = i18n.get("msg_default_placeholder")  # "-" -> "默认占位符" 或 "-"
 
                 if not cmd_str:
-                    cmd_str = "-"
+                    cmd_str = i18n.get("msg_default_placeholder")  # "-" -> "默认占位符" 或 "-"
 
                 # 绘制行
                 # 键名
@@ -1247,16 +1277,16 @@ class App(ctk.CTk):
                 row_idx += 1
 
             # 可选：如果没有数据但循环没执行（理论上不会到这里）
-            if row_idx == 1:
-                ctk.CTkLabel(self.scroll_frame, text="未找到有效的完整配置项。", text_color="gray").grid(row=1, column=0,
-                                                                                                        columnspan=5)
+            # if row_idx == 1:
+            #     ctk.CTkLabel(self.scroll_frame, text=i18n.get("msg_no_valid_configs"), text_color="gray").grid(row=1, column=0, columnspan=5)
 
         except Exception as e:
             print(f"刷新配置视图出错: {e}")
             if self.winfo_exists():
+                # 错误信息国际化
                 err_lbl = ctk.CTkLabel(
                     self.scroll_frame,
-                    text=f"加载失败: {str(e)}",
+                    text=i18n.get("msg_load_failed") + f": {str(e)}",
                     text_color="#c0392b"
                 )
                 err_lbl.grid(row=0, column=0, pady=20)
@@ -1290,10 +1320,12 @@ class App(ctk.CTk):
     def _init_build_config_page(self, parent):
         """初始化打包配置页面"""
         # 主标题
-        lbl_title = ctk.CTkLabel(
-            parent, text="APK属性配置", font=ctk.CTkFont(size=18, weight="bold")
+        self.lbl_title = ctk.CTkLabel(
+            parent,
+            text=(_("msg_card_apk_properties")),  # 统一使用 i18n.get
+            font=ctk.CTkFont(size=18, weight="bold")
         )
-        lbl_title.pack(pady=(15, 10))
+        self.lbl_title.pack(pady=(15, 10))
 
         # --- 主容器：使用 Grid 布局实现 2x2 ---
         # 错误修复：这里原来是 self.tab_build_config，现在改为使用传入的 parent
@@ -1310,28 +1342,29 @@ class App(ctk.CTk):
         # 1. 左上：环境配置
         self.frame_env = self._create_config_card(
             parent=grid_frame,
-            title="🌍 环境配置 (Environment)",
+            # title="🌍 环境配置 (Environment)",
+            title=i18n.get("msg_card_env"),
             row=0, col=0,
             content_func=self._build_env_content
         )
         # 2. 右上：声音配置
         self.frame_sound = self._create_config_card(
             parent=grid_frame,
-            title="🔊 声音配置 (Audio)",
+            title=i18n.get("msg_card_sound"),
             row=0, col=1,
             content_func=self._build_sound_content
         )
         # 3. 左下：地图配置
         self.frame_map = self._create_config_card(
             parent=grid_frame,
-            title="🗺️ 地图配置 (Map)",
+            title=i18n.get("msg_card_map"),
             row=1, col=0,
             content_func=self._build_map_content
         )
         # 4. 右下：其他设置
         self.frame_other = self._create_config_card(
             parent=grid_frame,
-            title="⚙️ 其他设置 (Others)",
+            title=i18n.get("msg_card_other"),
             row=1, col=1,
             content_func=self._build_other_content
         )
@@ -1342,10 +1375,10 @@ class App(ctk.CTk):
     def _init_led_config_page(self, parent):
         """初始化按键LED配置页面 (修复版)"""
         # 1. 主标题
-        lbl_title = ctk.CTkLabel(
-            parent, text="按键配置", font=ctk.CTkFont(size=18, weight="bold")
+        self.lbl_input_title = ctk.CTkLabel(
+            parent, text=_("msg_tab_input"), font=ctk.CTkFont(size=18, weight="bold")
         )
-        lbl_title.pack(pady=(15, 10))
+        self.lbl_input_title.pack(pady=(15, 10))
 
         # 2. 主容器：使用 Grid 布局实现 上下 1:1 平分
         # 错误修复：这里原来是 self.tab_input_led_config，现在改为使用传入的 parent
@@ -1361,14 +1394,16 @@ class App(ctk.CTk):
         # --- 上半部分：LED 模式/策略配置 ---
         self.frame_led_mode = self._create_config_card(
             parent=grid_frame,
-            title="💡 按键 配置",
+            title=_("msg_card_input"),
             row=0, col=0,
             content_func=self._build_input_mode_content
         )
+        self.title_led_mode = self.frame_led_mode.winfo_children()[0]
         # --- 下半部分：颜色与亮度配置 ---
         self.frame_led_color = self._create_config_card(
             parent=grid_frame,
-            title="🎨 其他配置",
+            title=_("msg_card_other"),
+            # title=_("msg_card_led"),
             row=1, col=0,
             content_func=self._build_led_color_content
         )
@@ -1388,12 +1423,13 @@ class App(ctk.CTk):
         sticky_entry = "ew"
 
         # --- 1. 按下 PTT (Press) ---
-        ctk.CTkLabel(
+        self.lbl_ptt_press = ctk.CTkLabel(
             parent,
-            text="按下 PTT:",
+            text=_("lbl_ptt_press"),
             anchor="w",
             width=label_width
-        ).grid(row=0, column=0, padx=(pad_x, 5), pady=(pad_y, 2), sticky=sticky_label)
+        )
+        self.lbl_ptt_press.grid(row=0, column=0, padx=(pad_x, 5), pady=(pad_y, 2), sticky=sticky_label)
 
         self.entry_ptt_press = ctk.CTkEntry(
             parent,
@@ -1403,12 +1439,13 @@ class App(ctk.CTk):
         self.entry_ptt_press.grid(row=0, column=1, padx=(5, pad_x), pady=(pad_y, 2), sticky=sticky_entry)
 
         # --- 2. 抬起 PTT (Release) ---
-        ctk.CTkLabel(
+        self.lbl_ptt_release = ctk.CTkLabel(
             parent,
-            text="抬起 PTT:",
+            text=_("lbl_ptt_release"),
             anchor="w",
             width=label_width
-        ).grid(row=1, column=0, padx=(pad_x, 5), pady=2, sticky=sticky_label)
+        )
+        self.lbl_ptt_release.grid(row=1, column=0, padx=(pad_x, 5), pady=2, sticky=sticky_label)
 
         self.entry_ptt_release = ctk.CTkEntry(
             parent,
@@ -1418,12 +1455,13 @@ class App(ctk.CTk):
         self.entry_ptt_release.grid(row=1, column=1, padx=(5, pad_x), pady=2, sticky=sticky_entry)
 
         # --- 3. SOS 按键 ---
-        ctk.CTkLabel(
+        self.lbl_sos_key = ctk.CTkLabel(
             parent,
-            text="SOS 按键:",
+            text=_("lbl_sos_key"),
             anchor="w",
             width=label_width
-        ).grid(row=2, column=0, padx=(pad_x, 5), pady=2, sticky=sticky_label)
+        )
+        self.lbl_sos_key.grid(row=2, column=0, padx=(pad_x, 5), pady=2, sticky=sticky_label)
 
         self.entry_sos = ctk.CTkEntry(
             parent,
@@ -1434,9 +1472,9 @@ class App(ctk.CTk):
 
         # --- 4. 保存按钮 ---
 
-        btn_save = ctk.CTkButton(
+        self.btn_save_config = ctk.CTkButton(
             parent,
-            text="➕ 保存配置",
+            text=_("btn_save_config"),
             command=self._on_save_manual_keys,
             fg_color="#28a745",
             hover_color="#218838",
@@ -1444,7 +1482,7 @@ class App(ctk.CTk):
             width=25,
             font=ctk.CTkFont(size=13, weight="bold")
         )
-        btn_save.grid(row=3, column=0, columnspan=2, padx=pad_x, pady=(pad_y, 10), sticky="e")
+        self.btn_save_config.grid(row=3, column=0, columnspan=2, padx=pad_x, pady=(pad_y, 10), sticky="e")
 
         # 状态提示
         self.lbl_env_info = ctk.CTkLabel(
@@ -1634,15 +1672,14 @@ class App(ctk.CTk):
             self.append_log(f"[Error] _on_save_manual_keys: {e}\n")
             messagebox.showerror("错误", error_msg)
 
-
-
     def _build_led_color_content(self, parent):
         """填充下半部分：颜色和亮度"""
-        ctk.CTkLabel(
+        self.lbl_other = ctk.CTkLabel(
             parent,
-            text="（功能设计开发中…）",
+            text=_("msg_feature_dev"),
             text_color="gray"
-        ).grid(row=2, column=0, padx=10, pady=(0, 10), sticky="w")
+        )
+        self.lbl_other.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="w")
 
         # ctk.CTkLabel(parent, text="LED 颜色 (Hex):", anchor="w").grid(row=0, column=0, sticky="w", pady=5)
         # self.entry_led_color = ctk.CTkEntry(parent, placeholder_text="#FF0000")
@@ -1659,27 +1696,30 @@ class App(ctk.CTk):
         card = ctk.CTkFrame(parent, corner_radius=10, border_width=1, border_color="#3B8ED0")
         card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
 
-        # 卡片内部布局
         card.grid_columnconfigure(0, weight=1)
-        card.grid_rowconfigure(1, weight=1)  # 内容区域可伸缩
+        card.grid_rowconfigure(1, weight=1)
 
-        # 标题栏
-        lbl_title = ctk.CTkLabel(
+        # ✅ 每个卡片自带标题标签，永远可以更新
+        card.title_label = ctk.CTkLabel(
             card, text=title,
             font=ctk.CTkFont(size=14, weight="bold"),
             anchor="w"
         )
-        lbl_title.grid(row=0, column=0, padx=15, pady=10, sticky="w")
+        card.title_label.grid(row=0, column=0, padx=15, pady=10, sticky="w")
 
-        # 内容容器 (由 content_func 填充)
         content_frame = ctk.CTkFrame(card, fg_color="transparent")
         content_frame.grid(row=1, column=0, padx=15, pady=(0, 15), sticky="nsew")
-        content_frame.grid_columnconfigure(1, weight=1)  # 让输入框撑开
+        content_frame.grid_columnconfigure(1, weight=1)
 
-        # 执行填充函数
         content_func(content_frame)
 
         return card
+
+    def get_env_names(self):
+        return {
+            "overseas": _("env_overseas"),
+            "domestic": _("env_domestic")
+        }
 
     def _build_env_content(self, parent):
         """构建环境配置内容"""
@@ -1696,7 +1736,8 @@ class App(ctk.CTk):
         # --- 2. 创建控件 ---
 
         # 标签
-        ctk.CTkLabel(parent, text="服务器节点:", anchor="w").grid(
+        self.lbl_server_node = ctk.CTkLabel(parent, text=_("lbl_server_node"), anchor="w")
+        self.lbl_server_node.grid(
             row=0, column=0, padx=5, pady=10, sticky="w"
         )
 
@@ -1741,7 +1782,8 @@ class App(ctk.CTk):
         # self.entry_custom_context.configure(state="disabled")
 
         # 登录方式下拉框
-        ctk.CTkLabel(parent, text="登录方式:", anchor="w").grid(
+        self.lbl_login_type = ctk.CTkLabel(parent, text=_("lbl_login_type"), anchor="w")
+        self.lbl_login_type.grid(
             row=4, column=0, padx=5, pady=10, sticky="w"
         )
 
@@ -1758,7 +1800,7 @@ class App(ctk.CTk):
         # 保存按钮（默认隐藏）
         self.btn_save_custom = ctk.CTkButton(
             parent,
-            text="💾 保存",
+            text=_("msg_save_btn"),
             command=self._save_profile_changes,
             fg_color="#d35400",
             hover_color="#e67e22",
@@ -1890,16 +1932,17 @@ class App(ctk.CTk):
         #     command=lambda v: (self._update_preview("bgm", int(v)), lbl_bgm_val.configure(text=f"{int(v)}%")))
 
         # 2. 音效开关
-        ctk.CTkLabel(parent, text="开启Tone:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
+        ctk.CTkLabel(parent, text="Tone:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
         self.switch_sfx = ctk.CTkSwitch(parent, text=" ",
                                         command=lambda: (
                                             self._sync_tone_enabled_to_json(bool(self.switch_sfx.get()))
                                         ))
-        self.switch_sfx.grid(row=1, column=1, padx=5, pady=8, sticky="w")
+        self.switch_sfx.grid(row=1, column=1, padx=5, pady=6, sticky="w")
         self.switch_sfx.select()  # 默认开启
 
         # 3. 语音编码
-        ctk.CTkLabel(parent, text="语音编码:", anchor="w").grid(
+        self.codec = ctk.CTkLabel(parent, text=_("codec"), anchor="w")
+        self.codec.grid(
             row=2, column=0, padx=5, pady=10, sticky="w"
         )
 
@@ -1908,12 +1951,13 @@ class App(ctk.CTk):
             values=["amrnb", "evrc8k", "opus"],
             command=self._sync_codec_to_json
         )
-        self.opt_sound.grid(row=2, column=1, padx=5, pady=10, sticky="ew")
+        self.opt_sound.grid(row=2, column=1, padx=5, pady=8, sticky="ew")
 
         self.opt_sound.set("amrnb")
 
         # 4. 音频系统
-        ctk.CTkLabel(parent, text="音频系统:", anchor="w").grid(
+        self.audio = ctk.CTkLabel(parent, text=_("audio"), anchor="w")
+        self.audio.grid(
             row=3, column=0, padx=5, pady=10, sticky="w"
         )
 
@@ -1922,12 +1966,13 @@ class App(ctk.CTk):
             values=["default", "sles", "oem"],
             command=self._sync_soundsystem_to_json
         )
-        self.opt_sound.grid(row=3, column=1, padx=5, pady=10, sticky="ew")
+        self.opt_sound.grid(row=3, column=1, padx=5, pady=8, sticky="ew")
 
         self.opt_sound.set("default")
 
         # 5. 播放通道
-        ctk.CTkLabel(parent, text="播放通道:", anchor="w").grid(
+        self.play_channel=ctk.CTkLabel(parent, text=_("play_channel"), anchor="w")
+        self.play_channel.grid(
             row=4, column=0, padx=5, pady=10, sticky="w"
         )
 
@@ -1936,13 +1981,14 @@ class App(ctk.CTk):
             values=["music", "voice"],
             command=self._sync_play_to_json
         )
-        self.opt_sound.grid(row=4, column=1, padx=5, pady=10, sticky="ew")
+        self.opt_sound.grid(row=4, column=1, padx=5, pady=8, sticky="ew")
 
         self.opt_sound.set("music")
 
         # 6. 录制通道
-        ctk.CTkLabel(parent, text="录制通道:", anchor="w").grid(
-            row=5, column=0, padx=5, pady=10, sticky="w"
+        self.rec_channel = ctk.CTkLabel(parent, text=_("rec_channel"), anchor="w")
+        self.rec_channel.grid(
+            row=5, column=0, padx=5, pady=8, sticky="w"
         )
 
         self.opt_sound = ctk.CTkOptionMenu(
@@ -2099,7 +2145,8 @@ class App(ctk.CTk):
     def _build_map_content(self, parent):
         """构建地图配置内容"""
         # 1. 地图源
-        ctk.CTkLabel(parent, text="地图数据源:", anchor="w").grid(
+        self.lbl_map_source = ctk.CTkLabel(parent, text=_("lbl_map_source"), anchor="w")
+        self.lbl_map_source.grid(
             row=0, column=0, padx=5, pady=10, sticky="w"
         )
 
@@ -2146,7 +2193,7 @@ class App(ctk.CTk):
         # self.entry_fps.insert(0, "60")
 
         # --- TTS开关 ---
-        ctk.CTkLabel(parent, text="开启TTS:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
+        ctk.CTkLabel(parent, text="TTS:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
         self.switch_sfx = ctk.CTkSwitch(parent, text=" ",
                                         command=lambda: (
                                             self._sync_tts_enabled_to_json(bool(self.switch_sfx.get()))
@@ -2155,7 +2202,7 @@ class App(ctk.CTk):
         self.switch_sfx.deselect()  # 默认关闭
 
         # --- launcher开关---
-        ctk.CTkLabel(parent, text="设置为 Launcher:", anchor="w").grid(
+        ctk.CTkLabel(parent, text="Launcher:", anchor="w").grid(
             row=2, column=0, padx=5, pady=8, sticky="w"
         )
 
@@ -2907,13 +2954,13 @@ class App(ctk.CTk):
         apk_type = self.apk_type_seg.get()
         self.current_apk_type = apk_type
 
-        if apk_type in ["大屏", "Large Screen"]:
+        if apk_type in ["大屏", "Large APK"]:
             apk_path = "LargeApp.apk"
-        elif apk_type in ["小屏", "Small Screen"]:
+        elif apk_type in ["小屏", "Small APK"]:
             apk_path = "SmallApp.apk"
         elif apk_type in ["自定义apk", "Custom apk"]:
             if not self.custom_apk_path:
-                choice = messagebox.askyesno("错误", "请先选择自定义APK")
+                choice = messagebox.askyesno("Error, please select an APK first")
                 if choice:
                     self.upload_apk()
                 else:
