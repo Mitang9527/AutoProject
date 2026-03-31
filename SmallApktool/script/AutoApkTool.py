@@ -32,13 +32,15 @@ APKTOOL_JAR = "apktool.jar"
 ENV_CONF = {
     "overseas": {
         "ip_address": "sgdns.shanlipoc.com:10200",
-        "context": "pocstar"
+        "context": "pocstar",
+        "upgrade_url":"upgrade.pocstar.com"
     },
     "domestic_v2": {
         "ip_address": "cndns.shanliptt.com:10200",
-        "context": "show"
+        "context": "show",
+        "upgrade_url":"123123"
     },
-}
+    }
 
 # 2. 显示名称映射
 ENV_DISPLAY_NAMES = {
@@ -96,7 +98,7 @@ MAP_CONFIG_TEMPLATES = {
             "report": True,
             "map_type": "none",
             "provider": "default",
-            "coor": "default",
+            "coor": "wgs84",
             "update_period_sec": 40,
             "report_period_sec": 40
         }
@@ -540,7 +542,7 @@ def update_slclient_login_type(login_type_ui: str) -> bool:
     """
     # 1. 校验文件是否存在
     if not PATH_SLCLIENT_JSON.exists():
-        messagebox.showerror("错误", f"slclient.json文件不存在：\n{PATH_SLCLIENT_JSON}")
+        messagebox.showerror("ERROR", f"Please unzip apk first")
         return False
 
     # 2. 映射UI值到JSON的login_mode值
@@ -1029,6 +1031,36 @@ class App(ctk.CTk):
         # 这是解决下拉框不切换的核心
         self.update_option_menus_on_language_change()
 
+        if hasattr(self, 'opt_env'):
+            # --- 1. 先断开回调 (防止刷新列表时触发写入逻辑) ---
+            self.opt_env.configure(command=None)
+
+            # 2. 重新生成列表
+            new_env_options = []
+            for key in ENV_CONF.keys():
+                display_name = ENV_DISPLAY_NAMES.get(key, {}).get(current_lang, key)
+                new_env_options.append(display_name)
+
+            # 3. 更新下拉框的值
+            self.opt_env.configure(values=new_env_options)
+
+            # 4. 恢复选中状态 (根据 JSON 里的 ID)
+            saved_env_id = "overseas"
+            if PATH_SLCLIENT_JSON.exists():
+                try:
+                    with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    saved_env_id = data.get("profile", {}).get("env", "overseas")
+                except:
+                    pass
+
+            # 找到对应的**新语言**显示名
+            target_display_name = ENV_DISPLAY_NAMES.get(saved_env_id, {}).get(current_lang, saved_env_id)
+            self.opt_env.set(target_display_name)
+
+            # --- 5. 重新接上回调 ---
+            self.opt_env.configure(command=self._on_env_selected)
+
         # 4. 更新其他组件 (保持原样)
         self.title(_("app_title"))
         self.logo_label.configure(text=_("sidebar_logo"))
@@ -1047,21 +1079,6 @@ class App(ctk.CTk):
             self.sound_title_label.configure(text=i18n.get("msg_card_sound"))
         if hasattr(self, 'map_title_label'):
             self.map_title_label.configure(text=i18n.get("msg_card_map"))
-            # 1. 获取当前下拉框的显示文本 (例如 "Overseas Env" 或 "Custom Deploy")
-
-        if not hasattr(self, 'opt_env'):
-            return
-
-        # 1. [关键] 直接从 JSON 读取 ID，不看下拉框
-        # 这样无论下拉框怎么乱跳，我们手里都有正确的 ID
-        saved_id = "overseas"  # 默认值
-        if PATH_SLCLIENT_JSON.exists():
-            try:
-                with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                saved_id = data.get("profile", {}).get("env", "overseas")
-            except:
-                pass
 
         self.lbl_title.configure(text=_("msg_card_apk_properties"))
         self.lbl_input_title.configure(text=_("msg_tab_input"))
@@ -1112,7 +1129,7 @@ class App(ctk.CTk):
                     print(f"[Warning] Failed to read login_mode for update: {e}")
 
             # c. 根据存储键，获取新语言下的显示名称，并设置
-            new_display_name = LOGIN_TYPE_MAPPING.get(current_login_mode_key, {}).get(i18n.current_lang, "账号登录")
+            new_display_name = LOGIN_TYPE_MAPPING.get(current_login_mode_key, {}).get(i18n.current_lang, "Account Login")
             self.opt_login_type.set(new_display_name)
             # 可能还需要更新预览
             self._update_preview("login_type", new_display_name)
@@ -1860,10 +1877,6 @@ class App(ctk.CTk):
 
         self.CUSTOM_OPTION_NAME = _("env_custom")
 
-        if base_options:
-            env_options = base_options + [self.CUSTOM_OPTION_NAME]
-        else:
-            env_options = [self.CUSTOM_OPTION_NAME]
 
         # --- 2. 创建控件 ---
 
@@ -1873,11 +1886,10 @@ class App(ctk.CTk):
             row=0, column=0, padx=5, pady=10, sticky="w"
         )
 
-        # TODO 需要重写将预设环境写入slclient
         # 下拉菜单
         self.opt_env = ctk.CTkOptionMenu(
             parent,
-            values=env_options,
+            values=base_options,
             command=self._on_env_selected
         )
         self.opt_env.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
@@ -1902,7 +1914,7 @@ class App(ctk.CTk):
             row=4, column=0, padx=5, pady=(5, 2), sticky="w"
         )
 
-        self.entry_custom_ip = ctk.CTkEntry(parent, state="disabled")
+        self.entry_custom_ip = ctk.CTkEntry(parent, state="normal")
         self.entry_custom_ip.grid(row=4, column=1, padx=5, pady=(5, 2), sticky="ew")
 
         # Context 输入框
@@ -1910,8 +1922,16 @@ class App(ctk.CTk):
             row=5, column=0, padx=5, pady=(2, 10), sticky="w"
         )
 
-        self.entry_custom_context = ctk.CTkEntry(parent, state="disabled")
+        self.entry_custom_context = ctk.CTkEntry(parent, state="normal")
         self.entry_custom_context.grid(row=5, column=1, padx=5, pady=(2, 10), sticky="ew")
+
+        # upgrade_url 输入框
+        ctk.CTkLabel(parent, text="upgrade_url:", anchor="w").grid(
+            row=6, column=0, padx=5, pady=(2, 10), sticky="w"
+        )
+
+        self.entry_custom_upgrade = ctk.CTkEntry(parent, state="normal")
+        self.entry_custom_upgrade.grid(row=6, column=1, padx=5, pady=(2, 10), sticky="ew")
 
         # 回显默认文字
         # self.entry_custom_context.configure(state="normal")
@@ -1931,11 +1951,11 @@ class App(ctk.CTk):
             values=login_type_display_names,  # 使用动态生成的列表
             command=self.on_login_type_change
         )
-        self.opt_login_type.set("账号登录")
+        # self.opt_login_type.set("账号登录")
         self.opt_login_type.grid(row=2, column=1, padx=5, pady=10, sticky="ew")
         # 默认选中「账号」
 
-        # 保存按钮（默认隐藏）
+        # 保存按钮
         self.btn_save_custom = ctk.CTkButton(
             parent,
             text=_("msg_save_btn"),
@@ -1945,8 +1965,7 @@ class App(ctk.CTk):
             height=28,
             font=ctk.CTkFont(weight="bold")
         )
-        self.btn_save_custom.grid_remove()
-
+        self.btn_save_custom.grid(row=7, column=0, columnspan=2, padx=5, pady=10, sticky="e")
         # 状态提示
         self.lbl_env_info = ctk.CTkLabel(
             parent,
@@ -1976,67 +1995,53 @@ class App(ctk.CTk):
         将当前输入的 IP 和 Context 保存到 slclient.json 的 profile 节点中。
         专用于【独立部署】模式，不影响 ENV_CONF 中的预设节点（如海外/国内）。
         """
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
 
         new_ip = self.entry_custom_ip.get().strip()
         new_context = self.entry_custom_context.get().strip()
+        upgrade_url = self.entry_custom_upgrade.get().strip()
 
-        # 1. 基础验证
+        # 1. 基础验证：必须同时存在 IP 和 Context
         if not new_ip or not new_context:
-            self.lbl_env_info.configure(
-                text="❌ 错误：DNS IP 和 Context 不能为空！",
-                text_color="#c0392b",
-                font=ctk.CTkFont(size=12, weight="bold")
-            )
+            messagebox.showwarning("输入错误", "IP 和 Context 不能为空！")
             return
 
+        # 2. 格式验证（保持不变）
         ip_part = new_ip.split(':')[0]
         if not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', ip_part) and not re.match(r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
                                                                               ip_part):
             if not messagebox.askyesno("格式确认",
-                                       f"检测到的 IP/域名 '{new_ip}' 格式可能不标准。\n"
-                                       f"确定要保存到独立部署配置吗？"):
+                                       f"检测到的 IP/域名 '{new_ip}' 格式可能不标准。\n" f"确定要保存到独立部署配置吗？"):
                 return
 
         try:
             json_path = PATH_SLCLIENT_JSON
-
-            # 如果文件不存在，创建一个新结构
-            if not json_path.exists():
-                data = {}
-            else:
-                # 读取现有 JSON
-                with open(json_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
 
             # 3. 定位并修改 profile 节点
             if "profile" not in data:
                 data["profile"] = {}
 
-            # 更新数据
-            data["profile"]["context"] = new_context
-            data["profile"]["dns"] = [new_ip]  # 强制存为列表，符合 slclient 常见格式
+            profile = data["profile"]
 
-            # 4. 写回文件
+            # 4. 更新数据：只在 upgrade_url 不为空时才写入
+            profile["context"] = new_context
+            profile["dns"] = [new_ip]  # 强制存为列表
+
+            # ⭐⭐⭐ 核心修改：仅当 upgrade_url 非空时才更新 ⭐⭐⭐
+            if upgrade_url:  # 如果输入框内容不为空
+                profile["upgrade_url"] = upgrade_url
+            # else: # 如果为空，什么也不做，保持 JSON 原有的值
+            #     pass
+
+            # 5. 写回文件
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
-            # self.entry_custom_ip.delete(0, "end")
-            # self.entry_custom_context.delete(0, "end")
-
-            # 6. 成功反馈
-            # success_msg = (
-            #     f"✅ 独立部署配置已保存!\n"
-            #     f"- Context: {new_context}\n"
-            #     f"- DNS: {new_ip}"
-            # )
-            # self.lbl_env_info.configure(
-            #     text=success_msg,
-            #     text_color="#27ae60",
-            #     font=ctk.CTkFont(size=11, weight="bold")
-            # )
-
             messagebox.showinfo("保存成功", "配置已写入")
-
 
         except FileNotFoundError:
             error_msg = "❌ 错误：找不到配置文件路径。"
@@ -2713,14 +2718,16 @@ class App(ctk.CTk):
         """
         将选中的预设节点配置同步写入 slclient.json 的 profile 节点
         """
+
         if node_name == self.CUSTOM_OPTION_NAME:
             return  # 独立部署模式不在此处处理
 
         config = ENV_CONF.get(node_name, {})
         ip_address = config.get("ip_address", "")
         context = config.get("context", "")
+        upgrade_url = config.get("upgrade_url", "")
 
-        if not ip_address or not context:
+        if not ip_address or not context or not upgrade_url:
             self.append_log(f"[Warn] Node {node_name} configuration is incomplete, writing is skipped。\n")
             return
 
@@ -2734,6 +2741,7 @@ class App(ctk.CTk):
             # 写入 DNS (列表格式) 和 Context
             data["profile"]["dns"] = [ip_address]
             data["profile"]["context"] = context
+            data["profile"]["upgrade_url"]= upgrade_url
 
             # 写回文件
             with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
@@ -2765,20 +2773,7 @@ class App(ctk.CTk):
         # 如果没找到对应的 Key，直接返回
         if not selected_key:
             return
-
-        # 2. 获取预设配置数据
-        preset = ENV_CONF.get(selected_key, {})
-        dns_ip = preset.get("ip_address", "")
-        context = preset.get("context", "")
-
-        # 示例：如果你有配置对象
-        # config = ConfigManager.get_profile()
-        # config.set("ip_address", dns_ip)
-        # config.set("context", context)
-        # config.save()
-
-        # 或者直接调用你的保存函数
-        # self._save_profile_changes(dns_ip, context)
+        self._sync_preset_node_to_json(selected_key)
 
     def _get_env_key_from_display(self, display_name):
         for key, value in self.ENV_OPTIONS.items():
@@ -2831,36 +2826,54 @@ class App(ctk.CTk):
 
     def load_all_configs(self) -> None:
         """加载所有配置（含slclient.json的login_mode）"""
-        if PATH_SLCLIENT_JSON.exists():
-            try:
+
+        # 定义默认环境为 overseas
+        default_env_key = "overseas"
+
+        try:
+            # 初始化变量
+            login_mode_val = "account"
+            map_source_val = "google"
+            current_env_key = default_env_key
+
+            # 只有当文件存在时才尝试读取
+            if PATH_SLCLIENT_JSON.exists():
                 with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
                     slclient_data = json.load(f)
 
-                # 读取profile下的login_mode
-                login_mode_val = slclient_data.get("profile", {}).get("login_mode", "account")
+                current_env_key = slclient_data.get("profile", {}).get("env_key", default_env_key)
 
-                # 读取profile下的map_source (假设它存储的是存储键，例如 "baidu_domestic")
-                map_source_val = slclient_data.get("profile", {}).get("map_source", "baidu_domestic")
+                login_mode_val = slclient_data.get("profile", {}).get("login_mode", login_mode_val)
+                map_source_val = slclient_data.get("profile", {}).get("map_source", map_source_val)
 
-                # 从存储的键获取当前语言下的UI显示名称
-                # 从 LOGIN_TYPE_MAPPING 中查找
-                ui_val = LOGIN_TYPE_MAPPING.get(login_mode_val, {}).get(i18n.current_lang, "账号登录")
 
-                # 从存储的键获取当前语言下的UI显示名称
-                ui_map_val = MAP_CONFIG_TEMPLATES.get(map_source_val, {}).get("display_name", {}).get(i18n.current_lang,
-                                                                                                      "百度 [国内]")
+            ui_env_val = ENV_DISPLAY_NAMES.get(current_env_key, {}).get(i18n.current_lang, "海外环境")
 
-                # 设置到下拉框
-                self.opt_login_type.set(ui_val)
-                self._update_preview("login_type", ui_val)
+            ui_login_val = LOGIN_TYPE_MAPPING.get(login_mode_val, {}).get(i18n.current_lang, "账号登录")
 
-                # 设置到下拉框
-                if hasattr(self, 'opt_map_source'):
-                    self.opt_map_source.set(ui_map_val)
-                    self._update_preview("map_source", ui_map_val)
+            ui_map_val = MAP_CONFIG_TEMPLATES.get(map_source_val, {}).get("display_name", {}).get(i18n.current_lang,
+                                                                                                  "谷歌")
 
-            except Exception as e:
-                self.append_log(f"[Warning] Failed to read login_mode：{e}\n")  # TODO 打包时获取配置写入
+
+            if hasattr(self, 'opt_env'):
+                self.opt_env.set(ui_env_val)
+                self._update_preview("env", ui_env_val)
+
+            self.opt_login_type.set(ui_login_val)
+            self._update_preview("login_type", ui_login_val)
+
+            if hasattr(self, 'opt_map_source'):
+                self.opt_map_source.set(ui_map_val)
+                self._update_preview("map_source", ui_map_val)
+
+        except Exception as e:
+            self.append_log(f"[Warning] Failed to load configs, using default: {e}\n")
+            try:
+                default_display = ENV_DISPLAY_NAMES["overseas"].get(i18n.current_lang, "海外环境")
+                if hasattr(self, 'opt_env'):
+                    self.opt_env.set(default_display)
+            except:
+                pass
 
     def apply_selected_config_to_slclient(self) -> None:
         """打包时调用：收集所有四个模块的数据并写入 JSON"""
@@ -3108,35 +3121,39 @@ class App(ctk.CTk):
         self.append_log(f"[Result] Command execution completed,  code：{returncode}\n")
         return returncode
 
-    def decompile_apk(self, output_dir: str = "app_out") -> bool:
+    def _do_decompile_logic(self, output_dir: str = "app_out") -> bool:
+        """
+        【核心逻辑】实际执行反编译的代码。
+        此函数可以被主线程调用，也可以被子线程调用。
+        返回 True 表示成功，False 表示失败。
+        """
         self.custom_apk_path = None
 
         apk_type = self.apk_type_seg.get()
         self.current_apk_type = apk_type
 
+        # 1. 确定 APK 路径
         if apk_type in ["大屏", "Large APK"]:
             apk_path = "LargeApp.apk"
         elif apk_type in ["小屏", "Small APK"]:
             apk_path = "SmallApp.apk"
         elif apk_type in ["自定义apk", "Custom apk"]:
             if not self.custom_apk_path:
-                choice = messagebox.askyesno("Error, please select an APK first")
-                if choice:
-                    self.upload_apk()
-                else:
-                    return False
+                self.after(0, lambda: messagebox.showerror("错误", "请先选择APK"))
+                return False
             apk_path = self.custom_apk_path
         else:
             self.append_log("[Error] Unknown APK type, please check your selection\n")
             return False
 
-        # 清理旧目录
+        # 2. 清理旧目录
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir, ignore_errors=True)
             self.append_log(f"[Info] Clean up old catalog：{output_dir}\n")
 
         self.append_log("Extracting...\n")
 
+        # 3. 执行命令
         command = [
             "java", "-jar", str(APKTOOL_JAR),
             "d", apk_path, "-s", "-o", output_dir
@@ -3144,6 +3161,35 @@ class App(ctk.CTk):
 
         exit_code = self.run_with_live_output(command)
         return exit_code == 0
+
+    def decompile_apk(self, output_dir: str = "app_out") -> None:
+        """
+        【多线程入口】启动反编译任务，不阻塞 UI。
+        """
+        if hasattr(self, '_is_decompiling') and self._is_decompiling:
+            self.append_log("[Info] 反编译正在进行中...\n")
+            return
+
+        self._is_decompiling = True
+
+        def task():
+            try:
+                # 调用核心逻辑
+                success = self._do_decompile_logic(output_dir)
+
+                if success:
+                    # 刷新一下配置
+                    self.after(500, self.load_all_configs)
+                else:
+                    return
+
+            except Exception as e:
+                self.append_log(f"\n[ERROR]: {str(e)}\n")
+            finally:
+                self._is_decompiling = False
+
+        # 启动线程
+        threading.Thread(target=task, daemon=True).start()
 
     def upload_apk(self):
         file_path = filedialog.askopenfilename(
@@ -3177,7 +3223,7 @@ class App(ctk.CTk):
             apk_path = self.custom_apk_path
 
         # 禁用按钮防止重复点击
-        self.build_apk_btn.configure(state="disabled", text="打包中...")
+        # self.msg_pack_apk.configure(state="disabled", text=_("msg_pack_apk"))
 
         # self.status_label.configure(text="状态：正在打包...", text_color="#d35400")
 
@@ -3266,6 +3312,8 @@ class App(ctk.CTk):
                 # self.status_label.configure(text="状态：打包成功", text_color="green")
                 # 删除app_out文件夹
                 shutil.rmtree(output_dir, ignore_errors=True)
+                # 初始化界面
+                self.load_all_configs()
                 messagebox.showinfo("成功", f"APK 打包成功！\n保存在：{output_apk_path}")
 
             except Exception as e:

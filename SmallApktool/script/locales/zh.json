@@ -121,7 +121,7 @@
   "msg_unpack_success": "[Step 2] 反编译成功\n",
   "msg_unpack_fail": "Decompilation failed",
   "msg_version_skip": "[Warn] 未找到 apktool.yml，跳过版本更新\n",
-  "msg_pack_apk": "\n[Step 3] 打包 APK...\n",
+  "msg_pack_apk": "打包 APK...",
   "msg_pack_fail": "APK packaging failed",
   "msg_align_apk": "[Step 4] 对齐 APK...\n",
   "msg_align_fail": "APK alignment failed",

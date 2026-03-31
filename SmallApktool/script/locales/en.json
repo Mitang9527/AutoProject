@@ -120,7 +120,7 @@
   "msg_unpack_success": "[Step 2] Decompilation successful\n",
   "msg_unpack_fail": "Decompilation failed",
   "msg_version_skip": "[Warn] apktool.yml not found, skipping version update\n",
-  "msg_pack_apk": "\n[Step 3] Packaging APK...\n",
+  "msg_pack_apk": "Packaging APK...",
   "msg_pack_fail": "APK packaging failed",
   "msg_align_apk": "[Step 4] Aligning APK...\n",
   "msg_align_fail": "APK alignment failed",
