@@ -43,41 +43,53 @@ LOGIN_TYPE_MAPPING = {
 }
 
 MAP_CONFIG_TEMPLATES = {
-    "百度 [国内]": {
-        "enabled": True,
-        "report": True,
-        "map_type": "baidu",
-        "provider": "baidu",
-        "coor": "bd09ll",
-        "update_period_sec": 40,
-        "report_period_sec": 40
+    "baidu_domestic": {
+        "display_name": {"zh": "百度 [国内]", "en": "Baidu [Domestic]"},
+        "config": {
+            "enabled": True,
+            "report": True,
+            "map_type": "baidu",
+            "provider": "baidu",
+            "coor": "bd09ll",
+            "update_period_sec": 40,
+            "report_period_sec": 40
+        }
     },
-    "百度 [海外]": {
-        "enabled": True,
-        "report": True,
-        "map_type": "baidu",
-        "provider": "baidu",
-        "coor": "wgs84",
-        "update_period_sec": 40,
-        "report_period_sec": 40
+    "baidu_oversea": {
+        "display_name": {"zh": "百度 [海外]", "en": "Baidu [Oversea]"},
+        "config": {
+            "enabled": True,
+            "report": True,
+            "map_type": "baidu",
+            "provider": "baidu",
+            "coor": "wgs84",
+            "update_period_sec": 40,
+            "report_period_sec": 40
+        }
     },
-    "谷歌": {
-        "enabled": True,
-        "report": True,
-        "map_type": "google",
-        "provider": "google",
-        "coor": "wgs84",
-        "update_period_sec": 40,
-        "report_period_sec": 40
+    "google": {
+        "display_name": {"zh": "谷歌", "en": "Google"},
+        "config": {
+            "enabled": True,
+            "report": True,
+            "map_type": "google",
+            "provider": "google",
+            "coor": "wgs84",
+            "update_period_sec": 40,
+            "report_period_sec": 40
+        }
     },
-    "GPS": {
-        "enabled": True,
-        "report": True,
-        "map_type": "none",
-        "provider": "default",
-        "coor": "default",
-        "update_period_sec": 40,
-        "report_period_sec": 40
+    "gps": {
+        "display_name": {"zh": "GPS", "en": "GPS"},
+        "config": {
+            "enabled": True,
+            "report": True,
+            "map_type": "none",
+            "provider": "default",
+            "coor": "default",
+            "update_period_sec": 40,
+            "report_period_sec": 40
+        }
     }
 }
 
@@ -550,33 +562,44 @@ def update_slclient_login_type(login_type_ui: str) -> bool:
         traceback.print_exc()
         return False
 
-def update_slclient_map_type(map_type_ui: str) -> bool:
+
+def update_slclient_map_type(map_source_key: str) -> bool:
+    """
+    更新slclient.json中的地图源配置
+    :param map_source_key: 地图源的存储键（如 "baidu_domestic"）
+    :return: 是否修改成功
+    """
     if not PATH_SLCLIENT_JSON.exists():
-        messagebox.showerror("错误", f"slclient.json 文件不存在：\n{PATH_SLCLIENT_JSON}")
+        print(f"[Error] File not found: {PATH_SLCLIENT_JSON}")
         return False
-
-    if map_type_ui not in MAP_CONFIG_TEMPLATES:
-        messagebox.showerror("错误", f"未知的地图类型：{map_type_ui}")
-        return False
-
-    lbs_config = MAP_CONFIG_TEMPLATES[map_type_ui]
 
     try:
         with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
-            slclient_data = json.load(f)
+            data = json.load(f)
 
-        slclient_data["lbs"] = lbs_config
+        # 获取对应的完整配置
+        template_config = MAP_CONFIG_TEMPLATES.get(map_source_key)
+        if not template_config:
+            print(f"[Error] No template found for key: {map_source_key}")
+            return False
+
+        # 将整个 config 部分写入 profile
+        if "lbs" not in data:
+            data["lbs"] = {}
+        data["lbs"].update(template_config["config"])
+
+        # # ⭐⭐⭐ 关键：将存储键本身也写入配置文件，作为唯一标识
+        # data["profile"]["map_source"] = map_source_key
 
         with open(PATH_SLCLIENT_JSON, "w", encoding="utf-8") as f:
-            json.dump(slclient_data, f, indent=2, ensure_ascii=False)
+            json.dump(data, f, ensure_ascii=False, indent=4)
 
+        # print(f"[OK] slclient.json updated successfully with map_source: {map_source_key}")
         return True
 
     except Exception as e:
-        messagebox.showerror("修改失败", f"更新 slclient.json 出错：\n{str(e)}")
-        traceback.print_exc()
+        print(f"[Error] Failed to update slclient.json: {e}")
         return False
-
 
 # ==================== 前端 UI 类 ====================
 
@@ -1017,6 +1040,8 @@ class App(ctk.CTk):
         """
         专门用于在语言切换时更新 CTkOptionMenu 的选项和选中值
         """
+        self._is_updating_language = True
+
         # --- 更新登录方式下拉框 ---
         if hasattr(self, 'opt_login_type'):
             # a. 重新生成当前语言下的选项列表
@@ -1038,7 +1063,7 @@ class App(ctk.CTk):
             # c. 根据存储键，获取新语言下的显示名称，并设置
             new_display_name = LOGIN_TYPE_MAPPING.get(current_login_mode_key, {}).get(i18n.current_lang, "账号登录")
             self.opt_login_type.set(new_display_name)
-            # 可能还需要更新预览，取决于你的逻辑
+            # 可能还需要更新预览
             self._update_preview("login_type", new_display_name)
 
         # --- 如果还有其他 OptionMenu，也需要在这里更新 ---
@@ -1048,6 +1073,30 @@ class App(ctk.CTk):
         #     self.some_other_option_menu.configure(values=new_values)
         #     # 然后根据该控件的逻辑状态恢复选中项
         #     # self.some_other_option_menu.set(...)
+
+        if hasattr(self, 'opt_map_source'):
+            # a. 重新生成当前语言下的选项列表
+            map_source_display_names = [v["display_name"][i18n.current_lang] for v in MAP_CONFIG_TEMPLATES.values()]
+            self.opt_map_source.configure(values=map_source_display_names)
+
+            # b. 根据存储的原始键，恢复当前选中的显示名称
+            current_map_source_key = "baidu_domestic"  # 默认值
+            if PATH_SLCLIENT_JSON.exists():
+                try:
+                    with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
+                        slclient_data = json.load(f)
+                    current_map_source_key = slclient_data.get("profile", {}).get("map_source", "baidu_domestic")
+                except Exception as e:
+                    print(f"[Warning] Failed to read map_source for update: {e}")
+
+            # c. 根据存储键，获取新语言下的显示名称，并设置
+            new_display_name = MAP_CONFIG_TEMPLATES.get(current_map_source_key, {}).get("display_name", {}).get(
+                i18n.current_lang, "百度 [国内]")
+            self.opt_map_source.set(new_display_name)  # 此时 on_map_source_change 不会执行任何操作
+
+        # ⭐⭐⭐【关键修改】重置标志位
+        self._is_updating_language = False
+
     def initial_env_check(self) -> None:
 
         if not self.env_checker.check_all(show_dialog=True):
@@ -2185,14 +2234,44 @@ class App(ctk.CTk):
             row=0, column=0, padx=5, pady=10, sticky="w"
         )
 
-        self.opt_map = ctk.CTkOptionMenu(
-            parent,
-            values=list(MAP_CONFIG_TEMPLATES.keys()),
-            command=lambda v: self._on_map_type_changed(v)
+        # 动态生成当前语言下的显示名称列表
+        map_source_display_names = [v["display_name"][i18n.current_lang] for v in MAP_CONFIG_TEMPLATES.values()]
+        self.opt_map_source = ctk.CTkOptionMenu(
+            parent, values=map_source_display_names, command=self.on_map_source_change
         )
-        self.opt_map.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
+        self.opt_map_source.grid(
+            row=0, column=1, padx=5, pady=10, sticky="w"
+        )
 
-        self.opt_map.set("谷歌")
+    def on_map_source_change(self, selected_display_name: str) -> None:
+            """
+            地图源变更回调
+            :param selected_display_name: UI下拉框选中的显示名称 (如 "百度 [国内]")
+            """
+            # 从UI显示名称反向查找存储键
+            selected_key = None
+            for key, value in MAP_CONFIG_TEMPLATES.items():
+                if value["display_name"]["zh"] == selected_display_name or value["display_name"][
+                    "en"] == selected_display_name:
+                    selected_key = key
+                    break
+
+            # 获取实际的配置
+            config = None
+            if selected_key:
+                config = MAP_CONFIG_TEMPLATES[selected_key]["config"]
+
+            # 假设你有一个函数来更新地图源配置
+            if selected_key:
+                if update_slclient_map_type(selected_key):  # 传入存储键
+                    self._update_preview("map_source", selected_display_name)
+                    self.append_log(f"[OK] Map source has been updated to：{selected_display_name}\n")
+                else:
+                    current = self.opt_map_source.get()
+                    messagebox.showwarning("警告", "配置更新失败，已恢复原设置")
+            else:
+                print(f"[Warning] Invalid map source selection: {selected_display_name}")
+                messagebox.showwarning("警告", "无效的地图源选项")
 
         # # 2. 卫星图层
         # ctk.CTkLabel(parent, text="默认卫星图:", anchor="w").grid(row=1, column=0, padx=5, pady=10, sticky="w")
@@ -2724,13 +2803,25 @@ class App(ctk.CTk):
                 # 读取profile下的login_mode
                 login_mode_val = slclient_data.get("profile", {}).get("login_mode", "account")
 
+                # 读取profile下的map_source (假设它存储的是存储键，例如 "baidu_domestic")
+                map_source_val = slclient_data.get("profile", {}).get("map_source", "baidu_domestic")
+
                 # 从存储的键获取当前语言下的UI显示名称
                 # 从 LOGIN_TYPE_MAPPING 中查找
                 ui_val = LOGIN_TYPE_MAPPING.get(login_mode_val, {}).get(i18n.current_lang, "账号登录")
 
+                # 从存储的键获取当前语言下的UI显示名称
+                ui_map_val = MAP_CONFIG_TEMPLATES.get(map_source_val, {}).get("display_name", {}).get(i18n.current_lang,
+                                                                                                  "百度 [国内]")
+
                 # 设置到下拉框
                 self.opt_login_type.set(ui_val)
                 self._update_preview("login_type", ui_val)
+
+                # 设置到下拉框
+                if hasattr(self, 'opt_map_source'):
+                    self.opt_map_source.set(ui_map_val)
+                    self._update_preview("map_source", ui_map_val)
 
             except Exception as e:
                 self.append_log(f"[Warning] Failed to read login_mode：{e}\n")    # TODO 打包时获取配置写入
