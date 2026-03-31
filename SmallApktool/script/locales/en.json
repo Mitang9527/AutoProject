@@ -213,5 +213,5 @@
   "opt_stream_recog": "recognition",
   "env_overseas": "Overseas Env",
   "env_domestic": "Domestic Env 2.0",
-  "env_custom": "Independent Deploy"
+  "env_custom": "Independent Deploy:"
 }

@@ -170,7 +170,7 @@
   "msg_card_other": "⚙️其他设置 ",
   "msg_card_input": "💡 按键 配置",
   "msg_card_led": "🎨  其他配置",
-  "lbl_server_node": "服务器节点:",
+  "lbl_server_node": "预设节点:",
   "lbl_enable_manual": "启用手动编辑",
   "lbl_dns_ip": "DNS IP:",
   "lbl_context": "Context:",
@@ -213,5 +213,5 @@
   "opt_stream_recog": "recognition",
   "env_overseas": "海外环境",
   "env_domestic": "国内环境2.0",
-  "env_custom": "独立部署"
+  "env_custom": "独立部署:"
 }

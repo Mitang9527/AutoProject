@@ -43,8 +43,7 @@ ENV_CONF = {
 # 2. 显示名称映射
 ENV_DISPLAY_NAMES = {
     "overseas": {"zh": "海外环境", "en": "Overseas Env"},
-    "domestic_v2": {"zh": "国内环境2.0", "en": "Domestic 2.0"},
-    "env_custom": {"zh": "独立部署", "en": "Custom Deploy"}
+    "domestic_v2": {"zh": "国内环境2.0", "en": "Domestic 2.0"}
 }
 
 LOGIN_TYPE_MAPPING = {
@@ -1040,6 +1039,7 @@ class App(ctk.CTk):
         self.clear_log_btn.configure(text=_("clear_log"))
         self.apk_select_label.configure(text=_("lbl_apk_type"))
         self.build_apk_btn.configure(text=_("btn_build"))
+        self.env_custom.configure(text=_("env_custom"))
         self.decompile_apk_btn.configure(text=_("btn_decompile"))
         self.scroll_frame.configure(label_text=i18n.get("msg_config_list_title"))
 
@@ -1062,32 +1062,6 @@ class App(ctk.CTk):
                 saved_id = data.get("profile", {}).get("env", "overseas")
             except:
                 pass
-
-        # 2. 生成新的选项列表
-        new_options = []
-        for key in ENV_CONF.keys():
-            name = ENV_DISPLAY_NAMES.get(key, {}).get(current_lang, key)
-            new_options.append(name)
-
-        # 添加独立部署
-        custom_name = "独立部署" if current_lang == 'zh' else "Custom Deploy"
-        new_options.append(custom_name)
-
-        # 3. 更新下拉框的选项池
-        self.opt_env.configure(values=new_options)
-
-        # 4. [关键] 根据 ID 强制设置下拉框的值
-        target_display_name = ""
-        if saved_id == self.CUSTOM_OPTION_NAME:
-            target_display_name = custom_name
-        else:
-            target_display_name = ENV_DISPLAY_NAMES.get(saved_id, {}).get(current_lang, saved_id)
-
-        self.opt_env.set(target_display_name)
-
-        # 5. [关键] 强制触发数据填充和状态更新
-        # 传入刚才确定的显示名
-        self._on_env_selected(target_display_name)
 
         self.lbl_title.configure(text=_("msg_card_apk_properties"))
         self.lbl_input_title.configure(text=_("msg_tab_input"))
@@ -1112,30 +1086,6 @@ class App(ctk.CTk):
         self.play_channel.configure(text=_("play_channel"))
         self.rec_channel.configure(text=_("rec_channel"))
 
-    def _restore_env_selection(self):
-        """根据 JSON 中的 ID 恢复下拉框显示"""
-        if not PATH_SLCLIENT_JSON.exists(): return
-
-        try:
-            with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            # 1. 读取 ID (例如 "overseas")
-            saved_id = data.get("profile", {}).get("env", "domestic_v2")
-
-            # 2. 根据当前语言，获取对应的显示名 (例如 "Overseas Env")
-            current_lang = i18n.current_lang
-            display_name = ENV_DISPLAY_NAMES.get(saved_id, {}).get(current_lang, saved_id)
-
-            # 3. [关键] 强制设置下拉框的值
-            # 这会覆盖掉旧的中文值，让它和新的英文列表匹配
-            self.opt_env.set(display_name)
-
-            # 4. 触发逻辑，填充 IP
-            self._on_env_selected(display_name)
-
-        except Exception as e:
-            print(f"Restore selection error: {e}")
 
     def update_option_menus_on_language_change(self):
         """
@@ -1897,11 +1847,6 @@ class App(ctk.CTk):
         content_func(content_frame)
         return card
 
-    def get_env_names(self):
-        return {
-            "overseas": _("env_overseas"),
-            "domestic": _("env_domestic")
-        }
 
     def _build_env_content(self, parent):
         """构建环境配置内容"""
@@ -1928,6 +1873,7 @@ class App(ctk.CTk):
             row=0, column=0, padx=5, pady=10, sticky="w"
         )
 
+        # TODO 需要重写将预设环境写入slclient
         # 下拉菜单
         self.opt_env = ctk.CTkOptionMenu(
             parent,
@@ -1946,21 +1892,26 @@ class App(ctk.CTk):
         )
         self.switch_custom_env.grid_remove()
 
+        self.env_custom = ctk.CTkLabel(parent, text=_("env_custom"), anchor="w")
+        self.env_custom.grid(
+            row=3, column=0, padx=5, pady=(5, 2), sticky="w"
+        )
+
         # DNS 输入框
         ctk.CTkLabel(parent, text="DNS IP:", anchor="w").grid(
-            row=2, column=0, padx=5, pady=(5, 2), sticky="w"
+            row=4, column=0, padx=5, pady=(5, 2), sticky="w"
         )
 
         self.entry_custom_ip = ctk.CTkEntry(parent, state="disabled")
-        self.entry_custom_ip.grid(row=2, column=1, padx=5, pady=(5, 2), sticky="ew")
+        self.entry_custom_ip.grid(row=4, column=1, padx=5, pady=(5, 2), sticky="ew")
 
         # Context 输入框
         ctk.CTkLabel(parent, text="Context:", anchor="w").grid(
-            row=3, column=0, padx=5, pady=(2, 10), sticky="w"
+            row=5, column=0, padx=5, pady=(2, 10), sticky="w"
         )
 
         self.entry_custom_context = ctk.CTkEntry(parent, state="disabled")
-        self.entry_custom_context.grid(row=3, column=1, padx=5, pady=(2, 10), sticky="ew")
+        self.entry_custom_context.grid(row=5, column=1, padx=5, pady=(2, 10), sticky="ew")
 
         # 回显默认文字
         # self.entry_custom_context.configure(state="normal")
@@ -1971,7 +1922,7 @@ class App(ctk.CTk):
         # 登录方式下拉框
         self.lbl_login_type = ctk.CTkLabel(parent, text=_("lbl_login_type"), anchor="w")
         self.lbl_login_type.grid(
-            row=4, column=0, padx=5, pady=10, sticky="w"
+            row=2, column=0, padx=5, pady=10, sticky="w"
         )
 
         login_type_display_names = [LOGIN_TYPE_MAPPING[key][i18n.current_lang] for key in LOGIN_TYPE_MAPPING.keys()]
@@ -1981,7 +1932,7 @@ class App(ctk.CTk):
             command=self.on_login_type_change
         )
         self.opt_login_type.set("账号登录")
-        self.opt_login_type.grid(row=4, column=1, padx=5, pady=10, sticky="ew")
+        self.opt_login_type.grid(row=2, column=1, padx=5, pady=10, sticky="ew")
         # 默认选中「账号」
 
         # 保存按钮（默认隐藏）
@@ -2800,10 +2751,9 @@ class App(ctk.CTk):
             return
 
     def _on_env_selected(self, selected_name):
-        """当下拉菜单选择改变时触发 - 核心路由"""
-        is_lang_switch = getattr(self, "_is_updating_language", False)
+        """当下拉菜单选择改变时触发 - 直接写入 Profile"""
 
-        # --- 1. 反查 ID (保持不变) ---
+        # 1. 反查 Key (根据显示名找到 'overseas' 或 'domestic_v2')
         selected_key = None
         current_lang = i18n.current_lang
 
@@ -2812,73 +2762,23 @@ class App(ctk.CTk):
                 selected_key = key
                 break
 
-        # 兜底：如果是独立部署，确保能匹配到
+        # 如果没找到对应的 Key，直接返回
         if not selected_key:
-            # 尝试直接匹配 ID (防止翻译表漏掉 CUSTOM_OPTION_NAME)
-            if selected_name == self.CUSTOM_OPTION_NAME:
-                selected_key = self.CUSTOM_OPTION_NAME
-
-        if not selected_key or not hasattr(self, 'switch_custom_env'):
             return
 
-        # --- 2. 逻辑分支 ---
+        # 2. 获取预设配置数据
+        preset = ENV_CONF.get(selected_key, {})
+        dns_ip = preset.get("ip_address", "")
+        context = preset.get("context", "")
 
-        # 情况 A: 用户选择了预设节点 (海外/国内)
-        if selected_key != self.CUSTOM_OPTION_NAME:
-            if is_lang_switch:
-                return
+        # 示例：如果你有配置对象
+        # config = ConfigManager.get_profile()
+        # config.set("ip_address", dns_ip)
+        # config.set("context", context)
+        # config.save()
 
-            # 1. 关闭编辑模式
-            if self.switch_custom_env.get():
-                self.switch_custom_env.deselect()
-                self._toggle_custom_env_inputs()
-
-            # 2. 禁用开关
-            self.switch_custom_env.configure(state="disabled")
-
-            # 3. 获取预设配置
-            preset = ENV_CONF.get(selected_key, {})
-            dns_ip = preset.get("ip_address", "")
-            context = preset.get("context", "")
-
-            # 4. 填充数据 (先启用再写入)
-            self.entry_custom_ip.configure(state="normal")
-            self.entry_custom_context.configure(state="normal")
-
-            self.entry_custom_ip.delete(0, "end")
-            self.entry_custom_ip.insert(0, dns_ip)
-            self.entry_custom_context.delete(0, "end")
-            self.entry_custom_context.insert(0, context)
-
-            # 5. 写完再禁用 (锁定输入框)
-            self.entry_custom_ip.configure(state="disabled")
-            self.entry_custom_context.configure(state="disabled")
-
-            # [关键] 隐藏保存按钮
-            self.btn_save_custom.grid_remove()
-
-            self._show_preset_info(selected_key)
-
-        # 情况 B: 用户选择了 "独立部署 (Profile)"
-        elif selected_key == self.CUSTOM_OPTION_NAME:
-            # 1. 启用开关
-            self.switch_custom_env.configure(state="normal", text="启用手动编辑")
-
-            # 2. 自动开启编辑模式
-            if not self.switch_custom_env.get():
-                self.switch_custom_env.select()
-                self._toggle_custom_env_inputs()
-
-            # --- [核心修复] 强制启用输入框 ---
-            # 无论之前的状态是什么，只要是独立部署，必须确保能编辑
-            self.entry_custom_ip.configure(state="normal")
-            self.entry_custom_context.configure(state="normal")
-
-            # --- [核心修复] 确保保存按钮显示 ---
-            self.btn_save_custom.grid()
-
-            # 3. 刷新数据
-            self._refresh_custom_inputs()
+        # 或者直接调用你的保存函数
+        # self._save_profile_changes(dns_ip, context)
 
     def _get_env_key_from_display(self, display_name):
         for key, value in self.ENV_OPTIONS.items():
