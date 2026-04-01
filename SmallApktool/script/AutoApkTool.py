@@ -38,7 +38,7 @@ ENV_CONF = {
     "domestic_v2": {
         "ip_address": "cndns.shanliptt.com:10200",
         "context": "show",
-        "upgrade_url":"123123"
+        "upgrade_url":"upgrade.shanliptt.com"
     },
     }
 
@@ -2074,12 +2074,13 @@ class App(ctk.CTk):
 
         # 2. 音效开关
         ctk.CTkLabel(parent, text="Tone:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
-        self.switch_sfx = ctk.CTkSwitch(parent, text=" ",
+        self.switch_tone_sfx = ctk.CTkSwitch(parent, text=" ",
                                         command=lambda: (
-                                            self._sync_tone_enabled_to_json(bool(self.switch_sfx.get()))
+                                            self._sync_tone_enabled_to_json(bool(self.switch_tone_sfx.get()))
                                         ))
-        self.switch_sfx.grid(row=1, column=1, padx=5, pady=6, sticky="w")
-        self.switch_sfx.select()  # 默认开启
+        self.switch_tone_sfx.grid(row=1, column=1, padx=5, pady=6, sticky="w")
+        # TODO 改为默认从load_all获取
+        self.switch_tone_sfx.select()  # 默认开启
 
         # 3. 语音编码
         self.codec = ctk.CTkLabel(parent, text=_("codec"), anchor="w")
@@ -2259,9 +2260,6 @@ class App(ctk.CTk):
         """
         try:
             data = self._load_slclient_json()
-
-            if "sound" not in data:
-                data["sound"] = {}
 
             json_value = bool(is_enabled)
 
@@ -2911,10 +2909,10 @@ class App(ctk.CTk):
                 pass
 
             # 2. 写入声音配置
-            if hasattr(self, 'slider_bgm'):
-                if "audio" not in data: data["audio"] = {}
-                data["audio"]["bgm_volume"] = int(self.slider_bgm.get())
-                data["audio"]["sfx_enabled"] = bool(self.switch_sfx.get())
+            # if hasattr(self, 'slider_bgm'):
+            #     if "audio" not in data: data["audio"] = {}
+            #     data["audio"]["bgm_volume"] = int(self.slider_bgm.get())
+            #     data["audio"]["sfx_enabled"] = bool(self.switch_sfx.get())
 
             # 3. 写入地图配置
             if hasattr(self, 'opt_map'):
