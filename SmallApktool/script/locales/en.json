@@ -9,6 +9,7 @@
   "clear_log": "Clear Log",
   "lbl_apk_type": "APK Type",
   "type_large_screen": "Large APK",
+  "type_middle_screen": "Middle APK",
   "type_small_screen": "Small APK",
   "type_custom_apk": "Custom apk",
   "msg_card_apk_properties": "APK Properties Config",

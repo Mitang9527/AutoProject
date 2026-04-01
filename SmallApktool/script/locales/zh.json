@@ -9,6 +9,7 @@
   "clear_log": "清空日志",
   "lbl_apk_type": "APK 类型",
   "type_large_screen": "大屏",
+  "type_middle_screen": "中屏",
   "type_small_screen": "小屏",
   "btn_build": "打包 APK",
   "btn_decompile": "解压apk",

@@ -131,6 +131,7 @@ APKSIGNER_BAT = PROJECT_PATH / "win" / "apksigner.bat"
 
 # 业务常量
 LAUNCHER_MODULE_PATH = ["ui", "launcherModule"]
+
 DEFAULT_CUSTOM_LIST = [
     "join_next_group",
     "switch_group_name_tts",
@@ -768,6 +769,7 @@ class App(ctk.CTk):
             self.sidebar_frame,
             values=[
                 _("type_large_screen"),
+                _("type_middle_screen"),
                 _("type_small_screen"),
                 _("type_custom_apk")
             ],
@@ -937,32 +939,6 @@ class App(ctk.CTk):
             display_text = self.tab_names.get(tab_key, "")
             self.selected_tab.set(display_text)
 
-    def _sync_ui_to_json_state(self):
-        """强制根据 JSON 中的 ID 同步 UI 显示和数据（用于语言切换时）"""
-        if not PATH_SLCLIENT_JSON.exists():
-            return
-
-        try:
-            with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            # 1. 读取 JSON 里的 ID (例如 "overseas")
-            saved_id = data.get("profile", {}).get("env", "overseas")
-
-            # 2. 获取当前语言下的显示名 (例如 "海外环境")
-            current_lang = i18n.current_lang
-            display_name = ENV_DISPLAY_NAMES.get(saved_id, {}).get(current_lang, saved_id)
-
-            # 3. 设置下拉框的值
-            self.opt_env.set(display_name)
-
-            # 4. [关键] 强制触发数据填充
-            # 这会去查 ENV_CONF，拿到对应的 IP 和 DNS，填进输入框
-            self._on_env_selected(display_name)
-
-        except Exception as e:
-            print(f"Sync UI state error: {e}")
-
     def refresh_ui_texts(self):
         """遍历并更新主要组件的文本 (已更新：支持 SegmentedButton 实时刷新)"""
         # 1. ⭐【关键】重新加载语言包，确保 _(...) 生效
@@ -1000,6 +976,7 @@ class App(ctk.CTk):
         # 2. 重新构建 values 列表 (再次调用 _() 获取最新语言)
         new_values = [
             _("type_large_screen"),
+            _("type_middle_screen"),
             _("type_small_screen"),
             _("type_custom_apk")
         ]
@@ -1015,6 +992,8 @@ class App(ctk.CTk):
 
         if self.current_apk_type == "大屏":
             self.apk_type_seg.set(_("type_large_screen"))
+        elif self.current_apk_type == "中屏":
+            self.apk_type_seg.set(_("type_middle_screen"))
         elif self.current_apk_type == "小屏":
             self.apk_type_seg.set(_("type_small_screen"))
         else:
@@ -1102,7 +1081,6 @@ class App(ctk.CTk):
         self.audio.configure(text=_("audio"))
         self.play_channel.configure(text=_("play_channel"))
         self.rec_channel.configure(text=_("rec_channel"))
-
 
     def update_option_menus_on_language_change(self):
         """
@@ -1289,6 +1267,52 @@ class App(ctk.CTk):
     def clear_log(self) -> None:
         if self.log_textbox.winfo_exists():
             self.log_textbox.delete("0.0", "end")
+
+    def ask_model_dialog(self):
+        # 1. 创建弹窗
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("型号")
+        dialog.geometry("300x150")
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # 2. 布局
+        ctk.CTkLabel(dialog, text="请输入设备型号:", font=("Microsoft YaHei", 14)).pack(pady=15)
+
+        entry = ctk.CTkEntry(dialog, width=200, placeholder_text="例如: T100-Pro")
+        entry.pack(pady=10)
+        entry.focus_set()
+
+        result = {"value": None}  # 用于接收结果
+
+        # 3. 定义提交逻辑
+        def submit():
+            val = entry.get().strip()
+            if val:
+                result["value"] = val
+                dialog.destroy()
+            else:
+                # 非空校验
+                entry.configure(border_color="red")
+
+        def cancel():
+            result["value"] = None
+            dialog.destroy()
+
+        # 4. 按钮区域
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(pady=10)
+
+        ctk.CTkButton(btn_frame, text="取消", width=80, command=cancel).pack(side="left", padx=10)
+        ctk.CTkButton(btn_frame, text="确认", width=80, command=submit).pack(side="right", padx=10)
+
+        # 5. 绑定回车键事件
+        dialog.bind('<Return>', lambda event: submit())
+
+        # 6. 等待窗口关闭 (阻塞在这里)
+        self.wait_window(dialog)
+
+        return result["value"]
 
     def refresh_config_view(self) -> None:
         if not self.winfo_exists():
@@ -2593,101 +2617,6 @@ class App(ctk.CTk):
                 text_color="gray"
             )
 
-    def _save_custom_env_to_file(self):
-        """将当前输入的独立部署配置保存到 slclient.json"""
-
-        ip = self.entry_custom_ip.get().strip()
-        context = self.entry_custom_context.get().strip()
-
-        # 1. 基础验证
-        if not ip or not context:
-            self.lbl_env_info.configure(
-                text="❌ 错误：IP 和 Context 不能为空！",
-                text_color="#c0392b",
-                font=ctk.CTkFont(size=12, weight="bold")
-            )
-            return
-
-        # 简单的 IP:Port 格式检查 (可选)
-        if ":" not in ip:
-            self.lbl_env_info.configure(
-                text="⚠️ 提示：IP 格式建议为 'IP:端口' (如 192.168.1.1:8080)",
-                text_color="#d35400",
-                font=ctk.CTkFont(size=12)
-            )
-            # 这里不 return，允许用户强行保存，或者你可以根据需求 return
-
-        # 2. 生成唯一的节点名称
-        # 使用 "Custom_" + context 作为 key，避免冲突
-        new_node_name = f"Custom_{context}"
-
-        # 检查是否已存在同名节点
-        if new_node_name in ENV_CONF:
-            confirm = messagebox.askyesno(
-                "节点已存在",
-                f"名为 '{new_node_name}' 的配置已存在。\n是否覆盖现有配置？"
-            )
-            if not confirm:
-                return
-
-        # 3. 读取并更新 slclient.json
-        try:
-            json_path = "slclient.json"  # 确保路径正确，如果是相对路径则相对于脚本运行目录
-
-            # 如果文件不存在，创建一个基础结构 (根据你的实际 JSON 结构调整)
-            data = {}
-            if os.path.exists(json_path):
-                with open(json_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-
-            # 假设 JSON 结构是 { "nodes": { "name": {...} } } 或者直接是 { "name": {...} }
-            # 请根据你实际的 slclient.json 结构调整下面的赋值逻辑
-            # 这里假设结构是直接平铺的：{ "NodeName": { "ip_address": "...", "context": "..." } }
-            # 如果你的结构嵌套在 "environments" 或其他键下，请相应修改，例如：data['environments'][new_node_name] = ...
-
-            data[new_node_name] = {
-                "ip_address": ip,
-                "context": context,
-                "description": "User Custom Environment"  # 可选描述
-            }
-
-            with open(json_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
-
-            # 4. 保存成功后的反馈
-            self.lbl_env_info.configure(
-                text=f"✅ 已保存: {new_node_name}",
-                text_color="#27ae60",
-                font=ctk.CTkFont(size=12, weight="bold")
-            )
-
-            # 5. 动态刷新内存和下拉菜单
-            # 更新全局配置字典 (如果 ENV_CONF 是全局变量)
-            ENV_CONF[new_node_name] = data[new_node_name]
-
-            # 刷新下拉菜单选项
-            current_options = list(self.opt_env.cget("values"))
-            if new_node_name not in current_options:
-                new_options = current_options + [new_node_name]
-                self.opt_env.configure(values=new_options)
-                self.opt_env.set(new_node_name)  # 自动选中新建的
-
-            # 触发选中事件，应用新配置
-            self._on_env_selected(new_node_name)
-
-            # 可选：保存后自动切回“预设模式”并选中刚创建的项，或者保持独立部署模式
-            # 这里选择保持独立部署模式但提示已保存，或者你可以选择自动关闭开关：
-            # self.switch_custom_env.deselect()
-            # self._toggle_custom_env_inputs()
-
-        except Exception as e:
-            self.lbl_env_info.configure(
-                text=f"❌ 保存失败: {str(e)}",
-                text_color="#c0392b",
-                font=ctk.CTkFont(size=12)
-            )
-            print(f"Error saving config: {e}")
-
     def _update_config_from_custom_inputs(self):
         """从手动输入框读取数据并更新内部配置"""
         ip = self.entry_custom_ip.get().strip()
@@ -2970,6 +2899,15 @@ class App(ctk.CTk):
             print(f"❌ 加载 slclient.json 失败: {e}")
 
     # ==================== APK 工具链逻辑 ====================
+    def get_version_info(self,yml_path):
+        """获取 versionCode 和 versionName"""
+
+        value = self.get_field_value_from_yml(PATH_YML, "versionInfo")
+        if value:
+            versionCode = value.get("versionCode")
+            versionName = value.get("versionName")
+
+            return versionCode, versionName
 
     def get_json_field(self, file_path: Path, field_path: List[str]) -> Any:
         try:
@@ -2984,6 +2922,47 @@ class App(ctk.CTk):
             return temp_data
         except Exception:
             return None
+
+    def set_json_field(self, file_path: Path, field_path: List[str], new_value: Any) -> bool:
+        """
+        读取 JSON 文件，根据路径修改指定字段的值，并保存回文件。
+
+        Args:
+            file_path: JSON 文件路径
+            field_path: 字段路径列表，例如 ["ui", "launcherModule"]
+            new_value: 要设置的新值
+
+        Returns:
+            bool: 操作成功返回 True，失败返回 False
+        """
+        try:
+            if not file_path.exists():
+                return False
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            # 2. 定位并修改数据
+            temp_data = data
+            for key in field_path[:-1]:
+                if isinstance(temp_data, dict) and key in temp_data:
+                    temp_data = temp_data[key]
+                else:
+                    return False
+
+            target_key = field_path[-1]
+            if isinstance(temp_data, dict):
+                temp_data[target_key] = new_value
+            else:
+                return False
+
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+
+            return True
+
+        except Exception as e:
+            return False
 
     def safe_remove(self, file_path: str, retries: int = 3) -> bool:
         """安全删除文件，带重试机制"""
@@ -3133,13 +3112,28 @@ class App(ctk.CTk):
         # 1. 确定 APK 路径
         if apk_type in ["大屏", "Large APK"]:
             apk_path = "LargeApp.apk"
+
+        elif apk_type in ["中屏", "Middle APK"]:
+            apk_path = "LargeApp.apk"
+
         elif apk_type in ["小屏", "Small APK"]:
             apk_path = "SmallApp.apk"
         elif apk_type in ["自定义apk", "Custom apk"]:
-            if not self.custom_apk_path:
-                self.after(0, lambda: messagebox.showerror("错误", "请先选择APK"))
+
+            selected_path = None
+            self.after(0, lambda: None)
+
+            apk_path = filedialog.askopenfilename(
+                title="请选择要解压的 APK 文件",
+                filetypes=[("APK 文件", "*.apk")]
+            )
+
+            if not apk_path:
+                self.append_log("[Info] User cancelled APK selection.\n")
                 return False
-            apk_path = self.custom_apk_path
+            self.custom_apk_path = apk_path
+
+            self.append_log(f"[Info] Selected custom APK: {apk_path}\n")
         else:
             self.append_log("[Error] Unknown APK type, please check your selection\n")
             return False
@@ -3158,6 +3152,21 @@ class App(ctk.CTk):
         ]
 
         exit_code = self.run_with_live_output(command)
+
+        if exit_code == 0:
+
+            if apk_type in ["中屏", "Middle APK"]:
+                self.append_log("[Info] Middle screen mode detected. Updating config...\n")
+
+                json_file = PATH_SLCLIENT_JSON
+                field_path = ["ui", "launcherModule"]
+                new_value = "middle"
+
+                if self.set_json_field(json_file, field_path, new_value):
+                    self.append_log(f"[Success] Auto-config: ui.launcherModule set to '{new_value}'\n")
+                else:
+                    self.append_log("[Warning] Config update failed after unzip.\n")
+
         return exit_code == 0
 
     def decompile_apk(self, output_dir: str = "app_out") -> None:
@@ -3203,31 +3212,20 @@ class App(ctk.CTk):
         """主打包入口
             解压只要打包app_out即可
         """
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
+
         output_dir: str = "app_out"
 
         apk_type = self.apk_type_seg.get()
         self.current_apk_type = apk_type
 
-        if apk_type == "大屏":
-            apk_path = "LargeApp.apk"
-
-        elif apk_type == "小屏":
-            apk_path = "SmallApp.apk"
-
-        elif apk_type == "自定义apk":
-            if not self.custom_apk_path:
-                messagebox.askyesno("错误", "请先上传自定义APK")
-                return
-            apk_path = self.custom_apk_path
-
         # 禁用按钮防止重复点击
-        # self.msg_pack_apk.configure(state="disabled", text=_("msg_pack_apk"))
-
-        # self.status_label.configure(text="状态：正在打包...", text_color="#d35400")
-
+        self.build_apk_btn.configure(state="disabled")
         def task():
             try:
-                self.append_log(f"\n=== Start  package process ({apk_type}) ===\n")
+                self.append_log(f"\n[Step 1]=== Start  package process ({apk_type}) ===\n")
 
                 # # 1. 反编译
                 # self.append_log("[Step 1] Decompiling APK...\n")
@@ -3243,6 +3241,15 @@ class App(ctk.CTk):
                 #     self.update_version_info(PATH_YML)
                 # else:
                 #     self.append_log("[Warn] 未找到 apktool.yml，跳过版本更新\n")
+
+                self.append_log("[Step 2] Getting device information...\n")
+                model = self.ask_model_dialog()
+
+                if model is None:
+                    raise Exception("User cancels packaging")
+
+                # 把 model 存入变量，供后面重命名使用,还需要写入devices的name中
+                self.current_device_model = model
 
                 # 2.替换input.json
                 self.copy_files(PATH_INPUT_JSON_SRC, PATH_INPUT_JSON_DST)
@@ -3307,7 +3314,6 @@ class App(ctk.CTk):
                 self.safe_remove("app-unsigned.apk")
 
                 self.append_log(f"\n[SUCCESS] ✅  file location: {output_apk_path}\n")
-                # self.status_label.configure(text="状态：打包成功", text_color="green")
                 # 删除app_out文件夹
                 shutil.rmtree(output_dir, ignore_errors=True)
                 # 初始化界面
@@ -3397,18 +3403,40 @@ class App(ctk.CTk):
 
     def build_newname(self, yml_path: Path) -> str:
         try:
-            version_info = self.get_field_value_from_yml(yml_path, "versionInfo")
-            version_name = version_info.get("versionName") if version_info else "unknown"
+            launcher_module = self.get_json_field(PATH_SLCLIENT_JSON, LAUNCHER_MODULE_PATH)
+            version_str = self.get_version_info(yml_path)[1]
+
+            raw_model = getattr(self, 'current_device_model', 'Unknown')
+
+            device_model = str(raw_model)
+
+            new_version_name = re.sub(r'(POCSTARS_)',r'\g<1>' + device_model + '_',version_str)
+
+            if launcher_module is None:
+                newname = 'ASAPP_' + str(new_version_name) + '.apk'
+            elif launcher_module == 'large':
+                newname = 'BSAPP_' + str(new_version_name) + '.apk'
+            elif launcher_module == 'middle':
+                newname = 'MSAPP_' + str(new_version_name) + '.apk'
+            elif launcher_module == 'small':
+                newname = 'SSAPP_' + str(new_version_name) + '.apk'
+            else:
+                newname = 'NSAPP_' + str(new_version_name) + '.apk'
+
+            self.append_log(f'Changed name to {newname}')
+            return newname
+
+        except Exception as e:
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            self.append_log(f'[ERR]:{e}')
             return f"APP_test_{timestamp}.apk"
-        except Exception:
-            return f"APP_{datetime.now().strftime('%Y%m%d%H%M%S')}.apk"
 
     def get_field_value_from_yml(self, yml_path: Path, field_name: str) -> Dict:
         data = self.load_yml(yml_path)
-        if data:
-            return data.get(field_name, {})
-        return {}
+        field_value = data.get(field_name, {})
+        if not field_value:
+            return None
+        return field_value
 
 
 # ==================== 国际化多语言支持 ====================
