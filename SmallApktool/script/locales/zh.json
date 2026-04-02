@@ -11,6 +11,7 @@
   "type_large_screen": "大屏",
   "type_middle_screen": "中屏",
   "type_small_screen": "小屏",
+  "type_none_screen": "无屏",
   "btn_build": "打包 APK",
   "btn_decompile": "解压apk",
   "type_custom_apk": "自定义apk",
@@ -25,6 +26,13 @@
   "login_account": "账号登录",
   "login_imei ": "IMEI登录",
   "login_iccid ": "ICCID登录",
+
+  "placeholder_model_input": "例如: T100-Pro",
+
+  "msg_btn_cancel": "取消",
+  "msg_btn_confirm": "确认",
+  "model_title": "型号",
+  "label_device_model": "输入适配型号",
 
 
 

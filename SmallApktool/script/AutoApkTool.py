@@ -9,6 +9,7 @@ import queue
 import shutil
 import platform
 import threading
+import tkinter
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -31,16 +32,16 @@ APKTOOL_JAR = "apktool.jar"
 # 环境配置
 ENV_CONF = {
     "overseas": {
-        "ip_address": "sgdns.shanlipoc.com:10200",
+        "ip_address": "sgdns.shanlipoc.com:10200,usdns.shanlipoc.com:10200",
         "context": "pocstar",
-        "upgrade_url":"upgrade.pocstar.com"
+        "upgrade_url": "upgrade.pocstar.com"
     },
     "domestic_v2": {
         "ip_address": "cndns.shanliptt.com:10200",
         "context": "show",
-        "upgrade_url":"upgrade.shanliptt.com"
+        "upgrade_url": "upgrade.shanliptt.com"
     },
-    }
+}
 
 # 2. 显示名称映射
 ENV_DISPLAY_NAMES = {
@@ -123,6 +124,7 @@ KEYSTORE_CONFIG = {
     "large": {"path": KEYSTORE_BIG, "password": "123456"},
     "middle": {"path": KEYSTORE_BIG, "password": "123456"},
     "small": {"path": KEYSTORE_SMALL, "password": "Lgsj829517"},
+    "none": {"path": KEYSTORE_SMALL, "password": "Lgsj829517"},
 }
 
 # 工具链路径
@@ -771,6 +773,7 @@ class App(ctk.CTk):
                 _("type_large_screen"),
                 _("type_middle_screen"),
                 _("type_small_screen"),
+                _("type_none_screen"),
                 _("type_custom_apk")
             ],
             command=self.on_apk_type_change,
@@ -939,6 +942,55 @@ class App(ctk.CTk):
             display_text = self.tab_names.get(tab_key, "")
             self.selected_tab.set(display_text)
 
+    def ask_model_dialog(self):
+        # 1. 创建弹窗
+        dialog = ctk.CTkToplevel(self)
+        dialog.title(_("model_title"))
+        dialog.geometry("300x150")
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # 2. 布局
+        self.label_device_model = ctk.CTkLabel(dialog, text=_("label_device_model"), font=("Microsoft YaHei", 14))
+        self.label_device_model.pack(pady=15)
+
+        self.entry = ctk.CTkEntry(dialog, width=200, placeholder_text=_("placeholder_model_input"))
+        self.entry.pack(pady=10)
+        self.entry.focus_set()
+
+        result = {"value": None}  # 用于接收结果
+
+        # 3. 定义提交逻辑
+        def submit():
+            val = self.entry.get().strip()
+            if val:
+                result["value"] = val
+                dialog.destroy()
+            else:
+                # 非空校验
+                self.entry.configure(border_color="red")
+
+        def cancel():
+            result["value"] = None
+            dialog.destroy()
+
+        # 4. 按钮区域
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(pady=10)
+
+        self.msg_btn_cancel=ctk.CTkButton(btn_frame, text=_("msg_btn_cancel"), width=80, command=cancel)
+        self.msg_btn_cancel.pack(side="left", padx=10)
+        self.msg_btn_confirm =ctk.CTkButton(btn_frame, text=_("msg_btn_confirm"), width=80, command=submit)
+        self.msg_btn_confirm.pack(side="right", padx=10)
+
+        # 5. 绑定回车键事件
+        dialog.bind('<Return>', lambda event: submit())
+
+        # 6. 等待窗口关闭 (阻塞在这里)
+        self.wait_window(dialog)
+
+        return result["value"]
+
     def refresh_ui_texts(self):
         """遍历并更新主要组件的文本 (已更新：支持 SegmentedButton 实时刷新)"""
         # 1. ⭐【关键】重新加载语言包，确保 _(...) 生效
@@ -978,17 +1030,12 @@ class App(ctk.CTk):
             _("type_large_screen"),
             _("type_middle_screen"),
             _("type_small_screen"),
+            _("type_none_screen"),
             _("type_custom_apk")
         ]
 
-        # 3. 更新控件
         self.apk_type_seg.configure(values=new_values)
 
-        # 4. 尝试恢复选中状态
-        # 注意：如果 current_selection 是旧语言的文本，这里可能需要映射逻辑
-        # 但通常 SegmentedButton 只要文本还在列表里，set 就能生效
-        # 如果切换语言导致文本变了（比如 "Large" -> "大屏"），set("Large") 会失效
-        # 所以最好的办法是：根据索引恢复，或者根据逻辑变量恢复
 
         if self.current_apk_type == "大屏":
             self.apk_type_seg.set(_("type_large_screen"))
@@ -996,34 +1043,27 @@ class App(ctk.CTk):
             self.apk_type_seg.set(_("type_middle_screen"))
         elif self.current_apk_type == "小屏":
             self.apk_type_seg.set(_("type_small_screen"))
+        elif self.current_apk_type == "无屏":
+            self.apk_type_seg.set(_("type_none_screen"))
         else:
             self.apk_type_seg.set(_("type_custom_apk"))
 
-        # 重新配置 SegmentedButton 的选项
-        # 注意：configure(values=...) 会触发 command，但我们上面的 _on_tab_switch 有防护
         self.tab_selector.configure(values=list(self.tab_names.values()))
-        # 如果之前有选中项，尝试恢复选中状态
         if current_key:
             self._show_tab(current_key)
 
-        # 3. ⭐⭐⭐【新增】更新所有 CTkOptionMenu ⭐⭐⭐
-        # 这是解决下拉框不切换的核心
         self.update_option_menus_on_language_change()
 
         if hasattr(self, 'opt_env'):
-            # --- 1. 先断开回调 (防止刷新列表时触发写入逻辑) ---
             self.opt_env.configure(command=None)
 
-            # 2. 重新生成列表
             new_env_options = []
             for key in ENV_CONF.keys():
                 display_name = ENV_DISPLAY_NAMES.get(key, {}).get(current_lang, key)
                 new_env_options.append(display_name)
 
-            # 3. 更新下拉框的值
             self.opt_env.configure(values=new_env_options)
 
-            # 4. 恢复选中状态 (根据 JSON 里的 ID)
             saved_env_id = "overseas"
             if PATH_SLCLIENT_JSON.exists():
                 try:
@@ -1033,11 +1073,9 @@ class App(ctk.CTk):
                 except:
                     pass
 
-            # 找到对应的**新语言**显示名
             target_display_name = ENV_DISPLAY_NAMES.get(saved_env_id, {}).get(current_lang, saved_env_id)
             self.opt_env.set(target_display_name)
 
-            # --- 5. 重新接上回调 ---
             self.opt_env.configure(command=self._on_env_selected)
 
         # 4. 更新其他组件 (保持原样)
@@ -1053,6 +1091,9 @@ class App(ctk.CTk):
         self.env_custom.configure(text=_("env_custom"))
         self.decompile_apk_btn.configure(text=_("btn_decompile"))
         self.scroll_frame.configure(label_text=i18n.get("msg_config_list_title"))
+
+        self.env_custom.configure(text=_("env_custom"))
+
 
         if hasattr(self, 'sound_title_label'):
             self.sound_title_label.configure(text=i18n.get("msg_card_sound"))
@@ -1082,6 +1123,23 @@ class App(ctk.CTk):
         self.play_channel.configure(text=_("play_channel"))
         self.rec_channel.configure(text=_("rec_channel"))
 
+        try:
+            if hasattr(self, 'model_dialog') and self.model_dialog.winfo_exists():
+                self.model_dialog.title(_("model_title"))
+            if hasattr(self, 'msg_btn_confirm') and self.msg_btn_confirm.winfo_exists():
+                self.msg_btn_confirm.configure(text=_("msg_btn_confirm"))
+            if hasattr(self, 'msg_btn_cancel') and self.msg_btn_cancel is not None:
+                self.msg_btn_cancel.configure(text=_("msg_btn_cancel"))
+            if hasattr(self, 'msg_btn_cancel') and self.msg_btn_cancel is not None:
+                self.msg_btn_cancel.configure(text=_("msg_btn_cancel"))
+            if hasattr(self, 'label_device_model') and self.label_device_model is not None:
+                self.label_device_model.configure(text=_("label_device_model"))
+            if hasattr(self, 'placeholder_model_input') and self.entry is not None:
+                self.entry.configure(text=_("placeholder_model_input"))
+
+        except tkinter.TclError:
+            pass
+
     def update_option_menus_on_language_change(self):
         """
         专门用于在语言切换时更新 CTkOptionMenu 的选项和选中值
@@ -1107,7 +1165,8 @@ class App(ctk.CTk):
                     print(f"[Warning] Failed to read login_mode for update: {e}")
 
             # c. 根据存储键，获取新语言下的显示名称，并设置
-            new_display_name = LOGIN_TYPE_MAPPING.get(current_login_mode_key, {}).get(i18n.current_lang, "Account Login")
+            new_display_name = LOGIN_TYPE_MAPPING.get(current_login_mode_key, {}).get(i18n.current_lang,
+                                                                                      "Account Login")
             self.opt_login_type.set(new_display_name)
             # 可能还需要更新预览
             self._update_preview("login_type", new_display_name)
@@ -1267,52 +1326,6 @@ class App(ctk.CTk):
     def clear_log(self) -> None:
         if self.log_textbox.winfo_exists():
             self.log_textbox.delete("0.0", "end")
-
-    def ask_model_dialog(self):
-        # 1. 创建弹窗
-        dialog = ctk.CTkToplevel(self)
-        dialog.title("型号")
-        dialog.geometry("300x150")
-        dialog.transient(self)
-        dialog.grab_set()
-
-        # 2. 布局
-        ctk.CTkLabel(dialog, text="请输入设备型号:", font=("Microsoft YaHei", 14)).pack(pady=15)
-
-        entry = ctk.CTkEntry(dialog, width=200, placeholder_text="例如: T100-Pro")
-        entry.pack(pady=10)
-        entry.focus_set()
-
-        result = {"value": None}  # 用于接收结果
-
-        # 3. 定义提交逻辑
-        def submit():
-            val = entry.get().strip()
-            if val:
-                result["value"] = val
-                dialog.destroy()
-            else:
-                # 非空校验
-                entry.configure(border_color="red")
-
-        def cancel():
-            result["value"] = None
-            dialog.destroy()
-
-        # 4. 按钮区域
-        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
-        btn_frame.pack(pady=10)
-
-        ctk.CTkButton(btn_frame, text="取消", width=80, command=cancel).pack(side="left", padx=10)
-        ctk.CTkButton(btn_frame, text="确认", width=80, command=submit).pack(side="right", padx=10)
-
-        # 5. 绑定回车键事件
-        dialog.bind('<Return>', lambda event: submit())
-
-        # 6. 等待窗口关闭 (阻塞在这里)
-        self.wait_window(dialog)
-
-        return result["value"]
 
     def refresh_config_view(self) -> None:
         if not self.winfo_exists():
@@ -1888,7 +1901,6 @@ class App(ctk.CTk):
         content_func(content_frame)
         return card
 
-
     def _build_env_content(self, parent):
         """构建环境配置内容"""
         current_lang = i18n.current_lang
@@ -1900,7 +1912,6 @@ class App(ctk.CTk):
             base_options.append(display_name)
 
         self.CUSTOM_OPTION_NAME = _("env_custom")
-
 
         # --- 2. 创建控件 ---
 
@@ -1950,7 +1961,7 @@ class App(ctk.CTk):
         self.entry_custom_context.grid(row=5, column=1, padx=5, pady=(2, 10), sticky="ew")
 
         # upgrade_url 输入框
-        ctk.CTkLabel(parent, text="upgrade_url:", anchor="w").grid(
+        ctk.CTkLabel(parent, text="upgrade url:", anchor="w").grid(
             row=6, column=0, padx=5, pady=(2, 10), sticky="w"
         )
 
@@ -2099,9 +2110,9 @@ class App(ctk.CTk):
         # 2. 音效开关
         ctk.CTkLabel(parent, text="Tone:", anchor="w").grid(row=1, column=0, padx=5, pady=8, sticky="w")
         self.switch_tone_sfx = ctk.CTkSwitch(parent, text=" ",
-                                        command=lambda: (
-                                            self._sync_tone_enabled_to_json(bool(self.switch_tone_sfx.get()))
-                                        ))
+                                             command=lambda: (
+                                                 self._sync_tone_enabled_to_json(bool(self.switch_tone_sfx.get()))
+                                             ))
         self.switch_tone_sfx.grid(row=1, column=1, padx=5, pady=6, sticky="w")
         # TODO 改为默认从load_all获取
         self.switch_tone_sfx.select()  # 默认开启
@@ -2665,10 +2676,11 @@ class App(ctk.CTk):
             if "profile" not in data:
                 data["profile"] = {}
 
-            # 写入 DNS (列表格式) 和 Context
-            data["profile"]["dns"] = [ip_address]
+            dns_list = ip_address.split(',')
+
+            data["profile"]["dns"] = dns_list
             data["profile"]["context"] = context
-            data["profile"]["upgrade_url"]= upgrade_url
+            data["profile"]["upgrade_url"] = upgrade_url
 
             # 写回文件
             with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
@@ -2773,14 +2785,12 @@ class App(ctk.CTk):
                 login_mode_val = slclient_data.get("profile", {}).get("login_mode", login_mode_val)
                 map_source_val = slclient_data.get("profile", {}).get("map_source", map_source_val)
 
-
             ui_env_val = ENV_DISPLAY_NAMES.get(current_env_key, {}).get(i18n.current_lang, "海外环境")
 
             ui_login_val = LOGIN_TYPE_MAPPING.get(login_mode_val, {}).get(i18n.current_lang, "账号登录")
 
             ui_map_val = MAP_CONFIG_TEMPLATES.get(map_source_val, {}).get("display_name", {}).get(i18n.current_lang,
                                                                                                   "谷歌")
-
 
             if hasattr(self, 'opt_env'):
                 self.opt_env.set(ui_env_val)
@@ -2899,7 +2909,7 @@ class App(ctk.CTk):
             print(f"❌ 加载 slclient.json 失败: {e}")
 
     # ==================== APK 工具链逻辑 ====================
-    def get_version_info(self,yml_path):
+    def get_version_info(self, yml_path):
         """获取 versionCode 和 versionName"""
 
         value = self.get_field_value_from_yml(PATH_YML, "versionInfo")
@@ -3110,14 +3120,18 @@ class App(ctk.CTk):
         self.current_apk_type = apk_type
 
         # 1. 确定 APK 路径
-        if apk_type in ["大屏", "Large APK"]:
+        if apk_type in ["大屏", "Large"]:
             apk_path = "LargeApp.apk"
 
-        elif apk_type in ["中屏", "Middle APK"]:
+        elif apk_type in ["中屏", "Middle"]:
             apk_path = "LargeApp.apk"
 
-        elif apk_type in ["小屏", "Small APK"]:
+        elif apk_type in ["小屏", "Small"]:
             apk_path = "SmallApp.apk"
+
+        elif apk_type in ["无屏", "Screenless"]:
+            apk_path = "Screenless.apk"
+
         elif apk_type in ["自定义apk", "Custom apk"]:
 
             selected_path = None
@@ -3223,6 +3237,7 @@ class App(ctk.CTk):
 
         # 禁用按钮防止重复点击
         self.build_apk_btn.configure(state="disabled")
+
         def task():
             try:
                 self.append_log(f"\n[Step 1]=== Start  package process ({apk_type}) ===\n")
@@ -3250,6 +3265,9 @@ class App(ctk.CTk):
 
                 # 把 model 存入变量，供后面重命名使用,还需要写入devices的name中
                 self.current_device_model = model
+                field_path = ["device", "name"]
+
+                self.set_json_field(PATH_SLCLIENT_JSON, field_path, model)
 
                 # 2.替换input.json
                 self.copy_files(PATH_INPUT_JSON_SRC, PATH_INPUT_JSON_DST)
@@ -3315,13 +3333,13 @@ class App(ctk.CTk):
 
                 self.append_log(f"\n[SUCCESS] ✅  file location: {output_apk_path}\n")
                 # 删除app_out文件夹
-                shutil.rmtree(output_dir, ignore_errors=True)
+                # shutil.rmtree(output_dir, ignore_errors=True)
                 # 初始化界面
                 self.load_all_configs()
-                messagebox.showinfo("成功", f"APK 打包成功！\n保存在：{output_apk_path}")
+                messagebox.showinfo("[SUCCESS]", f"APK Safe： \n{output_apk_path}")
 
             except Exception as e:
-                error_msg = f"[FAIL] ❌ 打包失败：{str(e)}"
+                error_msg = f"[FAIL] ❌ {str(e)}"
                 self.append_log(f"\n{error_msg}\n")
                 # self.status_label.configure(text="状态：打包失败", text_color="red")
                 messagebox.showerror("错误", error_msg)
@@ -3410,7 +3428,7 @@ class App(ctk.CTk):
 
             device_model = str(raw_model)
 
-            new_version_name = re.sub(r'(POCSTARS_)',r'\g<1>' + device_model + '_',version_str)
+            new_version_name = re.sub(r'(POCSTARS_)', r'\g<1>' + device_model + '_', version_str)
 
             if launcher_module is None:
                 newname = 'ASAPP_' + str(new_version_name) + '.apk'

@@ -8,10 +8,11 @@
   "btn_stop_listen": "Stop Listening",
   "clear_log": "Clear Log",
   "lbl_apk_type": "APK Type",
-  "type_large_screen": "Large APK",
-  "type_middle_screen": "Middle APK",
-  "type_small_screen": "Small APK",
-  "type_custom_apk": "Custom apk",
+  "type_large_screen": "Large",
+  "type_middle_screen": "Middle",
+  "type_small_screen": "Small",
+  "type_none_screen": "Screenless",
+  "type_custom_apk": "Custom",
   "msg_card_apk_properties": "APK Properties Config",
   "msg_feature_dev": "(Feature under development...)",
   "msg_save_btn": "Save",
@@ -23,6 +24,11 @@
   "login_imei ": "imei",
   "login_iccid ": "iccid",
 
+  "msg_btn_cancel": "Cancel",
+  "msg_btn_confirm": "Confirm",
+  "label_device_model": "Enter Device Model",
+  "model_title": "Model",
+  "placeholder_model_input": "eg: T100-Pro",
 
 
 
