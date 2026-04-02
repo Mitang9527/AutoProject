@@ -963,12 +963,12 @@ class App(ctk.CTk):
         # 3. 定义提交逻辑
         def submit():
             val = self.entry.get().strip()
-            if val:
-                result["value"] = val
-                dialog.destroy()
-            else:
-                # 非空校验
-                self.entry.configure(border_color="red")
+            # if val:
+            result["value"] = val
+            dialog.destroy()
+            # else:
+            #     # 非空校验
+            #     self.entry.configure(border_color="red")
 
         def cancel():
             result["value"] = None
@@ -1122,6 +1122,7 @@ class App(ctk.CTk):
         self.audio.configure(text=_("audio"))
         self.play_channel.configure(text=_("play_channel"))
         self.rec_channel.configure(text=_("rec_channel"))
+
 
         try:
             if hasattr(self, 'model_dialog') and self.model_dialog.winfo_exists():
@@ -2123,14 +2124,14 @@ class App(ctk.CTk):
             row=2, column=0, padx=5, pady=10, sticky="w"
         )
 
-        self.opt_sound = ctk.CTkOptionMenu(
+        self.opt_codec = ctk.CTkOptionMenu(
             parent,
             values=["amrnb", "evrc8k", "opus"],
             command=self._sync_codec_to_json
         )
-        self.opt_sound.grid(row=2, column=1, padx=5, pady=8, sticky="ew")
+        self.opt_codec.grid(row=2, column=1, padx=5, pady=8, sticky="ew")
 
-        self.opt_sound.set("amrnb")
+        self.opt_codec.set("amrnb")
 
         # 4. 音频系统
         self.audio = ctk.CTkLabel(parent, text=_("audio"), anchor="w")
@@ -2138,14 +2139,14 @@ class App(ctk.CTk):
             row=3, column=0, padx=5, pady=10, sticky="w"
         )
 
-        self.opt_sound = ctk.CTkOptionMenu(
+        self.opt_audio = ctk.CTkOptionMenu(
             parent,
             values=["default", "sles", "oem"],
             command=self._sync_soundsystem_to_json
         )
-        self.opt_sound.grid(row=3, column=1, padx=5, pady=8, sticky="ew")
+        self.opt_audio.grid(row=3, column=1, padx=5, pady=8, sticky="ew")
 
-        self.opt_sound.set("default")
+        self.opt_audio.set("default")
 
         # 5. 播放通道
         self.play_channel = ctk.CTkLabel(parent, text=_("play_channel"), anchor="w")
@@ -2153,14 +2154,14 @@ class App(ctk.CTk):
             row=4, column=0, padx=5, pady=10, sticky="w"
         )
 
-        self.opt_sound = ctk.CTkOptionMenu(
+        self.opt_play = ctk.CTkOptionMenu(
             parent,
             values=["music", "voice"],
             command=self._sync_play_to_json
         )
-        self.opt_sound.grid(row=4, column=1, padx=5, pady=8, sticky="ew")
+        self.opt_play.grid(row=4, column=1, padx=5, pady=8, sticky="ew")
 
-        self.opt_sound.set("music")
+        self.opt_play.set("music")
 
         # 6. 录制通道
         self.rec_channel = ctk.CTkLabel(parent, text=_("rec_channel"), anchor="w")
@@ -2168,20 +2169,23 @@ class App(ctk.CTk):
             row=5, column=0, padx=5, pady=8, sticky="w"
         )
 
-        self.opt_sound = ctk.CTkOptionMenu(
+        self.opt_rec = ctk.CTkOptionMenu(
             parent,
             values=["mic", "voice", "communication", "recognition"],
             command=self._sync_record_to_json
         )
-        self.opt_sound.grid(row=5, column=1, padx=5, pady=10, sticky="ew")
+        self.opt_rec.grid(row=5, column=1, padx=5, pady=10, sticky="ew")
 
-        self.opt_sound.set("recognition")
+        self.opt_rec.set("recognition")
 
     def _sync_codec_to_json(self, selected_codec: str) -> None:
         """
         【实时保存】当语音编码改变时，立即更新 slclient.json 中的 sound.codec
         :param selected_codec: 选中的编码字符串 (如 "amrnb", "opus")
         """
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
         try:
             data = self._load_slclient_json()
 
@@ -2209,6 +2213,9 @@ class App(ctk.CTk):
             self.append_log(f"[Error] Failed to save speech coding.: {e}\n")
 
     def _sync_soundsystem_to_json(self, selected_codec: str) -> None:
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
         try:
             data = self._load_slclient_json()
 
@@ -2236,6 +2243,9 @@ class App(ctk.CTk):
             self.append_log(f"[Error] Failed to save speech code: {e}\n")
 
     def _sync_play_to_json(self, selected_codec: str) -> None:
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
         try:
             data = self._load_slclient_json()
 
@@ -2263,6 +2273,9 @@ class App(ctk.CTk):
             self.append_log(f"[Error] Failed to save speech code: {e}\n")
 
     def _sync_record_to_json(self, selected_codec: str) -> None:
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
         try:
             data = self._load_slclient_json()
 
@@ -2293,6 +2306,9 @@ class App(ctk.CTk):
         """
         【实时保存】确保写入的是 JSON 标准的 true/false，而不是 0/1
         """
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
         try:
             data = self._load_slclient_json()
 
@@ -2339,6 +2355,11 @@ class App(ctk.CTk):
             :param selected_display_name: UI下拉框选中的显示名称 (如 "百度 [国内]")
             """
         # 从UI显示名称反向查找存储键
+
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
+
         selected_key = None
         for key, value in MAP_CONFIG_TEMPLATES.items():
             if value["display_name"]["zh"] == selected_display_name or value["display_name"][
@@ -2530,6 +2551,9 @@ class App(ctk.CTk):
         """
         【实时保存】确保写入的是 JSON 标准的 true/false，而不是 0/1
         """
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
         try:
             data = self._load_slclient_json()
 
@@ -2775,6 +2799,15 @@ class App(ctk.CTk):
             map_source_val = "google"
             current_env_key = default_env_key
 
+            tts_enabled_val = False
+            tone_enabled_val = True
+            launcher_enabled_val = False
+
+            codec_enabled_val = "amrnb"
+            audio_enabled_val = "default"
+            play_enabled_val = "music"
+            rec_enabled_val = "recognition"
+
             # 只有当文件存在时才尝试读取
             if PATH_SLCLIENT_JSON.exists():
                 with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
@@ -2783,7 +2816,17 @@ class App(ctk.CTk):
                 current_env_key = slclient_data.get("profile", {}).get("env_key", default_env_key)
 
                 login_mode_val = slclient_data.get("profile", {}).get("login_mode", login_mode_val)
-                map_source_val = slclient_data.get("profile", {}).get("map_source", map_source_val)
+                map_source_val = slclient_data.get("lbs", {}).get("map_source", map_source_val)
+
+                tts_enabled_val = slclient_data.get("tts", {}).get("enabled", False)
+                tone_enabled_val = slclient_data.get("sound", {}).get("tone_enabled", True)
+
+                codec_enabled_val = slclient_data.get("sound", {}).get("codec", codec_enabled_val)
+                audio_enabled_val = slclient_data.get("dsp", {}).get("provider", audio_enabled_val)
+                play_enabled_val = slclient_data.get("dsp", {}).get("play_stream", play_enabled_val)
+                rec_enabled_val = slclient_data.get("dsp", {}).get("record_stream", rec_enabled_val)
+
+
 
             ui_env_val = ENV_DISPLAY_NAMES.get(current_env_key, {}).get(i18n.current_lang, "海外环境")
 
@@ -2802,6 +2845,37 @@ class App(ctk.CTk):
             if hasattr(self, 'opt_map_source'):
                 self.opt_map_source.set(ui_map_val)
                 self._update_preview("map_source", ui_map_val)
+
+            if hasattr(self, 'switch_sfx'):
+                if tts_enabled_val:
+                    self.switch_sfx.select()
+                else:
+                    self.switch_sfx.deselect()
+
+            if hasattr(self, 'switch_tone_sfx'):
+                if tone_enabled_val:
+                    self.switch_tone_sfx.select()
+                else:
+                    self.switch_tone_sfx.deselect()
+
+            if hasattr(self, 'switch_launcher'):
+                if launcher_enabled_val:
+                    self.switch_launcher.select()
+                else:
+                    self.switch_launcher.deselect()
+
+            if hasattr(self, 'opt_rec'):
+                self.opt_rec.set(rec_enabled_val)
+
+            if hasattr(self, 'opt_play'):
+                self.opt_play.set(play_enabled_val)
+
+            if hasattr(self, 'opt_audio'):
+                self.opt_audio.set(audio_enabled_val)
+
+            if hasattr(self, 'opt_codec'):
+                self.opt_codec.set(codec_enabled_val)
+
 
         except Exception as e:
             self.append_log(f"[Warning] Failed to load configs, using default: {e}\n")
@@ -3132,7 +3206,7 @@ class App(ctk.CTk):
         elif apk_type in ["无屏", "Screenless"]:
             apk_path = "Screenless.apk"
 
-        elif apk_type in ["自定义apk", "Custom apk"]:
+        elif apk_type in ["自定义", "Custom"]:
 
             selected_path = None
             self.after(0, lambda: None)
@@ -3265,9 +3339,9 @@ class App(ctk.CTk):
 
                 # 把 model 存入变量，供后面重命名使用,还需要写入devices的name中
                 self.current_device_model = model
-                field_path = ["device", "name"]
-
-                self.set_json_field(PATH_SLCLIENT_JSON, field_path, model)
+                if model:
+                    field_path = ["device", "name"]
+                    self.set_json_field(PATH_SLCLIENT_JSON, field_path, model)
 
                 # 2.替换input.json
                 self.copy_files(PATH_INPUT_JSON_SRC, PATH_INPUT_JSON_DST)
@@ -3333,10 +3407,10 @@ class App(ctk.CTk):
 
                 self.append_log(f"\n[SUCCESS] ✅  file location: {output_apk_path}\n")
                 # 删除app_out文件夹
-                # shutil.rmtree(output_dir, ignore_errors=True)
+                shutil.rmtree(output_dir, ignore_errors=True)
                 # 初始化界面
                 self.load_all_configs()
-                messagebox.showinfo("[SUCCESS]", f"APK Safe： \n{output_apk_path}")
+                messagebox.showinfo("SUCCESS", f"APK Safe： \n{output_apk_path}")
 
             except Exception as e:
                 error_msg = f"[FAIL] ❌ {str(e)}"
@@ -3425,10 +3499,12 @@ class App(ctk.CTk):
             version_str = self.get_version_info(yml_path)[1]
 
             raw_model = getattr(self, 'current_device_model', 'Unknown')
-
             device_model = str(raw_model)
 
-            new_version_name = re.sub(r'(POCSTARS_)', r'\g<1>' + device_model + '_', version_str)
+            if not device_model or device_model.strip() == "":
+                new_version_name = version_str
+            else:
+                new_version_name = re.sub(r'(POCSTARS_)', r'\g<1>' + device_model + '_', version_str)
 
             if launcher_module is None:
                 newname = 'ASAPP_' + str(new_version_name) + '.apk'
@@ -3448,7 +3524,6 @@ class App(ctk.CTk):
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             self.append_log(f'[ERR]:{e}')
             return f"APP_test_{timestamp}.apk"
-
     def get_field_value_from_yml(self, yml_path: Path, field_name: str) -> Dict:
         data = self.load_yml(yml_path)
         field_value = data.get(field_name, {})
