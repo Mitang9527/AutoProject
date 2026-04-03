@@ -17,7 +17,6 @@ from typing import Optional, Set, List, Any, Dict
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
 from ruamel.yaml import YAML
-from ruamel.yaml.constructor import ConstructorError
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
@@ -297,7 +296,7 @@ class SmartKeyBackend:
             return True
 
         except Exception as e:
-            self.log_callback(f"[Error] 读取配置失败：{e}\n")
+            self.log_callback(f"[Error] Failed to read configuration：{e}\n")
             self.data = {
                 "stdkey": {}, "action": {}, "intent": {},
                 "custom": DEFAULT_CUSTOM_LIST.copy()
@@ -312,10 +311,10 @@ class SmartKeyBackend:
             with open(JSON_FILE, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
             if not silent:
-                self.log_callback(f"[OK] 配置已保存到 {JSON_FILE}\n")
+                self.log_callback(f"[OK] Configuration saved to {JSON_FILE}\n")
             return True
         except Exception as e:
-            self.log_callback(f"[Error] 保存失败：{e}\n")
+            self.log_callback(f"[Error] save failed：{e}\n")
             return False
 
     def _kill_process(self) -> None:
@@ -424,12 +423,13 @@ class SmartKeyBackend:
 
         last_process_time = 0
         is_many_mode = (key_type.lower() == "ptt")
-        mode_name = "防抖模式 (PTT)" if is_many_mode else "标准模式 (SOS)"
+        mode_name = "PTT" if is_many_mode else "SOS"
 
-        self.log_callback(f"\n--- 启动监听 (模式：{mode_name}) ---\n")
+        self.log_callback(f"\n--- Start monitoring (mode：{mode_name}) ---\n")
         if self._clear_logcat():
-            self.log_callback("[Info] 日志缓冲区已清空。\n"
-                              "[tip]  如按下按键后无日志输出，已知键值请到终端配置中自行输入!!!")
+            self.log_callback("[Info] Log buffer cleared。\n"
+                              "\n[tip]  If no log is output after pressing the button,\n"
+                              " please enter the known key value in the terminal configuration!!!\n")
 
         try:
             kwargs = {
@@ -473,7 +473,7 @@ class SmartKeyBackend:
                 if action_str in self.existing_actions:
                     self.skip_count += 1
                     if self.skip_count % SKIP_FEEDBACK_INTERVAL == 0:
-                        self.log_callback(f"[Skip] Action '{action_str}' 已存在。\n")
+                        self.log_callback(f"[Skip] Action '{action_str}' already exists。\n")
                     continue
 
                 last_process_time = current_time
@@ -481,7 +481,7 @@ class SmartKeyBackend:
 
                 match_k = re_keycode.search(line)
                 code_info = f" (KeyCode: {match_k.group(1)})" if match_k else ""
-                self.log_callback(f"\n[NEW] 捕获 Action: {action_str}{code_info}\n")
+                self.log_callback(f"\n[NEW]  Action: {action_str}{code_info}\n")
 
                 timestamp_suffix = datetime.now().strftime("%Y%m%d%H%M%S")
                 new_virtual_code = -1000
@@ -501,26 +501,26 @@ class SmartKeyBackend:
                 self.existing_codes.add(new_virtual_code)
 
                 created_keys = list(new_entries["stdkey"].keys())
-                self.log_callback(f"[OK] 已生成键位：{', '.join(created_keys)} (Key: {new_virtual_code})\n")
+                self.log_callback(f"[OK] {', '.join(created_keys)} (Key: {new_virtual_code})\n")
 
                 if self.save_config(silent=True):
-                    self.log_callback("[Auto-Save] ✅ 配置已保存。\n")
+                    self.log_callback("[Auto-Save] ✅ Success。\n")
                     if self.config_callback:
                         self.config_callback()
                 self.log_callback("\n")
 
         except Exception as e:
             if not self.stop_event.is_set():
-                self.log_callback(f"\n[Error] 监听异常：{e}\n")
+                self.log_callback(f"\n[Error] {e}\n")
         finally:
             self._kill_process()
             self.is_running = False
-            self.log_callback("\n[Info] 监听已停止。\n")
+            self.log_callback("\n[Info] Monitoring has stopped。\n")
 
     def start_capture(self, key_type: str) -> None:
         """启动监听线程"""
         if self.is_running:
-            self.log_callback("[Warning] 监听已在运行中。\n")
+            self.log_callback("[Warning] Monitoring is already running。\n")
             return
         self.stop_event.clear()
         self.skip_count = 0
@@ -3197,7 +3197,7 @@ class App(ctk.CTk):
         if apk_type in ["大屏", "Large"]:
             apk_path = "LargeApp.apk"
 
-        elif apk_type in ["中屏", "Middle"]:
+        elif apk_type in ["中屏", "Medium"]:
             apk_path = "LargeApp.apk"
 
         elif apk_type in ["小屏", "Small"]:
@@ -3212,8 +3212,8 @@ class App(ctk.CTk):
             self.after(0, lambda: None)
 
             apk_path = filedialog.askopenfilename(
-                title="请选择要解压的 APK 文件",
-                filetypes=[("APK 文件", "*.apk")]
+                title="APK File",
+                filetypes=[("APK File", "*.apk")]
             )
 
             if not apk_path:
@@ -3416,7 +3416,7 @@ class App(ctk.CTk):
                 error_msg = f"[FAIL] ❌ {str(e)}"
                 self.append_log(f"\n{error_msg}\n")
                 # self.status_label.configure(text="状态：打包失败", text_color="red")
-                messagebox.showerror("错误", error_msg)
+                messagebox.showerror("ERROR", error_msg)
             finally:
                 self.build_apk_btn.configure(state="normal", text=_("btn_build"))
 
