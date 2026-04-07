@@ -140,6 +140,7 @@ DEFAULT_CUSTOM_LIST = [
     "join_prev_group",
     "new_call_in"
 ]
+
 SKIP_FEEDBACK_INTERVAL = 5
 DEBOUNCE_SECONDS = 1.5
 
@@ -536,7 +537,6 @@ class SmartKeyBackend:
 
 # ==================== slclient.json处理 ====================
 
-
 def update_slclient_login_type(login_type_ui: str) -> bool:
     """
     更新slclient.json中的profile.login_mode字段
@@ -653,7 +653,7 @@ class App(ctk.CTk):
         self.selected_tab = ctk.StringVar(value="")
 
         self._init_sidebar()
-        self._init_main_area()  # 这是我们重构的重点
+        self._init_main_area()  # 重构的重点
 
         # 启动定时任务
         self.after(50, self.process_log_queue)
@@ -828,8 +828,6 @@ class App(ctk.CTk):
 
         # --- 1. 创建 SegmentedButton (充当 Tab Header) ---
         # 定义 Tab 名称映射 (为了实时翻译，我们存储键，显示值)
-        # --- 1. 创建 SegmentedButton (充当 Tab Header) ---
-        # 定义 Tab 名称映射
         self.tab_names = {
             "log": _("msg_tab_log"),
             "config": _("msg_tab_config"),
@@ -978,9 +976,9 @@ class App(ctk.CTk):
         btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
         btn_frame.pack(pady=10)
 
-        self.msg_btn_cancel=ctk.CTkButton(btn_frame, text=_("msg_btn_cancel"), width=80, command=cancel)
+        self.msg_btn_cancel = ctk.CTkButton(btn_frame, text=_("msg_btn_cancel"), width=80, command=cancel)
         self.msg_btn_cancel.pack(side="left", padx=10)
-        self.msg_btn_confirm =ctk.CTkButton(btn_frame, text=_("msg_btn_confirm"), width=80, command=submit)
+        self.msg_btn_confirm = ctk.CTkButton(btn_frame, text=_("msg_btn_confirm"), width=80, command=submit)
         self.msg_btn_confirm.pack(side="right", padx=10)
 
         # 5. 绑定回车键事件
@@ -1035,7 +1033,6 @@ class App(ctk.CTk):
         ]
 
         self.apk_type_seg.configure(values=new_values)
-
 
         if self.current_apk_type == "大屏":
             self.apk_type_seg.set(_("type_large_screen"))
@@ -1094,7 +1091,6 @@ class App(ctk.CTk):
 
         self.env_custom.configure(text=_("env_custom"))
 
-
         if hasattr(self, 'sound_title_label'):
             self.sound_title_label.configure(text=i18n.get("msg_card_sound"))
         if hasattr(self, 'map_title_label'):
@@ -1122,7 +1118,6 @@ class App(ctk.CTk):
         self.audio.configure(text=_("audio"))
         self.play_channel.configure(text=_("play_channel"))
         self.rec_channel.configure(text=_("rec_channel"))
-
 
         try:
             if hasattr(self, 'model_dialog') and self.model_dialog.winfo_exists():
@@ -1832,7 +1827,7 @@ class App(ctk.CTk):
                 self.entry_sos.delete(0, "end")
 
             # 6. 成功反馈
-            msg_lines = [f"✅ 配置已保存"]
+            msg_lines = [f"✅ Configuration is saved"]
             if has_ptt:
                 msg_lines.append(f"   🟢 PTT Key: {new_vkey_ptt} ({name_ptt_down}, {name_ptt_up})")
             if has_sos:
@@ -1840,13 +1835,13 @@ class App(ctk.CTk):
 
             final_msg = "\n".join(msg_lines)
 
-            self.lbl_env_info.configure(
-                text="✅ 保存成功!",
-                text_color="#27ae60",
-                font=ctk.CTkFont(size=12, weight="bold")
-            )
+            # self.lbl_env_info.configure(
+            #     text="✅ 保存成功!",
+            #     text_color="#27ae60",
+            #     font=ctk.CTkFont(size=12, weight="bold")
+            # )
             self.append_log(f"[Manual Save] {final_msg}\n")
-            messagebox.showinfo("成功", final_msg)
+            messagebox.showinfo("Successfully", final_msg)
 
             if hasattr(self, '_safe_refresh_config_view'):
                 self._safe_refresh_config_view()
@@ -1854,14 +1849,14 @@ class App(ctk.CTk):
                 self.refresh_config_view()
 
         except Exception as e:
-            error_msg = f"❌ 保存失败：{str(e)}"
+            error_msg = f"❌ ERROR：{str(e)}"
             self.lbl_env_info.configure(
                 text=error_msg,
                 text_color="#c0392b",
                 font=ctk.CTkFont(size=12, weight="bold")
             )
             self.append_log(f"[Error] _on_save_manual_keys: {e}\n")
-            messagebox.showerror("错误", error_msg)
+            messagebox.showerror("ERROR", error_msg)
 
     def _build_led_color_content(self, parent):
         """填充下半部分：颜色和亮度"""
@@ -2041,16 +2036,16 @@ class App(ctk.CTk):
 
         # 1. 基础验证：必须同时存在 IP 和 Context
         if not new_ip or not new_context:
-            messagebox.showwarning("输入错误", "IP 和 Context 不能为空！")
+            messagebox.showwarning("Error", "IP and Context must be entered！")
             return
 
         # 2. 格式验证（保持不变）
         ip_part = new_ip.split(':')[0]
-        if not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', ip_part) and not re.match(r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-                                                                              ip_part):
-            if not messagebox.askyesno("格式确认",
-                                       f"检测到的 IP/域名 '{new_ip}' 格式可能不标准。\n" f"确定要保存到独立部署配置吗？"):
-                return
+        # if not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', ip_part) and not re.match(r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+        #                                                                       ip_part):
+        #     if not messagebox.askyesno("格式确认",
+        #                                f"检测到的 IP/域名 '{new_ip}' 格式可能不标准。\n" f"确定要保存到独立部署配置吗？"):
+        #         return
 
         try:
             json_path = PATH_SLCLIENT_JSON
@@ -2063,21 +2058,18 @@ class App(ctk.CTk):
 
             profile = data["profile"]
 
-            # 4. 更新数据：只在 upgrade_url 不为空时才写入
             profile["context"] = new_context
-            profile["dns"] = [new_ip]  # 强制存为列表
+            profile["dns"] = [new_ip]
 
             # ⭐⭐⭐ 核心修改：仅当 upgrade_url 非空时才更新 ⭐⭐⭐
-            if upgrade_url:  # 如果输入框内容不为空
+            if upgrade_url:
                 profile["upgrade_url"] = upgrade_url
-            # else: # 如果为空，什么也不做，保持 JSON 原有的值
-            #     pass
 
             # 5. 写回文件
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
-            messagebox.showinfo("保存成功", "配置已写入")
+            messagebox.showinfo("Successfully", "saved successfully")
 
         except FileNotFoundError:
             error_msg = "❌ 错误：找不到配置文件路径。"
@@ -2826,8 +2818,6 @@ class App(ctk.CTk):
                 play_enabled_val = slclient_data.get("dsp", {}).get("play_stream", play_enabled_val)
                 rec_enabled_val = slclient_data.get("dsp", {}).get("record_stream", rec_enabled_val)
 
-
-
             ui_env_val = ENV_DISPLAY_NAMES.get(current_env_key, {}).get(i18n.current_lang, "海外环境")
 
             ui_login_val = LOGIN_TYPE_MAPPING.get(login_mode_val, {}).get(i18n.current_lang, "账号登录")
@@ -3182,12 +3172,14 @@ class App(ctk.CTk):
         self.append_log(f"[Result] Command execution completed,  code：{returncode}\n")
         return returncode
 
+
     def _do_decompile_logic(self, output_dir: str = "app_out") -> bool:
         """
         【核心逻辑】实际执行反编译的代码。
         此函数可以被主线程调用，也可以被子线程调用。
         返回 True 表示成功，False 表示失败。
         """
+        start_time = time.time()
         self.custom_apk_path = None
 
         apk_type = self.apk_type_seg.get()
@@ -3242,6 +3234,7 @@ class App(ctk.CTk):
         exit_code = self.run_with_live_output(command)
 
         if exit_code == 0:
+            end_time = time.time()
 
             if apk_type in ["中屏", "Middle APK"]:
                 self.append_log("[Info] Middle screen mode detected. Updating config...\n")
@@ -3254,6 +3247,8 @@ class App(ctk.CTk):
                     self.append_log(f"[Success] Auto-config: ui.launcherModule set to '{new_value}'\n")
                 else:
                     self.append_log("[Warning] Config update failed after unzip.\n")
+
+            self.append_log(f"[SUCCESS] ✅  time spent: {(end_time - start_time):.2f}s\n")
 
         return exit_code == 0
 
@@ -3300,6 +3295,7 @@ class App(ctk.CTk):
         """主打包入口
             解压只要打包app_out即可
         """
+        start_time = time.time()
         if not PATH_SLCLIENT_JSON.exists():
             messagebox.showerror("ERROR", f"Please unzip apk first")
             return False
@@ -3367,7 +3363,7 @@ class App(ctk.CTk):
                 self.safe_remove("app-unsigned-unaligned.apk")
 
                 # 5. 签名
-                self.append_log("[Step 5] Signing APK...\n")
+                self.append_log("\n[Step 5] Signing APK...\n")
                 value_map = {"大屏": "large", "中屏": "middle", "小屏": "small"}
                 key = value_map.get(apk_type, "large")
 
@@ -3410,7 +3406,9 @@ class App(ctk.CTk):
                 shutil.rmtree(output_dir, ignore_errors=True)
                 # 初始化界面
                 self.load_all_configs()
-                messagebox.showinfo("SUCCESS", f"APK Safe： \n{output_apk_path}")
+                end_time = time.time()
+                self.append_log(f"[SUCCESS] ✅  time spent: {(end_time - start_time):.2f}s\n")
+                messagebox.showinfo("SUCCESS", f"APK Safe: \n{output_apk_path}")
 
             except Exception as e:
                 error_msg = f"[FAIL] ❌ {str(e)}"
@@ -3517,13 +3515,14 @@ class App(ctk.CTk):
             else:
                 newname = 'NSAPP_' + str(new_version_name) + '.apk'
 
-            self.append_log(f'Changed name to {newname}')
+            self.append_log(f'[Info] Changed name to {newname}')
             return newname
 
         except Exception as e:
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             self.append_log(f'[ERR]:{e}')
             return f"APP_test_{timestamp}.apk"
+
     def get_field_value_from_yml(self, yml_path: Path, field_name: str) -> Dict:
         data = self.load_yml(yml_path)
         field_value = data.get(field_name, {})
@@ -3565,11 +3564,9 @@ class I18N:
 # 全局实例
 i18n = I18N()
 
-
 def _(key):
     """快捷翻译函数"""
     return i18n.get(key)
-
 
 if __name__ == "__main__":
     app = App()

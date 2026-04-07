@@ -1,4 +1,5 @@
 import time
+from functools import wraps
 from typing import Text
 from datetime import datetime, timedelta
 
@@ -65,7 +66,6 @@ def now_time_day():
     localtime = time.strftime("%Y_%m_%d", time.localtime())
     return localtime
 
-
 def datetime_strftime():
     """
         获取当前时间, 日期格式: 20250123_172225
@@ -73,7 +73,6 @@ def datetime_strftime():
     """
     datetime_strftime = datetime.now().strftime("%Y%m%d_%H%M%S")
     return datetime_strftime
-
 
 def tomorrow_time_day():
     """
@@ -102,12 +101,43 @@ def get_now_time() -> int:
     """
     return int(time.time()) * 1000
 
-
 def timeit(func):
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
-        print(f"{func.__name__}耗时: {end_time - start_time}.3f")
+        print(f"{func.__name__}耗时: {(end_time - start_time):.3f} 秒")
         return result
     return wrapper
+
+
+def timer(logger_func=None):
+    """
+    一个更灵活的计时装饰器，可以接收一个日志函数作为参数。
+
+    Args:
+        logger_func (callable, optional): 用于输出日志的函数。默认为 print。
+        lambda msg: print(f"[TIMING] {msg}"):传递一个 lambda 函数，将日志格式化后输出
+        lambda msg: log_file.write(msg + "\n") :传递一个文件对象的 write 方法，将日志写入文件
+    """
+    if logger_func is None:
+        logger_func = print
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start_time = time.perf_counter()
+            result = func(*args, **kwargs)
+            end_time = time.perf_counter()
+
+            execution_time = end_time - start_time
+
+            # 使用传入的日志函数来输出时间信息
+            log_message = f"函数 '{func.__name__}' 执行了 {execution_time:.6f} 秒"
+            logger_func(log_message)
+
+            return result
+
+        return wrapper
+
+    return decorator

@@ -1,5 +1,5 @@
 {
-    "app_title": "App Adaptation_1.7",
+    "app_title": "App Adaptation_2.0",
     "sidebar_logo": "App\nAdaptation",
     "lbl_device": "Device Selection",
     "btn_refresh": "Refresh Devices",
@@ -49,6 +49,7 @@
     "msg_card_input": "💡 Input Keys",
     "msg_card_led": "🎨  Other Config",
     "lbl_server_node": "Server Node:",
+    "env_custom": "Custom Node:",
     "lbl_login_type": "Login Type:",
     "lbl_codec": "Voice Codec:",
     "lbl_audio_sys": "Audio System:",

@@ -1,5 +1,5 @@
 {
-  "app_title": "App Adaptation_1.7",
+  "app_title": "App Adaptation_2.0",
   "sidebar_logo": "App\nAdaptation",
   "lbl_device": "设备选择",
   "btn_refresh": "刷新设备",
@@ -51,6 +51,7 @@
   "msg_card_led": "🎨  其他配置",
   "lbl_server_node": "预设节点:",
   "lbl_login_type": "登录方式:",
+  "env_custom": "自定义节点:",
   "lbl_codec": "语音编码:",
   "lbl_audio_sys": "音频系统:",
   "lbl_play_stream": "播放通道:",
