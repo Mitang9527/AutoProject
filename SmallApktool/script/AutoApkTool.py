@@ -107,6 +107,8 @@ MAP_CONFIG_TEMPLATES = {
 
 # 关键文件路径
 PATH_YML = PROJECT_PATH / "app_out" / "apktool.yml"
+PATH_ASS = PROJECT_PATH / "app_out" / "assets"
+PATH_SLCLIENT =  PROJECT_PATH / "app_out" / "assets" / "slclient"
 PATH_SLCLIENT_JSON = PROJECT_PATH / "app_out" / "assets" / "slclient.json"
 PATH_INPUT_JSON_SRC = "input.json"
 PATH_INPUT_JSON_DST = PROJECT_PATH / "app_out" / "assets" / "slclient" / "input.json"
@@ -837,7 +839,8 @@ class App(ctk.CTk):
             "log": _("msg_tab_log"),
             "config": _("msg_tab_config"),
             "build": _("msg_tab_build"),
-            "led": _("msg_tab_led")
+            "led": _("msg_tab_led"),
+            "terminal": _("msg_tab_apk_config")
         }
 
         self.tab_selector = ctk.CTkSegmentedButton(
@@ -915,6 +918,12 @@ class App(ctk.CTk):
         frame_led = ctk.CTkFrame(self.content_container, fg_color="transparent")
         self._init_led_config_page(frame_led)  # 注意：同上
         self.tab_frames["led"] = frame_led
+
+        # Tab 5: 终端配置 (保持原样)
+        frame_apk_config = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        self._init_terminal_config(frame_apk_config)  # 注意：同上
+        self.tab_frames["terminal"] = frame_apk_config
+
 
         # --- 将所有 Frame 放入容器，但先隐藏 ---
         for frame in self.tab_frames.values():
@@ -1010,8 +1019,10 @@ class App(ctk.CTk):
             "log": _("msg_tab_log"),
             "config": _("msg_tab_config"),
             "build": _("msg_tab_build"),
-            "led": _("msg_tab_led")
+            "led": _("msg_tab_led"),
+            "terminal": _("msg_tab_apk_config")
         }
+
 
         # 获取当前选中的键 (通过反向查找)
         current_display = self.selected_tab.get()
@@ -1036,7 +1047,7 @@ class App(ctk.CTk):
             _("type_none_screen"),
             _("type_custom_apk")
         ]
-
+        self._filter_terminal_folders()
         self.apk_type_seg.configure(values=new_values)
 
         if self.current_apk_type == "大屏":
@@ -1092,6 +1103,9 @@ class App(ctk.CTk):
         self.build_apk_btn.configure(text=_("btn_build"))
         self.env_custom.configure(text=_("env_custom"))
         self.decompile_apk_btn.configure(text=_("btn_decompile"))
+        self.apk_title_label.configure(text=_("msg_terminal_config_title"))
+
+
         self.scroll_frame.configure(label_text=i18n.get("msg_config_list_title"))
 
         self.env_custom.configure(text=_("env_custom"))
@@ -1101,6 +1115,7 @@ class App(ctk.CTk):
         if hasattr(self, 'map_title_label'):
             self.map_title_label.configure(text=i18n.get("msg_card_map"))
 
+        self.use_btn.configure(text=_("use_btn"))
         self.lbl_title.configure(text=_("msg_card_apk_properties"))
         self.lbl_input_title.configure(text=_("msg_tab_input"))
         self.title_led_mode.configure(text=_("msg_card_input"))
@@ -1124,6 +1139,7 @@ class App(ctk.CTk):
         self.play_channel.configure(text=_("play_channel"))
         self.rec_channel.configure(text=_("rec_channel"))
 
+
         try:
             if hasattr(self, 'model_dialog') and self.model_dialog.winfo_exists():
                 self.model_dialog.title(_("model_title"))
@@ -1137,6 +1153,8 @@ class App(ctk.CTk):
                 self.label_device_model.configure(text=_("label_device_model"))
             if hasattr(self, 'placeholder_model_input') and self.entry is not None:
                 self.entry.configure(text=_("placeholder_model_input"))
+            if hasattr(self, 'ok_btn') and self.ok_btn is not None:
+                self.ok_btn.configure(text=_("btn_ok"))
 
         except tkinter.TclError:
             pass
@@ -1605,6 +1623,258 @@ class App(ctk.CTk):
         # 4. 初始化加载 (可选)
         # self.after(500, self.load_led_configs)
 
+    # 弹窗语言自定义
+    def show_custom_message(self, title, message):
+        win = ctk.CTkToplevel(self)
+        win.title(title)
+        win.geometry("320x160")
+        win.resizable(False, False)
+
+        win.attributes("-topmost", True)
+        win.grab_set()
+
+        # ===== 字体统一 =====
+        title_font = ctk.CTkFont(size=15, weight="bold")
+        text_font = ctk.CTkFont(size=13,weight="bold")
+
+        # # ===== 标题 =====
+        # title_label = ctk.CTkLabel(win, text=title, font=title_font)
+        # title_label.pack(pady=(15, 5))
+
+        # ===== 内容 =====
+        label = ctk.CTkLabel(win, text=message, font=text_font, wraplength=280)
+        label.pack(pady=10)
+
+        # ===== 按钮 =====
+        btn = ctk.CTkButton(
+            win,
+            text=_("btn_ok"),
+            font=text_font,
+            width=80,
+            command=win.destroy
+        )
+        btn.pack(pady=10)
+
+        # ===== 居中 =====
+        win.update_idletasks()
+        w, h = win.winfo_width(), win.winfo_height()
+        x = (win.winfo_screenwidth() // 2) - (w // 2)
+        y = (win.winfo_screenheight() // 2) - (h // 2)
+        win.geometry(f"{w}x{h}+{x}+{y}")
+
+        # ===== 提升到最前（防止被遮挡）=====
+        win.lift()
+        win.focus_force()
+
+        win.after(10, lambda: win.attributes("-topmost", False))
+        # 回车关闭
+        win.after(10, lambda: win.attributes("-topmost", False))
+        # ESC关闭
+        win.bind("<Return>", lambda e: win.destroy())
+
+    def _init_terminal_config(self, parent):
+        # 创建主标题
+        self.apk_title_label = ctk.CTkLabel(
+            parent,
+            text=_("msg_terminal_config_title"),
+            font=ctk.CTkFont(size=20, weight="bold")
+        )
+        self.apk_title_label.pack(pady=(20, 10))
+
+        # 创建搜索框
+        search_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        search_frame.pack(pady=5, fill="x", padx=20)
+
+        self.terminal_search_var = ctk.StringVar()
+        search_entry = ctk.CTkEntry(
+            search_frame,
+            placeholder_text=_("placeholder_search_terminal"),
+            textvariable=self.terminal_search_var,
+            width=200
+        )
+        search_entry.pack(pady=5)
+
+
+        # # 搜索按钮
+        # search_btn = ctk.CTkButton(
+        #     search_frame,
+        #     text=_("btn_search"),
+        #     command=self._filter_terminal_folders,
+        #     width=80
+        # )
+        # search_btn.pack(side="left", padx=5)
+
+        # ⭐ 主内容区域 - 直接使用传入的parent
+        self.terminal_scroll_frame = ctk.CTkScrollableFrame(parent, width=800, height=500)
+        self.terminal_scroll_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+
+        # 初始化数据
+        self.terminal_all_folders = []
+        self._load_terminal_folders()
+
+        # 绑定搜索
+        self.terminal_search_var.trace_add("write", self._filter_terminal_folders)
+        search_entry.bind('<Return>', lambda e: self._filter_terminal_folders())
+
+    def _load_terminal_folders(self):
+        """加载终端配置文件夹"""
+        # 清空现有组件
+        for widget in self.terminal_scroll_frame.winfo_children():
+            widget.destroy()
+
+        # 获取文件夹列表
+        folder_path = "terminal_configs"
+        Path(folder_path).mkdir(exist_ok=True)
+        self.terminal_all_folders = [f for f in Path(folder_path).iterdir() if f.is_dir()]
+
+        # 按6列网格布局
+        for index, folder in enumerate(self.terminal_all_folders):
+            row = index // 6
+            col = index % 6
+
+            # 创建图标容器
+            icon_frame = ctk.CTkFrame(self.terminal_scroll_frame, width=120, height=140, corner_radius=10)
+            icon_frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+
+            # 配置行列权重
+            self.terminal_scroll_frame.grid_columnconfigure(col, weight=1)
+
+            # 创建图标
+            icon_label = ctk.CTkLabel(
+                icon_frame,
+                text="📁",
+                font=ctk.CTkFont(size=24)
+            )
+            icon_label.pack(pady=(10, 5))
+
+            # 创建文件夹名称
+            name_label = ctk.CTkLabel(
+                icon_frame,
+                text=folder.name[:10] + ("..." if len(folder.name) > 10 else ""),
+                font=ctk.CTkFont(size=12),
+                wraplength=100
+            )
+            name_label.pack(pady=(0, 5))
+
+            # 创建使用按钮
+            self.use_btn = ctk.CTkButton(
+                icon_frame,
+                text=_("use_btn"),
+                width=80,
+                height=25,
+                command=lambda f=folder: self._use_terminal_config(f),
+                fg_color="#1f6aa0",
+                hover_color="#144870"
+            )
+            self.use_btn.pack(pady=(0, 10))
+
+    def _filter_terminal_folders(self, *args):
+        """过滤终端配置文件夹"""
+        search_term = self.terminal_search_var.get().lower()
+
+        # 清空现有组件
+        for widget in self.terminal_scroll_frame.winfo_children():
+            widget.destroy()
+
+        # 过滤文件夹
+        filtered_folders = [
+            f for f in self.terminal_all_folders
+            if search_term in f.name.lower()
+        ]
+
+        # 重新布局过滤后的文件夹
+        for index, folder in enumerate(filtered_folders):
+            row = index // 6
+            col = index % 6
+
+            icon_frame = ctk.CTkFrame(self.terminal_scroll_frame, width=120, height=140, corner_radius=10)
+            icon_frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+            self.terminal_scroll_frame.grid_columnconfigure(col, weight=1)
+
+            icon_label = ctk.CTkLabel(icon_frame, text="📁", font=ctk.CTkFont(size=24))
+            icon_label.pack(pady=(10, 5))
+
+            name_label = ctk.CTkLabel(
+                icon_frame,
+                text=folder.name[:10] + ("..." if len(folder.name) > 10 else ""),
+                font=ctk.CTkFont(size=12),
+                wraplength=100
+            )
+            name_label.pack(pady=(0, 5))
+
+            self.use_btn = ctk.CTkButton(
+                icon_frame,
+                text=_("use_btn"),
+                width=80,
+                height=25,
+                command=lambda f=folder: self._use_terminal_config(f),
+                fg_color="#1f6aa0",
+                hover_color="#144870"
+            )
+            self.use_btn.pack(pady=(0, 10))
+
+    def _use_terminal_config(self, folder_path):
+        """
+        使用终端配置替换到app_out中
+        """
+        # print(f"使用终端配置:{folder_path.name}")
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror("ERROR", f"Please unzip apk first")
+            return False
+        self.copy_terminal_files(folder_path)
+        self.load_all_configs()
+        self.load_and_echo_config_after_unzip()
+
+    def copy_terminal_files(self, folder_path):
+        """
+        点击按钮覆盖app_out
+        """
+        source_dir = Path(folder_path)
+
+        # ===== 源路径 =====
+        slclient_json = source_dir / "slclient.json"
+        slclient_dir = source_dir / "slclient"
+        led_json = slclient_dir / "led.json"
+        input_json = slclient_dir / "input.json"
+        reaction_json = slclient_dir / "reaction.json"
+
+        try:
+            # # ===== 检查源文件 =====
+            # if not slclient_json.exists():
+            #     raise FileNotFoundError(f"缺少文件: {slclient_json}")
+            # if not led_json.exists():
+            #     raise FileNotFoundError(f"缺少文件: {led_json}")
+            # if not input_json.exists():
+            #     raise FileNotFoundError(f"缺少文件: {input_json}")
+            #
+            # # ===== 检查目标目录 =====
+            # if not PATH_ASS.exists():
+            #     raise FileNotFoundError(f"目标目录不存在: {PATH_ASS}")
+            #
+            # if not PATH_SLCLIENT_JSON.exists():
+            #     raise FileNotFoundError(f"目标目录不存在: {PATH_SLCLIENT_JSON}")
+
+            # ===== 拷贝文件 =====
+            shutil.copy2(slclient_json, PATH_ASS / "slclient.json")
+            # print(f"[success] {slclient_json} -> {PATH_ASS}\n")
+
+            shutil.copy2(led_json, PATH_SLCLIENT/ "led.json")
+            # print(f"[success] {led_json} -> {PATH_SLCLIENT}\n")
+
+            shutil.copy2(input_json, PATH_SLCLIENT / "input.json")
+            # print(f"[success] {input_json} -> {PATH_SLCLIENT}\n")
+
+            shutil.copy2(reaction_json, PATH_SLCLIENT / "reaction.json")
+            # print(f"[success] {input_json} -> {PATH_SLCLIENT}\n")
+
+            self.append_log(f"[success] Imported {folder_path.name} successfully\n")
+            self.show_custom_message("Success", f"Imported {folder_path.name} successfully")
+
+        except Exception as e:
+            self.append_log(f"[ERROR]: {e}")
+
+
     def _build_input_mode_content(self, parent):
         """构建手动配置 PTT/SOS 按键的 UI (样式统一版)"""
 
@@ -1846,7 +2116,7 @@ class App(ctk.CTk):
             #     font=ctk.CTkFont(size=12, weight="bold")
             # )
             self.append_log(f"[Manual Save] {final_msg}\n")
-            messagebox.showinfo("Successfully", final_msg)
+            self.show_custom_message("Successfully", final_msg)
 
             if hasattr(self, '_safe_refresh_config_view'):
                 self._safe_refresh_config_view()
@@ -2168,7 +2438,7 @@ class App(ctk.CTk):
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
-            messagebox.showinfo("Successfully", "saved successfully")
+            self.show_custom_message("Successfully", "saved successfully")
 
         except FileNotFoundError:
             error_msg = "❌ 错误：找不到配置文件路径。"
@@ -3040,7 +3310,6 @@ class App(ctk.CTk):
 
         except Exception as e:
             self.append_log(f"[Error] Failed to write json: {e}\n")
-            import traceback
             traceback.print_exc()
 
     # 在 App 类定义之前或 __init__ 中调用
@@ -3389,7 +3658,7 @@ class App(ctk.CTk):
 
         if file_path:
             self.custom_apk_path = file_path
-            messagebox.showinfo("提示", f"已选择APK:\n{file_path}")
+            self.show_custom_message("Tip", f"已选择APK:\n{file_path}")
 
     def build_apk(self) -> None:
         """主打包入口
@@ -3508,7 +3777,7 @@ class App(ctk.CTk):
                 self.load_all_configs()
                 end_time = time.time()
                 self.append_log(f"[SUCCESS] ✅  time spent: {(end_time - start_time):.2f}s\n")
-                messagebox.showinfo("SUCCESS", f"APK Safe: \n{output_apk_path}")
+                self.show_custom_message("SUCCESS", f"APK Safe: \n{output_apk_path}")
 
             except Exception as e:
                 error_msg = f"[FAIL] ❌ {str(e)}"
