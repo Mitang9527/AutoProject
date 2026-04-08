@@ -625,6 +625,11 @@ class App(ctk.CTk):
         self.title(_("app_title"))
         self.geometry("1200x700")
 
+        # 添加标志跟踪是否是环境预设值
+        self.is_default_dns = False
+        self.is_default_context = False
+        self.is_default_upgrade = False
+
         # 状态变量
         self.backend: Optional[SmartKeyBackend] = None
         self.current_device: str = ""
@@ -1964,6 +1969,17 @@ class App(ctk.CTk):
         self.entry_custom_upgrade = ctk.CTkEntry(parent, state="normal")
         self.entry_custom_upgrade.grid(row=6, column=1, padx=5, pady=(2, 10), sticky="ew")
 
+        self.entry_custom_ip.bind("<FocusIn>", lambda e: self.on_dns_entry_focus_in(e))
+        self.entry_custom_ip.bind("<FocusOut>", self.on_dns_entry_focus_out)
+
+        self.entry_custom_context.bind("<FocusIn>", lambda e: self.on_context_entry_focus_in(e))
+        self.entry_custom_context.bind("<FocusOut>", self.on_context_entry_focus_out)
+
+
+        self.entry_custom_upgrade.bind("<FocusIn>", lambda e: self.on_upgrade_entry_focus_in(e))
+        self.entry_custom_upgrade.bind("<FocusOut>", self.on_upgrade_entry_focus_out)
+
+
         # 回显默认文字
         # self.entry_custom_context.configure(state="normal")
         # self.entry_custom_context.delete(0, 'end')
@@ -2020,6 +2036,89 @@ class App(ctk.CTk):
         else:
             self.opt_env.set(self.CUSTOM_OPTION_NAME)
             self._on_env_selected(self.CUSTOM_OPTION_NAME)
+
+    def load_and_echo_config_after_unzip(self):
+        """
+        解压完成后从slclient.json加载配置并回显到输入框，以灰色字体显示
+        """
+        config_data = self._load_slclient_json()
+
+        # 获取profile节点下的配置
+        profile_config = config_data.get("profile", {})
+
+        dns_list = profile_config.get("dns", [])
+        if dns_list and isinstance(dns_list, list):
+            first_dns = dns_list[0] if dns_list else ""
+            if first_dns:
+                self.entry_custom_ip.delete(0, "end")
+                self.entry_custom_ip.insert(0, first_dns)
+                self.entry_custom_ip.configure(text_color="gray")
+                self.original_dns_value = first_dns
+
+        context_value = profile_config.get("context", "")
+        if context_value:
+            self.entry_custom_context.delete(0, "end")
+            self.entry_custom_context.insert(0, context_value)
+            self.entry_custom_context.configure(text_color="gray")
+            self.original_context_value = context_value
+
+        upgrade_url = profile_config.get("upgrade_url", "")
+        if upgrade_url:
+            self.entry_custom_upgrade.delete(0, "end")
+            self.entry_custom_upgrade.insert(0, upgrade_url)
+            self.entry_custom_upgrade.configure(text_color="gray")
+            self.original_upgrade_url = upgrade_url
+
+        self.append_log("Configuration loaded and echoed successfully.\n")
+
+    def on_dns_entry_focus_in(self, event):
+        """DNS输入框获得焦点时的处理"""
+        if self.entry_custom_ip.cget("text_color") == "gray":
+            self.entry_custom_ip.delete(0, "end")
+            self.entry_custom_ip.configure(text_color="black")
+
+    def on_dns_entry_focus_out(self, event):
+        """DNS输入框失去焦点时的处理 - 如果没有输入任何内容，恢复原始配置值"""
+        current_content = self.entry_custom_ip.get().strip()
+        if current_content == "":
+            if hasattr(self, 'original_dns_value') and self.original_dns_value:
+                self.entry_custom_ip.delete(0, "end")
+                self.entry_custom_ip.insert(0, self.original_dns_value)
+                self.entry_custom_ip.configure(text_color="gray")
+
+    def on_context_entry_focus_in(self, event):
+        """Context输入框获得焦点时的处理"""
+        if self.entry_custom_context.cget("text_color") == "gray":
+            self.entry_custom_context.delete(0, "end")
+            self.entry_custom_context.configure(text_color="black")
+
+    def on_context_entry_focus_out(self, event):
+        """Context输入框失去焦点时的处理 - 如果没有输入任何内容，恢复原始配置值"""
+        current_content = self.entry_custom_context.get().strip()
+        if current_content == "":
+            if hasattr(self, 'original_context_value') and self.original_context_value:
+                self.entry_custom_context.delete(0, "end")
+                self.entry_custom_context.insert(0, self.original_context_value)
+                self.entry_custom_context.configure(text_color="gray")
+
+    def on_upgrade_entry_focus_in(self, event):
+        """Upgrade URL输入框获得焦点时的处理"""
+        if self.entry_custom_upgrade.cget("text_color") == "gray":
+            self.entry_custom_upgrade.delete(0, "end")
+            self.entry_custom_upgrade.configure(text_color="black")
+
+    def on_upgrade_entry_focus_out(self, event):
+        """Upgrade URL输入框失去焦点时的处理 - 如果没有输入任何内容，恢复原始配置值"""
+        current_content = self.entry_custom_upgrade.get().strip()
+        if current_content == "":
+            if hasattr(self, 'original_upgrade_url') and self.original_upgrade_url:
+                self.entry_custom_upgrade.delete(0, "end")
+                self.entry_custom_upgrade.insert(0, self.original_upgrade_url)
+                self.entry_custom_upgrade.configure(text_color="gray")
+            # else:
+            #     self.entry_custom_upgrade.delete(0, "end")
+            #     self.entry_custom_upgrade.insert(0, "请输入升级URL")
+            #     self.entry_custom_upgrade.configure(text_color="gray")
 
     def _save_profile_changes(self):
         """
@@ -2107,7 +2206,6 @@ class App(ctk.CTk):
                                                  self._sync_tone_enabled_to_json(bool(self.switch_tone_sfx.get()))
                                              ))
         self.switch_tone_sfx.grid(row=1, column=1, padx=5, pady=6, sticky="w")
-        # TODO 改为默认从load_all获取
         self.switch_tone_sfx.select()  # 默认开启
 
         # 3. 语音编码
@@ -3247,6 +3345,8 @@ class App(ctk.CTk):
                     self.append_log(f"[Success] Auto-config: ui.launcherModule set to '{new_value}'\n")
                 else:
                     self.append_log("[Warning] Config update failed after unzip.\n")
+
+            self.load_and_echo_config_after_unzip()
 
             self.append_log(f"[SUCCESS] ✅  time spent: {(end_time - start_time):.2f}s\n")
 
