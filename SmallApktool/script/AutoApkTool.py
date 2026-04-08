@@ -79,7 +79,7 @@ MAP_CONFIG_TEMPLATES = {
             "report_period_sec": 40
         }
     },
-    "google": {
+    "Google": {
         "display_name": {"zh": "谷歌", "en": "Google"},
         "config": {
             "enabled": True,
@@ -1181,18 +1181,18 @@ class App(ctk.CTk):
             self.opt_map_source.configure(values=map_source_display_names)
 
             # b. 根据存储的原始键，恢复当前选中的显示名称
-            current_map_source_key = "baidu_domestic"  # 默认值
+            current_map_source_key = "Google"  # 默认值
             if PATH_SLCLIENT_JSON.exists():
                 try:
                     with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
                         slclient_data = json.load(f)
-                    current_map_source_key = slclient_data.get("profile", {}).get("map_source", "baidu_domestic")
+                    current_map_source_key = slclient_data.get("profile", {}).get("map_source", "Google")
                 except Exception as e:
                     print(f"[Warning] Failed to read map_source for update: {e}")
 
             # c. 根据存储键，获取新语言下的显示名称，并设置
             new_display_name = MAP_CONFIG_TEMPLATES.get(current_map_source_key, {}).get("display_name", {}).get(
-                i18n.current_lang, "百度 [国内]")
+                i18n.current_lang, "谷歌")
             self.opt_map_source.set(new_display_name)  # 此时 on_map_source_change 不会执行任何操作
 
         # ⭐⭐⭐【关键修改】重置标志位
@@ -2788,7 +2788,7 @@ class App(ctk.CTk):
         try:
             # 初始化变量
             login_mode_val = "account"
-            map_source_val = "google"
+            map_source_val = "Google"
             current_env_key = default_env_key
 
             tts_enabled_val = False

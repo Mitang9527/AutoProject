@@ -15,6 +15,66 @@
     "sos_up": {
       "event": "KEY_UP",
       "key": -2
+    },
+    "many_ptt_down_20260407150305": {
+      "event": "KEY_DOWN",
+      "key": -1000
+    },
+    "ptt_up_20260407150305": {
+      "event": "KEY_UP",
+      "key": -1000
+    },
+    "many_ptt_down_20260407150346": {
+      "event": "KEY_DOWN",
+      "key": -1001
+    },
+    "ptt_up_20260407150346": {
+      "event": "KEY_UP",
+      "key": -1001
+    },
+    "many_ptt_down_20260407150853": {
+      "event": "KEY_DOWN",
+      "key": -1002
+    },
+    "ptt_up_20260407150853": {
+      "event": "KEY_UP",
+      "key": -1002
+    },
+    "many_ptt_down_20260407151048": {
+      "event": "KEY_DOWN",
+      "key": -1003
+    },
+    "ptt_up_20260407151048": {
+      "event": "KEY_UP",
+      "key": -1003
+    },
+    "many_ptt_down_20260407151607": {
+      "event": "KEY_DOWN",
+      "key": -1004
+    },
+    "ptt_up_20260407151607": {
+      "event": "KEY_UP",
+      "key": -1004
+    },
+    "sos_down_20260407151611": {
+      "event": "KEY_CLICK",
+      "key": -1005,
+      "time": 3000
+    },
+    "sos_up_20260407151611": {
+      "event": "KEY_CLICK",
+      "key": -1005,
+      "time": 3000
+    },
+    "sos_down_20260407151615": {
+      "event": "KEY_CLICK",
+      "key": -1006,
+      "time": 3000
+    },
+    "sos_up_20260407151615": {
+      "event": "KEY_CLICK",
+      "key": -1006,
+      "time": 3000
     }
   },
   "custom": [],
@@ -54,6 +114,86 @@
           }
         }
       ]
+    },
+    "many_ptt_down_20260407150305": {
+      "default": [],
+      "member": [],
+      "new_call_in": []
+    },
+    "ptt_up_20260407150305": {
+      "default": [
+        {
+          "command": {
+            "id": "STOP_SPEAK"
+          }
+        }
+      ],
+      "member": [],
+      "new_call_in": []
+    },
+    "many_ptt_down_20260407150346": {
+      "default": [],
+      "member": [],
+      "new_call_in": []
+    },
+    "ptt_up_20260407150346": {
+      "default": [
+        {
+          "command": {
+            "id": "STOP_SPEAK"
+          }
+        }
+      ],
+      "member": [],
+      "new_call_in": []
+    },
+    "many_ptt_down_20260407150853": {
+      "default": [],
+      "member": [],
+      "new_call_in": []
+    },
+    "ptt_up_20260407150853": {
+      "default": [
+        {
+          "command": {
+            "id": "STOP_SPEAK"
+          }
+        }
+      ],
+      "member": [],
+      "new_call_in": []
+    },
+    "many_ptt_down_20260407151048": {
+      "default": [],
+      "member": [],
+      "new_call_in": []
+    },
+    "ptt_up_20260407151048": {
+      "default": [
+        {
+          "command": {
+            "id": "STOP_SPEAK"
+          }
+        }
+      ],
+      "member": [],
+      "new_call_in": []
+    },
+    "many_ptt_down_20260407151607": {
+      "default": [],
+      "member": [],
+      "new_call_in": []
+    },
+    "ptt_up_20260407151607": {
+      "default": [
+        {
+          "command": {
+            "id": "STOP_SPEAK"
+          }
+        }
+      ],
+      "member": [],
+      "new_call_in": []
     }
   },
   "intent": {
@@ -68,6 +208,48 @@
     },
     "sos_up": {
       "action": "com.android.cusKey.f2.up"
+    },
+    "many_ptt_down_20260407150305": {
+      "action": "123"
+    },
+    "ptt_up_20260407150305": {
+      "action": "123123"
+    },
+    "many_ptt_down_20260407150346": {
+      "action": "12312"
+    },
+    "ptt_up_20260407150346": {
+      "action": "3123123"
+    },
+    "many_ptt_down_20260407150853": {
+      "action": "q23"
+    },
+    "ptt_up_20260407150853": {
+      "action": "123"
+    },
+    "many_ptt_down_20260407151048": {
+      "action": "123213"
+    },
+    "ptt_up_20260407151048": {
+      "action": "123132"
+    },
+    "many_ptt_down_20260407151607": {
+      "action": "1233"
+    },
+    "ptt_up_20260407151607": {
+      "action": "123213"
+    },
+    "sos_down_20260407151611": {
+      "action": "123123"
+    },
+    "sos_up_20260407151611": {
+      "action": "123123"
+    },
+    "sos_down_20260407151615": {
+      "action": "123213"
+    },
+    "sos_up_20260407151615": {
+      "action": "123213"
     }
   }
 }
