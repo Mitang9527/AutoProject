@@ -134,6 +134,7 @@ APKSIGNER_BAT = PROJECT_PATH / "win" / "apksigner.bat"
 
 # 业务常量
 LAUNCHER_MODULE_PATH = ["ui", "launcherModule"]
+RECORDER_ENABLE_PATH = ["recorder", "enable"]
 
 DEFAULT_CUSTOM_LIST = [
     "join_next_group",
@@ -631,6 +632,9 @@ class App(ctk.CTk):
         self.is_default_dns = False
         self.is_default_context = False
         self.is_default_upgrade = False
+
+        # 添加标志跟踪是否是已有配置导入
+        self.is_import = False
 
         # 状态变量
         self.backend: Optional[SmartKeyBackend] = None
@@ -1673,7 +1677,6 @@ class App(ctk.CTk):
         win.bind("<Return>", lambda e: win.destroy())
 
     def _init_terminal_config(self, parent):
-        # 创建主标题
         self.apk_title_label = ctk.CTkLabel(
             parent,
             text=_("msg_terminal_config_title"),
@@ -1681,11 +1684,12 @@ class App(ctk.CTk):
         )
         self.apk_title_label.pack(pady=(20, 10))
 
-        # 创建搜索框
+        # 搜索框
         search_frame = ctk.CTkFrame(parent, fg_color="transparent")
         search_frame.pack(pady=5, fill="x", padx=20)
 
         self.terminal_search_var = ctk.StringVar()
+
         search_entry = ctk.CTkEntry(
             search_frame,
             placeholder_text=_("placeholder_search_terminal"),
@@ -1694,62 +1698,65 @@ class App(ctk.CTk):
         )
         search_entry.pack(pady=5)
 
-
-        # # 搜索按钮
-        # search_btn = ctk.CTkButton(
-        #     search_frame,
-        #     text=_("btn_search"),
-        #     command=self._filter_terminal_folders,
-        #     width=80
-        # )
-        # search_btn.pack(side="left", padx=5)
-
-        # ⭐ 主内容区域 - 直接使用传入的parent
+        # 滚动区域
         self.terminal_scroll_frame = ctk.CTkScrollableFrame(parent, width=800, height=500)
         self.terminal_scroll_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
-
-        # 初始化数据
+        # 数据
         self.terminal_all_folders = []
+
         self._load_terminal_folders()
 
-        # 绑定搜索
-        self.terminal_search_var.trace_add("write", self._filter_terminal_folders)
+        # 绑定搜索（加防抖）
+        self._search_after_id = None
+        self.terminal_search_var.trace_add("write", self._on_search_change)
         search_entry.bind('<Return>', lambda e: self._filter_terminal_folders())
 
+    #  防抖搜索（减少卡顿）
+    def _on_search_change(self, *args):
+        if self._search_after_id:
+            self.after_cancel(self._search_after_id)
+
+        self._search_after_id = self.after(300, self._filter_terminal_folders)
+
     def _load_terminal_folders(self):
-        """加载终端配置文件夹"""
-        # 清空现有组件
+        folder_path = "terminal_configs"
+        Path(folder_path).mkdir(exist_ok=True)
+
+        self.terminal_all_folders = [
+            f for f in Path(folder_path).iterdir() if f.is_dir()
+        ]
+
+        self._render_terminal_folders(self.terminal_all_folders)
+
+    def _render_terminal_folders(self, folders):
+        # 清空 UI
         for widget in self.terminal_scroll_frame.winfo_children():
             widget.destroy()
 
-        # 获取文件夹列表
-        folder_path = "terminal_configs"
-        Path(folder_path).mkdir(exist_ok=True)
-        self.terminal_all_folders = [f for f in Path(folder_path).iterdir() if f.is_dir()]
-
-        # 按6列网格布局
-        for index, folder in enumerate(self.terminal_all_folders):
+        for index, folder in enumerate(folders):
             row = index // 6
             col = index % 6
 
-            # 创建图标容器
-            icon_frame = ctk.CTkFrame(self.terminal_scroll_frame, width=120, height=140, corner_radius=10)
+            icon_frame = ctk.CTkFrame(
+                self.terminal_scroll_frame,
+                width=120,
+                height=140,
+                corner_radius=10
+            )
             icon_frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
 
-            # 配置行列权重
             self.terminal_scroll_frame.grid_columnconfigure(col, weight=1)
 
-            # 创建图标
-            icon_label = ctk.CTkLabel(
+            # 图标
+            ctk.CTkLabel(
                 icon_frame,
                 text="📁",
                 font=ctk.CTkFont(size=24)
-            )
-            icon_label.pack(pady=(10, 5))
+            ).pack(pady=(10, 5))
 
-            # 创建文件夹名称
-            name_label = ctk.CTkLabel(
+            # 名称
+            name_label =ctk.CTkLabel(
                 icon_frame,
                 text=folder.name[:10] + ("..." if len(folder.name) > 10 else ""),
                 font=ctk.CTkFont(size=12),
@@ -1757,8 +1764,7 @@ class App(ctk.CTk):
             )
             name_label.pack(pady=(0, 5))
 
-            # 创建使用按钮
-            self.use_btn = ctk.CTkButton(
+            use_btn = ctk.CTkButton(
                 icon_frame,
                 text=_("use_btn"),
                 width=80,
@@ -1767,52 +1773,21 @@ class App(ctk.CTk):
                 fg_color="#1f6aa0",
                 hover_color="#144870"
             )
-            self.use_btn.pack(pady=(0, 10))
+            use_btn.pack(pady=(0, 10))
+            self.use_btn = use_btn
 
-    def _filter_terminal_folders(self, *args):
-        """过滤终端配置文件夹"""
+    def _filter_terminal_folders(self):
         search_term = self.terminal_search_var.get().lower()
 
-        # 清空现有组件
-        for widget in self.terminal_scroll_frame.winfo_children():
-            widget.destroy()
+        if not search_term:
+            filtered = self.terminal_all_folders
+        else:
+            filtered = [
+                f for f in self.terminal_all_folders
+                if search_term in f.name.lower()
+            ]
 
-        # 过滤文件夹
-        filtered_folders = [
-            f for f in self.terminal_all_folders
-            if search_term in f.name.lower()
-        ]
-
-        # 重新布局过滤后的文件夹
-        for index, folder in enumerate(filtered_folders):
-            row = index // 6
-            col = index % 6
-
-            icon_frame = ctk.CTkFrame(self.terminal_scroll_frame, width=120, height=140, corner_radius=10)
-            icon_frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
-            self.terminal_scroll_frame.grid_columnconfigure(col, weight=1)
-
-            icon_label = ctk.CTkLabel(icon_frame, text="📁", font=ctk.CTkFont(size=24))
-            icon_label.pack(pady=(10, 5))
-
-            name_label = ctk.CTkLabel(
-                icon_frame,
-                text=folder.name[:10] + ("..." if len(folder.name) > 10 else ""),
-                font=ctk.CTkFont(size=12),
-                wraplength=100
-            )
-            name_label.pack(pady=(0, 5))
-
-            self.use_btn = ctk.CTkButton(
-                icon_frame,
-                text=_("use_btn"),
-                width=80,
-                height=25,
-                command=lambda f=folder: self._use_terminal_config(f),
-                fg_color="#1f6aa0",
-                hover_color="#144870"
-            )
-            self.use_btn.pack(pady=(0, 10))
+        self._render_terminal_folders(filtered)
 
     def _use_terminal_config(self, folder_path):
         """
@@ -1825,6 +1800,7 @@ class App(ctk.CTk):
         self.copy_terminal_files(folder_path)
         self.load_all_configs()
         self.load_and_echo_config_after_unzip()
+        self.is_import = True
 
     def copy_terminal_files(self, folder_path):
         """
@@ -1868,8 +1844,10 @@ class App(ctk.CTk):
             shutil.copy2(reaction_json, PATH_SLCLIENT / "reaction.json")
             # print(f"[success] {input_json} -> {PATH_SLCLIENT}\n")
 
-            self.append_log(f"[success] Imported {folder_path.name} successfully\n")
-            self.show_custom_message("Success", f"Imported {folder_path.name} successfully")
+            self.append_log(f"[success] Imported {folder_path.name} Successfully\n")
+            self.show_custom_message("Success", f"Imported \n"
+                                                f"\n{folder_path.name}\n"
+                                                f"\nSuccessfully !")
 
         except Exception as e:
             self.append_log(f"[ERROR]: {e}")
@@ -3709,7 +3687,8 @@ class App(ctk.CTk):
                     self.set_json_field(PATH_SLCLIENT_JSON, field_path, model)
 
                 # 2.替换input.json
-                self.copy_files(PATH_INPUT_JSON_SRC, PATH_INPUT_JSON_DST)
+                if not self.is_import:
+                    self.copy_files(PATH_INPUT_JSON_SRC, PATH_INPUT_JSON_DST)
 
                 # 3. 构建未签名 APK
                 self.append_log("\n[Step 3] Packing APK...\n")
@@ -3786,6 +3765,8 @@ class App(ctk.CTk):
                 messagebox.showerror("ERROR", error_msg)
             finally:
                 self.build_apk_btn.configure(state="normal", text=_("btn_build"))
+                # 还原导入标示，后续打包继续使用覆盖input.json
+                self.is_import = False
 
         threading.Thread(target=task, daemon=True).start()
 
@@ -3864,6 +3845,7 @@ class App(ctk.CTk):
         try:
             launcher_module = self.get_json_field(PATH_SLCLIENT_JSON, LAUNCHER_MODULE_PATH)
             version_str = self.get_version_info(yml_path)[1]
+            recorder_module = self.get_json_field(PATH_SLCLIENT_JSON, RECORDER_ENABLE_PATH)
 
             raw_model = getattr(self, 'current_device_model', 'Unknown')
             device_model = str(raw_model)
@@ -3872,8 +3854,10 @@ class App(ctk.CTk):
                 new_version_name = version_str
             else:
                 new_version_name = re.sub(r'(POCSTARS_)', r'\g<1>' + device_model + '_', version_str)
+            if recorder_module:
+                newname = 'RSAPP_' + str(new_version_name) + '.apk'
 
-            if launcher_module is None:
+            elif launcher_module is None:
                 newname = 'ASAPP_' + str(new_version_name) + '.apk'
             elif launcher_module == 'large':
                 newname = 'BSAPP_' + str(new_version_name) + '.apk'
