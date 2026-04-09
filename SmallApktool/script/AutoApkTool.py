@@ -1702,8 +1702,9 @@ class App(ctk.CTk):
         self.terminal_scroll_frame = ctk.CTkScrollableFrame(parent, width=800, height=500)
         self.terminal_scroll_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # 数据
+        # 数据 - 分别存储全部文件夹和显示的文件夹
         self.terminal_all_folders = []
+        self.current_displayed_folders = []
 
         self._load_terminal_folders()
 
@@ -1712,22 +1713,30 @@ class App(ctk.CTk):
         self.terminal_search_var.trace_add("write", self._on_search_change)
         search_entry.bind('<Return>', lambda e: self._filter_terminal_folders())
 
-    #  防抖搜索（减少卡顿）
-    def _on_search_change(self, *args):
-        if self._search_after_id:
-            self.after_cancel(self._search_after_id)
-
-        self._search_after_id = self.after(300, self._filter_terminal_folders)
-
     def _load_terminal_folders(self):
         folder_path = "terminal_configs"
         Path(folder_path).mkdir(exist_ok=True)
 
+        # 只在首次加载时扫描目录，后续使用缓存
         self.terminal_all_folders = [
             f for f in Path(folder_path).iterdir() if f.is_dir()
         ]
 
-        self._render_terminal_folders(self.terminal_all_folders)
+        # 初始化显示所有文件夹
+        self.current_displayed_folders = self.terminal_all_folders.copy()
+        self._render_terminal_folders(self.current_displayed_folders)
+
+        # 根据当前搜索状态决定显示哪些文件夹
+        search_term = self.terminal_search_var.get().lower()
+        if not search_term:
+            self.current_displayed_folders = self.terminal_all_folders.copy()
+        else:
+            self.current_displayed_folders = [
+                f for f in self.terminal_all_folders
+                if search_term in f.name.lower()
+            ]
+
+        self._render_terminal_folders(self.current_displayed_folders)
 
     def _render_terminal_folders(self, folders):
         # 清空 UI
@@ -1756,7 +1765,7 @@ class App(ctk.CTk):
             ).pack(pady=(10, 5))
 
             # 名称
-            name_label =ctk.CTkLabel(
+            name_label = ctk.CTkLabel(
                 icon_frame,
                 text=folder.name[:10] + ("..." if len(folder.name) > 10 else ""),
                 font=ctk.CTkFont(size=12),
@@ -1780,14 +1789,22 @@ class App(ctk.CTk):
         search_term = self.terminal_search_var.get().lower()
 
         if not search_term:
-            filtered = self.terminal_all_folders
+            self.current_displayed_folders = self.terminal_all_folders.copy()
         else:
-            filtered = [
+            self.current_displayed_folders = [
                 f for f in self.terminal_all_folders
                 if search_term in f.name.lower()
             ]
 
-        self._render_terminal_folders(filtered)
+        self._render_terminal_folders(self.current_displayed_folders)
+
+    def _on_search_change(self, *args):
+        if self._search_after_id:
+            self.after_cancel(self._search_after_id)
+
+        self._search_after_id = self.after(50, self._filter_terminal_folders)
+
+
 
     def _use_terminal_config(self, folder_path):
         """
