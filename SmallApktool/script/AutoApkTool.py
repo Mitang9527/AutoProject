@@ -79,7 +79,7 @@ MAP_CONFIG_TEMPLATES = {
             "report_period_sec": 40
         }
     },
-    "Google": {
+    "google": {
         "display_name": {"zh": "谷歌", "en": "Google"},
         "config": {
             "enabled": True,
@@ -91,7 +91,7 @@ MAP_CONFIG_TEMPLATES = {
             "report_period_sec": 40
         }
     },
-    "gps": {
+    "none": {
         "display_name": {"zh": "GPS", "en": "GPS"},
         "config": {
             "enabled": True,
@@ -108,7 +108,7 @@ MAP_CONFIG_TEMPLATES = {
 # 关键文件路径
 PATH_YML = PROJECT_PATH / "app_out" / "apktool.yml"
 PATH_ASS = PROJECT_PATH / "app_out" / "assets"
-PATH_SLCLIENT =  PROJECT_PATH / "app_out" / "assets" / "slclient"
+PATH_SLCLIENT = PROJECT_PATH / "app_out" / "assets" / "slclient"
 PATH_SLCLIENT_JSON = PROJECT_PATH / "app_out" / "assets" / "slclient.json"
 PATH_INPUT_JSON_SRC = "input.json"
 PATH_INPUT_JSON_DST = PROJECT_PATH / "app_out" / "assets" / "slclient" / "input.json"
@@ -135,6 +135,9 @@ APKSIGNER_BAT = PROJECT_PATH / "win" / "apksigner.bat"
 # 业务常量
 LAUNCHER_MODULE_PATH = ["ui", "launcherModule"]
 RECORDER_ENABLE_PATH = ["recorder", "enable"]
+
+LBS_COOR_PATH = ["lbs", "coor"]
+LBS_MAP_PYPE = ["lbs", "map_type"]
 
 DEFAULT_CUSTOM_LIST = [
     "join_next_group",
@@ -928,7 +931,6 @@ class App(ctk.CTk):
         self._init_terminal_config(frame_apk_config)  # 注意：同上
         self.tab_frames["terminal"] = frame_apk_config
 
-
         # --- 将所有 Frame 放入容器，但先隐藏 ---
         for frame in self.tab_frames.values():
             frame.grid(row=0, column=0, sticky="nsew")
@@ -1027,7 +1029,6 @@ class App(ctk.CTk):
             "terminal": _("msg_tab_apk_config")
         }
 
-
         # 获取当前选中的键 (通过反向查找)
         current_display = self.selected_tab.get()
         current_key = None
@@ -1109,7 +1110,6 @@ class App(ctk.CTk):
         self.decompile_apk_btn.configure(text=_("btn_decompile"))
         self.apk_title_label.configure(text=_("msg_terminal_config_title"))
 
-
         self.scroll_frame.configure(label_text=i18n.get("msg_config_list_title"))
 
         self.env_custom.configure(text=_("env_custom"))
@@ -1142,7 +1142,6 @@ class App(ctk.CTk):
         self.audio.configure(text=_("audio"))
         self.play_channel.configure(text=_("play_channel"))
         self.rec_channel.configure(text=_("rec_channel"))
-
 
         try:
             if hasattr(self, 'model_dialog') and self.model_dialog.winfo_exists():
@@ -1213,14 +1212,23 @@ class App(ctk.CTk):
                 try:
                     with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
                         slclient_data = json.load(f)
-                    current_map_source_key = slclient_data.get("profile", {}).get("map_source", "Google")
+
+                    current_map_source_key = slclient_data.get("lbs", {}).get("map_type", "Google")
+                    self.map_type = self.get_json_field(PATH_SLCLIENT_JSON,LBS_MAP_PYPE)
+                    if self.map_coor == "wgs84" and self.map_type == "baidu":
+                        current_map_source_key = "baidu_oversea"
+                    elif self.map_coor == "bd09ll" and self.map_type == "baidu":
+                        current_map_source_key = "baidu_domestic"
+                    if current_map_source_key == "none":
+                        current_map_source_key = "none"
+
                 except Exception as e:
                     print(f"[Warning] Failed to read map_source for update: {e}")
 
             # c. 根据存储键，获取新语言下的显示名称，并设置
             new_display_name = MAP_CONFIG_TEMPLATES.get(current_map_source_key, {}).get("display_name", {}).get(
-                i18n.current_lang, "谷歌")
-            self.opt_map_source.set(new_display_name)  # 此时 on_map_source_change 不会执行任何操作
+                i18n.current_lang)
+            self.opt_map_source.set(new_display_name)
 
         # ⭐⭐⭐【关键修改】重置标志位
         self._is_updating_language = False
@@ -1639,7 +1647,7 @@ class App(ctk.CTk):
 
         # ===== 字体统一 =====
         title_font = ctk.CTkFont(size=15, weight="bold")
-        text_font = ctk.CTkFont(size=13,weight="bold")
+        text_font = ctk.CTkFont(size=13, weight="bold")
 
         # # ===== 标题 =====
         # title_label = ctk.CTkLabel(win, text=title, font=title_font)
@@ -1785,6 +1793,8 @@ class App(ctk.CTk):
             use_btn.pack(pady=(0, 10))
             self.use_btn = use_btn
 
+        self.terminal_scroll_frame.update_idletasks()
+
     def _filter_terminal_folders(self):
         search_term = self.terminal_search_var.get().lower()
 
@@ -1797,6 +1807,9 @@ class App(ctk.CTk):
             ]
 
         self._render_terminal_folders(self.current_displayed_folders)
+
+        # 强制滚动到顶部
+        self.after_idle(lambda: self.terminal_scroll_frame._parent_canvas.yview_moveto(0))
 
     def _on_search_change(self, *args):
         if self._search_after_id:
@@ -1852,7 +1865,7 @@ class App(ctk.CTk):
             shutil.copy2(slclient_json, PATH_ASS / "slclient.json")
             # print(f"[success] {slclient_json} -> {PATH_ASS}\n")
 
-            shutil.copy2(led_json, PATH_SLCLIENT/ "led.json")
+            shutil.copy2(led_json, PATH_SLCLIENT / "led.json")
             # print(f"[success] {led_json} -> {PATH_SLCLIENT}\n")
 
             shutil.copy2(input_json, PATH_SLCLIENT / "input.json")
@@ -1868,7 +1881,6 @@ class App(ctk.CTk):
 
         except Exception as e:
             self.append_log(f"[ERROR]: {e}")
-
 
     def _build_input_mode_content(self, parent):
         """构建手动配置 PTT/SOS 按键的 UI (样式统一版)"""
@@ -2240,10 +2252,8 @@ class App(ctk.CTk):
         self.entry_custom_context.bind("<FocusIn>", lambda e: self.on_context_entry_focus_in(e))
         self.entry_custom_context.bind("<FocusOut>", self.on_context_entry_focus_out)
 
-
         self.entry_custom_upgrade.bind("<FocusIn>", lambda e: self.on_upgrade_entry_focus_in(e))
         self.entry_custom_upgrade.bind("<FocusOut>", self.on_upgrade_entry_focus_out)
-
 
         # 回显默认文字
         # self.entry_custom_context.configure(state="normal")
@@ -3171,7 +3181,7 @@ class App(ctk.CTk):
                 current_env_key = slclient_data.get("profile", {}).get("env_key", default_env_key)
 
                 login_mode_val = slclient_data.get("profile", {}).get("login_mode", login_mode_val)
-                map_source_val = slclient_data.get("lbs", {}).get("map_source", map_source_val)
+                map_source_val = slclient_data.get("lbs", {}).get("map_type", map_source_val)
 
                 tts_enabled_val = slclient_data.get("tts", {}).get("enabled", False)
                 tone_enabled_val = slclient_data.get("sound", {}).get("tone_enabled", True)
@@ -3185,8 +3195,14 @@ class App(ctk.CTk):
 
             ui_login_val = LOGIN_TYPE_MAPPING.get(login_mode_val, {}).get(i18n.current_lang, "账号登录")
 
-            ui_map_val = MAP_CONFIG_TEMPLATES.get(map_source_val, {}).get("display_name", {}).get(i18n.current_lang,
-                                                                                                  "谷歌")
+            self.map_coor = self.get_json_field(PATH_SLCLIENT_JSON, LBS_COOR_PATH)
+
+            if self.map_coor == "wgs84" and map_source_val == "baidu":
+                map_source_val = "baidu_oversea"
+            elif self.map_coor == "bd09ll" and map_source_val == "baidu":
+                map_source_val = "baidu_domestic"
+
+            ui_map_val = MAP_CONFIG_TEMPLATES.get(map_source_val, {}).get("display_name", {}).get(i18n.current_lang)
 
             if hasattr(self, 'opt_env'):
                 self.opt_env.set(ui_env_val)
@@ -3534,7 +3550,6 @@ class App(ctk.CTk):
         self.append_log(f"[Result] Command execution completed,  code：{returncode}\n")
         return returncode
 
-
     def _do_decompile_logic(self, output_dir: str = "app_out") -> bool:
         """
         【核心逻辑】实际执行反编译的代码。
@@ -3633,6 +3648,7 @@ class App(ctk.CTk):
 
                 if success:
                     # 刷新一下配置
+                    messagebox.showinfo("Success", "Decompile Apk Successful!")
                     self.after(500, self.load_all_configs)
                 else:
                     return
@@ -3934,9 +3950,11 @@ class I18N:
 # 全局实例
 i18n = I18N()
 
+
 def _(key):
     """快捷翻译函数"""
     return i18n.get(key)
+
 
 if __name__ == "__main__":
     app = App()
