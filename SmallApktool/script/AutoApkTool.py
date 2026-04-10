@@ -1214,7 +1214,7 @@ class App(ctk.CTk):
                         slclient_data = json.load(f)
 
                     current_map_source_key = slclient_data.get("lbs", {}).get("map_type", "Google")
-                    self.map_type = self.get_json_field(PATH_SLCLIENT_JSON,LBS_MAP_PYPE)
+                    self.map_type = self.get_json_field(PATH_SLCLIENT_JSON, LBS_MAP_PYPE)
                     if self.map_coor == "wgs84" and self.map_type == "baidu":
                         current_map_source_key = "baidu_oversea"
                     elif self.map_coor == "bd09ll" and self.map_type == "baidu":
@@ -1678,7 +1678,6 @@ class App(ctk.CTk):
         win.lift()
         win.focus_force()
 
-        win.after(10, lambda: win.attributes("-topmost", False))
         # 回车关闭
         win.after(10, lambda: win.attributes("-topmost", False))
         # ESC关闭
@@ -2275,7 +2274,6 @@ class App(ctk.CTk):
         )
         # self.opt_login_type.set("账号登录")
         self.opt_login_type.grid(row=2, column=1, padx=5, pady=10, sticky="ew")
-        # 默认选中「账号」
 
         # 保存按钮
         self.btn_save_custom = ctk.CTkButton(
@@ -2414,7 +2412,7 @@ class App(ctk.CTk):
             return
 
         # 2. 格式验证（保持不变）
-        ip_part = new_ip.split(':')[0]
+        # ip_part = new_ip.split(':')[0]
         # if not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', ip_part) and not re.match(r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
         #                                                                       ip_part):
         #     if not messagebox.askyesno("格式确认",
@@ -3255,73 +3253,170 @@ class App(ctk.CTk):
             except:
                 pass
 
-    def apply_selected_config_to_slclient(self) -> None:
-        """打包时调用：收集所有四个模块的数据并写入 JSON"""
-        if not PATH_SLCLIENT_JSON.exists():
-            self.append_log("[Error] json does not exist, cannot be written。\n")
-            return
+    # TODO 优化在打包时弹窗确认当前slclient的内容
+    def _get_slclient_preview_data(self) -> dict:
+        """
+        收集所有模块的当前配置值。
+        不依赖 build_config，直接从 GUI 控件读取以确保是最新值。
+        """
+        data = {}
+        current_lang = i18n.current_lang
 
-        try:
-            with open(PATH_SLCLIENT_JSON, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+        # --- A. Profile (环境与登录) ---
+        # 1. 环境
+        selected_env_display = self.opt_env.get()
+        env_key = "overseas"
+        # 反查环境键名
+        for key, names in ENV_DISPLAY_NAMES.items():
+            if names.get(current_lang) == selected_env_display:
+                env_key = key
+                break
 
-            if not hasattr(self, 'current_env_config'):
-                self.append_log("[Error] Environment configuration not initialized。\n")
-                return
+        # 获取该环境的具体配置 (例如 DNS IP)
+        env_conf = ENV_CONF.get(env_key, {})
 
-            cfg = self.current_env_config
+        data["env_ip"] = env_conf.get("ip_address", "Default")
+        data["context"] = env_conf.get("context", "pocstar")
+        data["login_type"] = self.opt_login_type.get()
 
-            # 如果是独立部署模式，校验输入是否为空
-            if cfg.get('is_custom'):
-                if not cfg['ip'] or not cfg['context']:
-                    self.append_log(
-                        "[Error] IP and Context cannot be empty! Please fill in or turn off the Independent Deployment Switch。\n")
-                    # 可以选择弹窗提示或阻止打包
-                    return
-                self.append_log(f"[Info] Use stand-alone deployment configuration: {cfg['ip']}\n")
+        # --- B. LBS (地图) ---
+        data["map_source"] = self.opt_map_source.get()
 
-            # 写入逻辑 (与之前一致)
-            if "network" not in data: data["network"] = {}
-            data["network"]["server_ip"] = cfg['ip']
-            data["network"]["context_path"] = cfg['context']
+        # --- C. Sound & DSP ---
+        data["codec"] = self.opt_codec.get()
+        data["tone_enabled"] = self.switch_tone_sfx.get()
+        data["audio_provider"] = self.opt_audio.get()
+        data["play_channel"] = self.opt_play.get()
+        data["rec_channel"] = self.opt_rec.get()
 
-            # 如果有 ID 映射逻辑 (仅针对非自定义模式)
-            if not cfg.get('is_custom') and "ui" in data:
-                # 这里可以加入 NAME_TO_ID 逻辑
-                pass
+        # --- D. TTS & Launcher ---
+        data["tts_enabled"] = self.switch_sfx.get()
+        data["launcher_home"] = self.switch_launcher.get()
 
-            # 2. 写入声音配置
-            # if hasattr(self, 'slider_bgm'):
-            #     if "audio" not in data: data["audio"] = {}
-            #     data["audio"]["bgm_volume"] = int(self.slider_bgm.get())
-            #     data["audio"]["sfx_enabled"] = bool(self.switch_sfx.get())
+        return data
 
-            # 3. 写入地图配置
-            if hasattr(self, 'opt_map'):
-                if "map" not in data: data["map"] = {}
-                data["map"]["provider"] = self.opt_map.get()
-                data["map"]["satellite_default"] = bool(self.switch_satellite.get())
+    def apply_selected_config_to_slclient(self) -> bool:
+        """
+        打包时调用：弹窗确认当前 slclient 的内容。
+        格式：键：值 (非 JSON)
 
-            # 4. 写入其他设置
-            if hasattr(self, 'switch_debug'):
-                if "system" not in data: data["system"] = {}
-                data["system"]["debug_mode"] = bool(self.switch_debug.get())
-                fps_val = getattr(self, 'entry_fps', None)
-                if fps_val:
-                    try:
-                        data["system"]["max_fps"] = int(fps_val.get())
-                    except:
-                        data["system"]["max_fps"] = 60
+        Returns:
+            bool: True 表示用户确认，False 表示取消。
+        """
+        # 1. 获取数据
+        raw_data = self._get_slclient_preview_data()
 
-            # 写回文件
-            with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+        # 2. 格式化为文本行 (模仿你想要的格式)
+        lines = []
 
-            self.append_log("[OK] All configurations have been successfully written to slclient.json\n")
+        # 环境信息
+        lines.append(f"环境IP：{raw_data['env_ip']}")
+        lines.append(f"Context：{raw_data['context']}")
+        lines.append(f"登录方式：{raw_data['login_type']}")
+        lines.append("-" * 30)  # 分割线
 
-        except Exception as e:
-            self.append_log(f"[Error] Failed to write json: {e}\n")
-            traceback.print_exc()
+        # 地图
+        lines.append(f"地图源：{raw_data['map_source']}")
+        lines.append("-" * 30)
+
+        # 声音
+        lines.append(f"Codec：{raw_data['codec']}")
+        lines.append(f"Tone：{'开' if raw_data['tone_enabled'] else '关'}")
+        lines.append(f"音频提供商：{raw_data['audio_provider']}")
+        lines.append(f"播放流：{raw_data['play_channel']}")
+        lines.append(f"录音流：{raw_data['rec_channel']}")
+        lines.append("-" * 30)
+
+        # 其他
+        lines.append(f"TTS：{'开' if raw_data['tts_enabled'] else '关'}")
+        lines.append(f"设为桌面：{'是' if raw_data['launcher_home'] else '否'}")
+
+        # 拼接最终文本
+        message_text = "\n".join(lines)
+
+        # 3. 创建弹窗 (模仿 show_custom_message 样式)
+        win = ctk.CTkToplevel(self)
+        win.title("打包配置确认")
+        win.geometry("400x550")  # 调整为瘦高型
+        win.resizable(True, True)
+
+        win.attributes("-topmost", True)
+        win.grab_set()
+
+        # ===== 字体统一 =====
+        title_font = ctk.CTkFont(size=15, weight="bold")
+        text_font = ctk.CTkFont(size=13)
+
+        # ===== 标题 =====
+        title_label = ctk.CTkLabel(win, text="📦 确认配置", font=title_font)
+        title_label.pack(pady=(15, 5))
+
+        # ===== 内容 (使用 Textbox 显示文本行) =====
+        text_frame = ctk.CTkFrame(win, fg_color="transparent")
+        text_frame.pack(padx=20, pady=10, fill="both", expand=True)
+
+        textbox = ctk.CTkTextbox(text_frame, font=text_font, wrap="word")  # wrap="word" 自动换行
+        textbox.pack(fill="both", expand=True)
+        textbox.insert("0.0", message_text)
+        textbox.configure(state="disabled")  # 只读
+
+        # ===== 按钮 =====
+        btn_frame = ctk.CTkFrame(win, fg_color="transparent")
+        btn_frame.pack(pady=10)
+
+        result = {"confirmed": False}
+
+        def on_ok():
+            result["confirmed"] = True
+            win.destroy()
+
+        def on_cancel():
+            result["confirmed"] = False
+            win.destroy()
+
+        # 确认按钮
+        btn_ok = ctk.CTkButton(
+            btn_frame,
+            text="✅ 确认打包",
+            font=text_font,
+            width=100,
+            command=on_ok,
+            fg_color="green"
+        )
+        btn_ok.pack(side="left", padx=20)
+
+        # 取消按钮
+        btn_cancel = ctk.CTkButton(
+            btn_frame,
+            text="❌ 取消",
+            font=text_font,
+            width=100,
+            command=on_cancel,
+            fg_color="gray"
+        )
+        btn_cancel.pack(side="left", padx=20)
+
+        # ===== 居中与置顶逻辑 =====
+        win.update_idletasks()
+        w, h = win.winfo_width(), win.winfo_height()
+        x = (win.winfo_screenwidth() // 2) - (w // 2)
+        y = (win.winfo_screenheight() // 2) - (h // 2)
+        win.geometry(f"{w}x{h}+{x}+{y}")
+
+        win.lift()
+        win.focus_force()
+        win.after(10, lambda: win.attributes("-topmost", False))
+
+        # 绑定按键
+        win.bind("<Return>", lambda e: on_ok())
+        win.bind("<Escape>", lambda e: on_cancel())
+
+        # 4. 阻塞等待
+        win.wait_window()
+
+        return result.get("confirmed", False)
+
+
 
     # 在 App 类定义之前或 __init__ 中调用
     def load_slclient_config(self):
@@ -3708,8 +3803,11 @@ class App(ctk.CTk):
                 #     self.append_log("[Warn] 未找到 apktool.yml，跳过版本更新\n")
 
                 self.append_log("[Step 2] Getting device information...\n")
-                model = self.ask_model_dialog()
+                # apply_selected = self.apply_selected_config_to_slclient()
+                # if not apply_selected:
+                #     return False
 
+                model = self.ask_model_dialog()
                 if model is None:
                     raise Exception("User cancels packaging")
 
