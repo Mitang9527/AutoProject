@@ -1001,6 +1001,12 @@ class App(ctk.CTk):
         self.msg_btn_confirm = ctk.CTkButton(btn_frame, text=_("msg_btn_confirm"), width=80, command=submit)
         self.msg_btn_confirm.pack(side="right", padx=10)
 
+        dialog.update_idletasks()
+        w, h = dialog.winfo_width(), dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (w // 2)
+        y = (dialog.winfo_screenheight() // 2) - (h // 2)
+        dialog.geometry(f"{w}x{h}+{x}+{y}")
+
         # 5. 绑定回车键事件
         dialog.bind('<Return>', lambda event: submit())
 
@@ -3376,31 +3382,33 @@ class App(ctk.CTk):
                 break
 
         if found_env:
-            lines.append(f"IP：\n{ip_formatted}")
-            lines.append(f"Context：{raw_data['context']}")
+            lines.append(f"IP:  \n{ip_formatted}")
+            lines.append(f"Context:  {raw_data['context']}")
         else:
-            lines.append(f"IP：\n{ip_formatted}")
-            lines.append(f"Context：{raw_data['context']}")
+            lines.append(f"IP:  \n{ip_formatted}")
+            lines.append(f"Context:  {raw_data['context']}")
 
-        lines.append(f"Login Type: {raw_data['login_type']}\n")
+        lbl_login_type = _("lbl_login_type")
+        lines.append(f"{lbl_login_type}:  {raw_data['login_type']}\n")
         lines.append("-" * 30)
 
         # 地图
-        lines.append(f"Location Data Source：{raw_data['map_source']}\n")
+        lbl_map_source = _("lbl_map_source")
+        lines.append(f"{lbl_map_source}:  {raw_data['map_source']}\n")
         lines.append("-" * 30)
 
         # 声音
-        lines.append(f"Tone：{'True' if raw_data['tone_enabled'] else 'False'}\n")
+        lines.append(f"Tone:  {'True' if raw_data['tone_enabled'] else 'False'}\n")
         lines.append("-" * 30)
-        lines.append(f"Codec：{raw_data['codec']}")
-        lines.append(f"audio：{raw_data['audio_provider']}")
-        lines.append(f"Play channel：{raw_data['play_channel']}")
-        lines.append(f"Rec channel：{raw_data['rec_channel']}\n")
+        lines.append(f"Codec:  {raw_data['codec']}")
+        lines.append(f"audio:  {raw_data['audio_provider']}")
+        lines.append(f"Play channel:  {raw_data['play_channel']}")
+        lines.append(f"Rec channel:  {raw_data['rec_channel']}\n")
         lines.append("-" * 30)
 
         # 其他
-        lines.append(f"TTS：{'True' if raw_data['tts_enabled'] else 'False'}")
-        lines.append(f"Launcher：{'True' if raw_data['launcher_home'] else 'False'}")
+        lines.append(f"TTS:  {'True' if raw_data['tts_enabled'] else 'False'}")
+        lines.append(f"Launcher:  {'True' if raw_data['launcher_home'] else 'False'}")
 
         # 拼接最终文本
         message_text = "\n".join(lines)
@@ -3468,11 +3476,11 @@ class App(ctk.CTk):
         self.btn_dialog_ok.pack(side="left", padx=20)
 
         # ===== 居中与置顶逻辑 =====
-        win.update_idletasks()
-        w, h = win.winfo_width(), win.winfo_height()
-        x = (win.winfo_screenwidth() // 2) - (w // 2)
-        y = (win.winfo_screenheight() // 2) - (h // 2)
-        win.geometry(f"{w}x{h}+{x}+{y}")
+        # win.update_idletasks()
+        # w, h = win.winfo_width(), win.winfo_height()
+        # x = (win.winfo_screenwidth() // 2) - (w // 2)
+        # y = (win.winfo_screenheight() // 2) - (h // 2)
+        # win.geometry(f"{w}x{h}+{x}+{y}")
 
         win.lift()
         win.focus_force()
@@ -3874,6 +3882,7 @@ class App(ctk.CTk):
                 #     self.append_log("[Warn] 未找到 apktool.yml，跳过版本更新\n")
 
                 self.append_log("[Step 2] Getting device information...\n")
+                # TODO 待完善弹窗的国际化翻译
                 apply_selected = self.apply_selected_config_to_slclient()
                 if not apply_selected:
                     return False
