@@ -70,5 +70,9 @@
     "opt_map_baidu_cn": "Baidu [CN]",
     "opt_map_baidu_overseas": "Baidu [Overseas]",
     "opt_map_google": "Google",
-    "opt_map_gps": "GPS"
+    "opt_map_gps": "GPS",
+    "confirm_config_text": "📦 Confirm Configuration",
+    "package_config_title": "Package Configuration Confirmation",
+    "confirm_button": "✅ Confirm Package",
+    "cancel_button": "❌ Cancel"
 }

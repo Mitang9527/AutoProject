@@ -71,5 +71,9 @@
   "opt_map_baidu_cn": "百度 [国内]",
   "opt_map_baidu_overseas": "百度 [海外]",
   "opt_map_google": "谷歌",
-  "opt_map_gps": "GPS"
+  "opt_map_gps": "GPS",
+  "confirm_config_text": "📦 确认配置",
+  "package_config_title": "打包配置确认",
+  "confirm_button": "✅ 确认打包",
+  "cancel_button": "❌ 取消"
 }

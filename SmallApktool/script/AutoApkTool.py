@@ -1087,11 +1087,36 @@ class App(ctk.CTk):
                 try:
                     with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
                         data = json.load(f)
-                    saved_env_id = data.get("profile", {}).get("env", "overseas")
-                except:
+
+                    profile_data = data.get("profile", {})
+                    config_dns = profile_data.get("dns")
+                    config_context = profile_data.get("context")
+
+                    for env_id, env_config in ENV_CONF.items():
+                        env_ip_address = env_config.get("ip_address")
+                        env_context = env_config.get("context")
+
+
+                        if config_context and env_context and config_context == env_context:
+                            if config_dns and env_ip_address:
+                                if isinstance(config_dns, list):
+                                    config_dns_str = ','.join(config_dns)
+                                else:
+                                    config_dns_str = str(config_dns) if config_dns else ""
+
+                                dns_list = [addr.strip() for addr in env_ip_address.split(',')]
+
+                                # 检查配置中的DNS是否包含在环境配置的IP地址列表中
+                                if any(config_dns_str in dns_addr or dns_addr in config_dns_str for dns_addr in
+                                       dns_list):
+                                    matched_env_id = env_id
+                                    break
+
+                except Exception as e:
+                    print(f"Error reading configuration file: {e}")
                     pass
 
-            target_display_name = ENV_DISPLAY_NAMES.get(saved_env_id, {}).get(current_lang, saved_env_id)
+            target_display_name = ENV_DISPLAY_NAMES.get(matched_env_id, {}).get(current_lang, matched_env_id)
             self.opt_env.set(target_display_name)
 
             self.opt_env.configure(command=self._on_env_selected)
@@ -1158,6 +1183,10 @@ class App(ctk.CTk):
                 self.entry.configure(text=_("placeholder_model_input"))
             if hasattr(self, 'ok_btn') and self.ok_btn is not None:
                 self.ok_btn.configure(text=_("btn_ok"))
+            if hasattr(self, 'btn_dialog_ok') and self.btn_dialog_ok is not None:
+                self.btn_dialog_ok.configure(text=_("confirm_button"))
+            if hasattr(self, 'btn_dialog_cancel') and self.btn_dialog_cancel is not None:
+                self.btn_dialog_cancel.configure(text=_("cancel_button"))
 
         except tkinter.TclError:
             pass
@@ -3272,12 +3301,24 @@ class App(ctk.CTk):
                 env_key = key
                 break
 
-        # 获取该环境的具体配置 (例如 DNS IP)
-        env_conf = ENV_CONF.get(env_key, {})
+        if PATH_SLCLIENT_JSON.exists():
+            try:
+                with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
+                    slclient_data = json.load(f)
 
-        data["env_ip"] = env_conf.get("ip_address", "Default")
-        data["context"] = env_conf.get("context", "pocstar")
-        data["login_type"] = self.opt_login_type.get()
+                profile_data = slclient_data.get("profile", {})
+                data["env_ip"] = profile_data.get("dns", "Default")
+                data["context"] = profile_data.get("context", "pocstar")
+                data["login_type"] = profile_data.get("login_type", self.opt_login_type.get())
+            except Exception as e:
+                print(f"Error reading slclient.json: {e}")
+                data["env_ip"] = "Default"
+                data["context"] = "pocstar"
+                data["login_type"] = self.opt_login_type.get()
+        else:
+            data["env_ip"] = "Default"
+            data["context"] = "pocstar"
+            data["login_type"] = self.opt_login_type.get()
 
         # --- B. LBS (地图) ---
         data["map_source"] = self.opt_map_source.get()
@@ -3306,38 +3347,68 @@ class App(ctk.CTk):
         # 1. 获取数据
         raw_data = self._get_slclient_preview_data()
 
-        # 2. 格式化为文本行 (模仿你想要的格式)
         lines = []
 
         # 环境信息
-        lines.append(f"环境IP：{raw_data['env_ip']}")
-        lines.append(f"Context：{raw_data['context']}")
-        lines.append(f"登录方式：{raw_data['login_type']}")
-        lines.append("-" * 30)  # 分割线
+        ip_addresses = raw_data['env_ip']
+        if isinstance(ip_addresses, list):
+            ip_formatted = "\n".join([f"  - {ip}" for ip in ip_addresses])
+        else:
+            ips = str(ip_addresses).split(',')
+            ip_formatted = "\n".join([f"  - {ip.strip()}" for ip in ips])
+
+        lines.append("-" * 30)
+
+        # 检查IP地址是否在预定义环境中
+        found_env = None
+        for env_id, env_config in ENV_CONF.items():
+            env_ip_address = env_config.get("ip_address", "")
+            if isinstance(env_ip_address, list):
+                env_ips = env_ip_address
+            else:
+                env_ips = [addr.strip() for addr in str(env_ip_address).split(',')]
+
+            current_ips = [addr.strip() for addr in str(raw_data['env_ip']).split(',')] if not isinstance(
+                raw_data['env_ip'], list) else raw_data['env_ip']
+
+            if any(ip in env_ips for ip in current_ips):
+                found_env = env_id
+                break
+
+        if found_env:
+            lines.append(f"IP：\n{ip_formatted}")
+            lines.append(f"Context：{raw_data['context']}")
+        else:
+            lines.append(f"IP：\n{ip_formatted}")
+            lines.append(f"Context：{raw_data['context']}")
+
+        lines.append(f"Login Type: {raw_data['login_type']}\n")
+        lines.append("-" * 30)
 
         # 地图
-        lines.append(f"地图源：{raw_data['map_source']}")
+        lines.append(f"Location Data Source：{raw_data['map_source']}\n")
         lines.append("-" * 30)
 
         # 声音
+        lines.append(f"Tone：{'True' if raw_data['tone_enabled'] else 'False'}\n")
+        lines.append("-" * 30)
         lines.append(f"Codec：{raw_data['codec']}")
-        lines.append(f"Tone：{'开' if raw_data['tone_enabled'] else '关'}")
-        lines.append(f"音频提供商：{raw_data['audio_provider']}")
-        lines.append(f"播放流：{raw_data['play_channel']}")
-        lines.append(f"录音流：{raw_data['rec_channel']}")
+        lines.append(f"audio：{raw_data['audio_provider']}")
+        lines.append(f"Play channel：{raw_data['play_channel']}")
+        lines.append(f"Rec channel：{raw_data['rec_channel']}\n")
         lines.append("-" * 30)
 
         # 其他
-        lines.append(f"TTS：{'开' if raw_data['tts_enabled'] else '关'}")
-        lines.append(f"设为桌面：{'是' if raw_data['launcher_home'] else '否'}")
+        lines.append(f"TTS：{'True' if raw_data['tts_enabled'] else 'False'}")
+        lines.append(f"Launcher：{'True' if raw_data['launcher_home'] else 'False'}")
 
         # 拼接最终文本
         message_text = "\n".join(lines)
 
-        # 3. 创建弹窗 (模仿 show_custom_message 样式)
+        # 3. 创建弹窗
         win = ctk.CTkToplevel(self)
-        win.title("打包配置确认")
-        win.geometry("400x550")  # 调整为瘦高型
+        win.title(_("confirm_config_text"))
+        win.geometry("400x550")
         win.resizable(True, True)
 
         win.attributes("-topmost", True)
@@ -3348,8 +3419,8 @@ class App(ctk.CTk):
         text_font = ctk.CTkFont(size=13)
 
         # ===== 标题 =====
-        title_label = ctk.CTkLabel(win, text="📦 确认配置", font=title_font)
-        title_label.pack(pady=(15, 5))
+        package_config_title = ctk.CTkLabel(win, text=_("package_config_title"), font=title_font)
+        package_config_title.pack(pady=(15, 5))
 
         # ===== 内容 (使用 Textbox 显示文本行) =====
         text_frame = ctk.CTkFrame(win, fg_color="transparent")
@@ -3374,27 +3445,27 @@ class App(ctk.CTk):
             result["confirmed"] = False
             win.destroy()
 
-        # 确认按钮
-        btn_ok = ctk.CTkButton(
-            btn_frame,
-            text="✅ 确认打包",
-            font=text_font,
-            width=100,
-            command=on_ok,
-            fg_color="green"
-        )
-        btn_ok.pack(side="left", padx=20)
-
         # 取消按钮
-        btn_cancel = ctk.CTkButton(
+        self.btn_dialog_cancel = ctk.CTkButton(
             btn_frame,
-            text="❌ 取消",
+            text=_("cancel_button"),
             font=text_font,
             width=100,
             command=on_cancel,
             fg_color="gray"
         )
-        btn_cancel.pack(side="left", padx=20)
+        self.btn_dialog_cancel.pack(side="left", padx=20)
+
+        # 确认按钮
+        self.btn_dialog_ok = ctk.CTkButton(
+            btn_frame,
+            text=_("confirm_button"),
+            font=text_font,
+            width=100,
+            command=on_ok,
+            fg_color="green"
+        )
+        self.btn_dialog_ok.pack(side="left", padx=20)
 
         # ===== 居中与置顶逻辑 =====
         win.update_idletasks()
@@ -3803,9 +3874,9 @@ class App(ctk.CTk):
                 #     self.append_log("[Warn] 未找到 apktool.yml，跳过版本更新\n")
 
                 self.append_log("[Step 2] Getting device information...\n")
-                # apply_selected = self.apply_selected_config_to_slclient()
-                # if not apply_selected:
-                #     return False
+                apply_selected = self.apply_selected_config_to_slclient()
+                if not apply_selected:
+                    return False
 
                 model = self.ask_model_dialog()
                 if model is None:
