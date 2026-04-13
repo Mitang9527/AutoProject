@@ -1,5 +1,5 @@
 {
-  "app_title": "App Adaptation_2.3",
+  "app_title": "App Adaptation_2.4",
   "sidebar_logo": "App\nAdaptation",
   "lbl_device": "设备选择",
   "btn_refresh": "刷新设备",
@@ -51,7 +51,7 @@
   "msg_card_sound": "🔊 声音配置 ",
   "msg_card_map": "🗺️定位 ",
   "msg_card_other": "⚙️其他设置 ",
-  "msg_card_input": "💡 按键 配置",
+  "msg_card_input": "💡 按键配置",
   "msg_card_led": "🎨  其他配置",
   "lbl_server_node": "预设节点:",
   "lbl_login_type": "登录方式:",
