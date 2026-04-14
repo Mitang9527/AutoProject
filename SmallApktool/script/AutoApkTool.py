@@ -3882,7 +3882,6 @@ class App(ctk.CTk):
                 #     self.append_log("[Warn] 未找到 apktool.yml，跳过版本更新\n")
 
                 self.append_log("[Step 2] Getting device information...\n")
-                # TODO 待完善弹窗的国际化翻译
                 apply_selected = self.apply_selected_config_to_slclient()
                 if not apply_selected:
                     return False
