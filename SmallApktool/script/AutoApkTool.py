@@ -1088,7 +1088,6 @@ class App(ctk.CTk):
 
             self.opt_env.configure(values=new_env_options)
 
-            saved_env_id = "overseas"
             if PATH_SLCLIENT_JSON.exists():
                 try:
                     with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
@@ -1098,21 +1097,26 @@ class App(ctk.CTk):
                     config_dns = profile_data.get("dns")
                     config_context = profile_data.get("context")
 
+                    # 初始化 matched_env_id 为默认值
+                    matched_env_id = "overseas"  # 默认环境ID
+
                     for env_id, env_config in ENV_CONF.items():
                         env_ip_address = env_config.get("ip_address")
                         env_context = env_config.get("context")
 
-
                         if config_context and env_context and config_context == env_context:
                             if config_dns and env_ip_address:
+
                                 if isinstance(config_dns, list):
-                                    config_dns_str = ','.join(config_dns)
+                                    config_dns_str = ','.join(str(dns) for dns in config_dns)
                                 else:
                                     config_dns_str = str(config_dns) if config_dns else ""
 
-                                dns_list = [addr.strip() for addr in env_ip_address.split(',')]
+                                if isinstance(env_ip_address, list):
+                                    dns_list = [str(addr).strip() for addr in env_ip_address]
+                                else:
+                                    dns_list = [addr.strip() for addr in str(env_ip_address).split(',')]
 
-                                # 检查配置中的DNS是否包含在环境配置的IP地址列表中
                                 if any(config_dns_str in dns_addr or dns_addr in config_dns_str for dns_addr in
                                        dns_list):
                                     matched_env_id = env_id
@@ -1120,11 +1124,12 @@ class App(ctk.CTk):
 
                 except Exception as e:
                     print(f"Error reading configuration file: {e}")
-                    pass
+                    matched_env_id = "overseas"  # 出错时使用默认值
+            else:
+                matched_env_id = "overseas"  # 文件不存在时使用默认值
 
             target_display_name = ENV_DISPLAY_NAMES.get(matched_env_id, {}).get(current_lang, matched_env_id)
             self.opt_env.set(target_display_name)
-
             self.opt_env.configure(command=self._on_env_selected)
 
         # 4. 更新其他组件 (保持原样)
