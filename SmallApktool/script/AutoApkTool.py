@@ -3320,15 +3320,18 @@ class App(ctk.CTk):
                 profile_data = slclient_data.get("profile", {})
                 data["env_ip"] = profile_data.get("dns", "Default")
                 data["context"] = profile_data.get("context", "pocstar")
+                data["upgrade_url"] = profile_data.get("upgrade_url", "upgrade.pocstar.com")
                 data["login_type"] = profile_data.get("login_type", self.opt_login_type.get())
             except Exception as e:
                 print(f"Error reading slclient.json: {e}")
                 data["env_ip"] = "Default"
                 data["context"] = "pocstar"
+                data["upgrade_url"] = "upgrade.pocstar.com"
                 data["login_type"] = self.opt_login_type.get()
         else:
             data["env_ip"] = "Default"
             data["context"] = "pocstar"
+            data["upgrade_url"] = "upgrade.pocstar.com"
             data["login_type"] = self.opt_login_type.get()
 
         # --- B. LBS (地图) ---
@@ -3389,9 +3392,11 @@ class App(ctk.CTk):
         if found_env:
             lines.append(f"IP:  \n{ip_formatted}")
             lines.append(f"Context:  {raw_data['context']}")
+            lines.append(f"Upgrade Url:  {raw_data['upgrade_url']}")
         else:
             lines.append(f"IP:  \n{ip_formatted}")
             lines.append(f"Context:  {raw_data['context']}")
+            lines.append(f"Upgrade Url:  {raw_data['upgrade_url']}")
 
         lbl_login_type = _("lbl_login_type")
         lines.append(f"{lbl_login_type}:  {raw_data['login_type']}\n")
