@@ -75,5 +75,16 @@
   "confirm_config_text": "📦 确认配置",
   "package_config_title": "打包配置确认",
   "confirm_button": "✅ 确认打包",
-  "cancel_button": "❌ 取消"
+  "cancel_button": "❌ 取消",
+  "error_title": "错误",
+  "msg_unzip_first": "请先解压apk",
+  "msg_err_adb": "请先选择有效的 ADB 设备！",
+  "msg_err_safe": "IP 和 Context不能为空",
+  "msg_err_canel": "用户退出",
+  "success_title": "成功",
+  "success_unzip": "解压APK成功!",
+  "success_import": "导入成功!",
+  "success_build": "打包apk成功!",
+  "success_safe_title": "保存成功",
+  "lbl_env_info": "请至少填写 PTT (按下 + 抬起) 或 SOS 其中一项！"
 }

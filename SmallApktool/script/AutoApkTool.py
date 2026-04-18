@@ -551,7 +551,7 @@ def update_slclient_login_type(login_type_ui: str) -> bool:
     """
     # 1. 校验文件是否存在
     if not PATH_SLCLIENT_JSON.exists():
-        messagebox.showerror("ERROR", f"Please unzip apk first")
+        messagebox.showerror(_("error_title"), _("msg_unzip_first"))
         return False
 
     # 2. 映射UI值到JSON的login_mode值
@@ -577,7 +577,7 @@ def update_slclient_login_type(login_type_ui: str) -> bool:
         return True
 
     except Exception as e:
-        messagebox.showerror("修改失败", f"更新slclient.json出错：\n{str(e)}")
+        messagebox.showerror(_("error_title"), f"更新slclient.json出错：\n{str(e)}")
         traceback.print_exc()
         return False
 
@@ -629,7 +629,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title(_("app_title"))
-        self.geometry("1200x700")
+        self.geometry("1200x780")
 
         # 添加标志跟踪是否是环境预设值
         self.is_default_dns = False
@@ -1344,7 +1344,7 @@ class App(ctk.CTk):
             self.env_checker.check_all(show_dialog=True)
             return
         if not self.current_device or self.current_device in ["未检测到设备", "ADB 错误", "未连接"]:
-            messagebox.showerror("ERR", "请先选择有效的 ADB 设备！")
+            messagebox.showerror(_("error_title"), _("msg_err_adb"))
             self.refresh_devices()
             return
 
@@ -1864,7 +1864,7 @@ class App(ctk.CTk):
         """
         # print(f"使用终端配置:{folder_path.name}")
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
         self.copy_terminal_files(folder_path)
         self.load_all_configs()
@@ -1914,9 +1914,11 @@ class App(ctk.CTk):
             # print(f"[success] {input_json} -> {PATH_SLCLIENT}\n")
 
             self.append_log(f"[success] Imported {folder_path.name} Successfully\n")
-            self.show_custom_message("Success", f"Imported \n"
-                                                f"\n{folder_path.name}\n"
-                                                f"\nSuccessfully !")
+            # self.show_custom_message("Success", f"Imported \n"
+            #                                     f"\n{folder_path.name}\n"
+            #                                     f"\nSuccessfully !")
+            messagebox.showinfo(_("success_title"),_("success_import"))
+
 
         except Exception as e:
             self.append_log(f"[ERROR]: {e}")
@@ -2025,20 +2027,12 @@ class App(ctk.CTk):
 
         # 【核心修改】组合校验：必须至少有一组有效数据
         if not has_ptt and not has_sos:
-            self.lbl_env_info.configure(
-                text="❌ 错误：请至少填写 PTT (按下 + 抬起) 或 SOS 其中一项！",
-                text_color="#c0392b",
-                font=ctk.CTkFont(size=12, weight="bold")
-            )
-            return
-
-        # 如果只填了 PTT 的一部分，提示错误
-        if (val_press and not val_release) or (not val_press and val_release):
-            self.lbl_env_info.configure(
-                text="❌ 错误：请输入 PTT 的按下和抬起 Action！",
-                text_color="#c0392b",
-                font=ctk.CTkFont(size=12, weight="bold")
-            )
+            # self.lbl_env_info.configure(
+            #     text=_("lbl_env_info"),
+            #     text_color="#c0392b",
+            #     font=ctk.CTkFont(size=12, weight="bold")
+            # )
+            messagebox.showerror(_("error_title"),_("lbl_env_info"))
             return
 
         # 预初始化变量，防止未定义错误
@@ -2148,11 +2142,12 @@ class App(ctk.CTk):
                 self.entry_sos.delete(0, "end")
 
             # 6. 成功反馈
-            msg_lines = [f"✅ Configuration is saved"]
+            # msg_lines = ["✅ Configuration is saved"]
+            msg_lines = [" "]
             if has_ptt:
-                msg_lines.append(f"   🟢 PTT Key: {new_vkey_ptt} ({name_ptt_down}, {name_ptt_up})")
+                msg_lines.append(f"   🟢 PTT Key:\n {new_vkey_ptt} ({name_ptt_down}, {name_ptt_up})")
             if has_sos:
-                msg_lines.append(f"   🔴 SOS Key: {new_vkey_sos} ({name_sos_down}, {name_sos_up})")
+                msg_lines.append(f"   🔴 SOS Key:\n {new_vkey_sos} ({name_sos_down}, {name_sos_up})")
 
             final_msg = "\n".join(msg_lines)
 
@@ -2162,7 +2157,7 @@ class App(ctk.CTk):
             #     font=ctk.CTkFont(size=12, weight="bold")
             # )
             self.append_log(f"[Manual Save] {final_msg}\n")
-            self.show_custom_message("Successfully", final_msg)
+            messagebox.showinfo(_("success_safe_title"), final_msg)
 
             if hasattr(self, '_safe_refresh_config_view'):
                 self._safe_refresh_config_view()
@@ -2177,7 +2172,7 @@ class App(ctk.CTk):
                 font=ctk.CTkFont(size=12, weight="bold")
             )
             self.append_log(f"[Error] _on_save_manual_keys: {e}\n")
-            messagebox.showerror("ERROR", error_msg)
+            messagebox.showerror(_("error_title"), error_msg)
 
     def _build_led_color_content(self, parent):
         """填充下半部分：颜色和亮度"""
@@ -2220,6 +2215,8 @@ class App(ctk.CTk):
 
     def _build_env_content(self, parent):
         """构建环境配置内容"""
+        parent.grid_columnconfigure(1, weight=1)
+
         current_lang = i18n.current_lang
 
         base_options = []
@@ -2230,15 +2227,13 @@ class App(ctk.CTk):
 
         self.CUSTOM_OPTION_NAME = _("env_custom")
 
-        # --- 2. 创建控件 ---
-
-        # 标签
+        # --- 1. 服务器节点标签 ---
         self.lbl_server_node = ctk.CTkLabel(parent, text=_("lbl_server_node"), anchor="w")
         self.lbl_server_node.grid(
             row=0, column=0, padx=5, pady=10, sticky="w"
         )
 
-        # 下拉菜单
+        # --- 2. 环境下拉菜单 ---
         self.opt_env = ctk.CTkOptionMenu(
             parent,
             values=base_options,
@@ -2246,45 +2241,61 @@ class App(ctk.CTk):
         )
         self.opt_env.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
 
-        # 操作模式开关（隐藏，仅作为扩展）
-        self.switch_custom_env = ctk.CTkSwitch(
-            parent,
-            text="启用手动编辑",
-            command=self._toggle_custom_env_inputs,
-            fg_color="#d35400",
-            state="disabled"
+        # --- 3. 登录方式下拉框 (保持在顶部区域) ---
+        self.lbl_login_type = ctk.CTkLabel(parent, text=_("lbl_login_type"), anchor="w")
+        self.lbl_login_type.grid(
+            row=2, column=0, padx=5, pady=10, sticky="w"
         )
-        self.switch_custom_env.grid_remove()
 
+        login_type_display_names = [LOGIN_TYPE_MAPPING[key][i18n.current_lang] for key in LOGIN_TYPE_MAPPING.keys()]
+        self.opt_login_type = ctk.CTkOptionMenu(
+            parent,
+            values=login_type_display_names,
+            command=self.on_login_type_change
+        )
+        self.opt_login_type.grid(row=2, column=1, padx=5, pady=10, sticky="ew")
+
+        # --- 4. 自定义配置区域标题 ---
         self.env_custom = ctk.CTkLabel(parent, text=_("env_custom"), anchor="w")
         self.env_custom.grid(
-            row=3, column=0, padx=5, pady=(5, 2), sticky="w"
+            row=4, column=0, padx=5, pady=(15, 5), sticky="w" # 上方留白多一点，区分区域
         )
 
-        # DNS 输入框
+        # --- 5. 【新增】分割线 ---
+        separator = ctk.CTkFrame(
+            parent,
+            height=2,
+            fg_color=("#3B8ED0", "gray60")
+        )
+        separator.grid(
+            row=3, column=0, columnspan=2, pady=(5, 10), sticky="ew" # 跨两列，填满宽度
+        )
+
+        # --- 6. DNS 输入框
         ctk.CTkLabel(parent, text="DNS IP:", anchor="w").grid(
-            row=4, column=0, padx=5, pady=(5, 2), sticky="w"
+            row=5, column=0, padx=5, pady=(5, 2), sticky="w"
         )
 
         self.entry_custom_ip = ctk.CTkEntry(parent, state="normal")
-        self.entry_custom_ip.grid(row=4, column=1, padx=5, pady=(5, 2), sticky="ew")
+        self.entry_custom_ip.grid(row=5, column=1, padx=5, pady=(5, 2), sticky="ew")
 
-        # Context 输入框
+        # --- 7. Context 输入框
         ctk.CTkLabel(parent, text="Context:", anchor="w").grid(
-            row=5, column=0, padx=5, pady=(2, 10), sticky="w"
+            row=6, column=0, padx=5, pady=(5, 2), sticky="w"
         )
 
         self.entry_custom_context = ctk.CTkEntry(parent, state="normal")
-        self.entry_custom_context.grid(row=5, column=1, padx=5, pady=(2, 10), sticky="ew")
+        self.entry_custom_context.grid(row=6, column=1, padx=5, pady=(5, 2), sticky="ew")
 
-        # upgrade_url 输入框
+        # --- 8. upgrade_url
         ctk.CTkLabel(parent, text="upgrade url:", anchor="w").grid(
-            row=6, column=0, padx=5, pady=(2, 10), sticky="w"
+            row=7, column=0, padx=5, pady=(5, 2), sticky="w"
         )
 
         self.entry_custom_upgrade = ctk.CTkEntry(parent, state="normal")
-        self.entry_custom_upgrade.grid(row=6, column=1, padx=5, pady=(2, 10), sticky="ew")
+        self.entry_custom_upgrade.grid(row=7, column=1, padx=5, pady=(5, 2), sticky="ew")
 
+        # --- 9. 绑定事件  ---
         self.entry_custom_ip.bind("<FocusIn>", lambda e: self.on_dns_entry_focus_in(e))
         self.entry_custom_ip.bind("<FocusOut>", self.on_dns_entry_focus_out)
 
@@ -2294,28 +2305,7 @@ class App(ctk.CTk):
         self.entry_custom_upgrade.bind("<FocusIn>", lambda e: self.on_upgrade_entry_focus_in(e))
         self.entry_custom_upgrade.bind("<FocusOut>", self.on_upgrade_entry_focus_out)
 
-        # 回显默认文字
-        # self.entry_custom_context.configure(state="normal")
-        # self.entry_custom_context.delete(0, 'end')
-        # self.entry_custom_context.insert(0, "demotext")
-        # self.entry_custom_context.configure(state="disabled")
-
-        # 登录方式下拉框
-        self.lbl_login_type = ctk.CTkLabel(parent, text=_("lbl_login_type"), anchor="w")
-        self.lbl_login_type.grid(
-            row=2, column=0, padx=5, pady=10, sticky="w"
-        )
-
-        login_type_display_names = [LOGIN_TYPE_MAPPING[key][i18n.current_lang] for key in LOGIN_TYPE_MAPPING.keys()]
-        self.opt_login_type = ctk.CTkOptionMenu(
-            parent,
-            values=login_type_display_names,  # 使用动态生成的列表
-            command=self.on_login_type_change
-        )
-        # self.opt_login_type.set("账号登录")
-        self.opt_login_type.grid(row=2, column=1, padx=5, pady=10, sticky="ew")
-
-        # 保存按钮
+        # --- 10. 保存按钮  ---
         self.btn_save_custom = ctk.CTkButton(
             parent,
             text=_("msg_save_btn"),
@@ -2325,8 +2315,9 @@ class App(ctk.CTk):
             height=28,
             font=ctk.CTkFont(weight="bold")
         )
-        self.btn_save_custom.grid(row=7, column=0, columnspan=2, padx=5, pady=10, sticky="e")
-        # 状态提示
+        self.btn_save_custom.grid(row=8, column=0, columnspan=2, padx=5, pady=15, sticky="e")
+
+        # --- 11. 状态提示 ---
         self.lbl_env_info = ctk.CTkLabel(
             parent,
             text="",
@@ -2334,8 +2325,9 @@ class App(ctk.CTk):
             font=ctk.CTkFont(size=10),
             anchor="w"
         )
-        self.lbl_env_info.grid(row=5, column=0, columnspan=2, padx=5, pady=(5, 10), sticky="w")
+        self.lbl_env_info.grid(row=9, column=0, columnspan=2, padx=5, pady=(0, 10), sticky="w")
 
+        # --- 12. 初始化数据回显逻辑 ---
         saved = self.opt_env.get()
 
         if saved in base_options:
@@ -2439,7 +2431,7 @@ class App(ctk.CTk):
         专用于【独立部署】模式，不影响 ENV_CONF 中的预设节点（如海外/国内）。
         """
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
 
         new_ip = self.entry_custom_ip.get().strip()
@@ -2448,7 +2440,7 @@ class App(ctk.CTk):
 
         # 1. 基础验证：必须同时存在 IP 和 Context
         if not new_ip or not new_context:
-            messagebox.showwarning("Error", "IP and Context must be entered！")
+            messagebox.showwarning(_("error_title"), _("msg_err_safe"))
             return
 
         # 2. 格式验证（保持不变）
@@ -2481,12 +2473,12 @@ class App(ctk.CTk):
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
-            self.show_custom_message("Successfully", "saved successfully")
+            messagebox.showinfo(_("success_title"),_("success_safe_title"))
 
         except FileNotFoundError:
             error_msg = "❌ 错误：找不到配置文件路径。"
             self.lbl_env_info.configure(text=error_msg, text_color="#c0392b")
-            messagebox.showerror("路径错误", error_msg)
+            messagebox.showerror(_("error_title"), error_msg)
         except PermissionError:
             error_msg = "❌ 错误：没有权限写入文件，请以管理员身份运行。"
             self.lbl_env_info.configure(text=error_msg, text_color="#c0392b")
@@ -2587,7 +2579,7 @@ class App(ctk.CTk):
         :param selected_codec: 选中的编码字符串 (如 "amrnb", "opus")
         """
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
         try:
             data = self._load_slclient_json()
@@ -2617,7 +2609,7 @@ class App(ctk.CTk):
 
     def _sync_soundsystem_to_json(self, selected_codec: str) -> None:
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
         try:
             data = self._load_slclient_json()
@@ -2647,7 +2639,7 @@ class App(ctk.CTk):
 
     def _sync_play_to_json(self, selected_codec: str) -> None:
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
         try:
             data = self._load_slclient_json()
@@ -2677,7 +2669,7 @@ class App(ctk.CTk):
 
     def _sync_record_to_json(self, selected_codec: str) -> None:
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
         try:
             data = self._load_slclient_json()
@@ -2710,7 +2702,7 @@ class App(ctk.CTk):
         【实时保存】确保写入的是 JSON 标准的 true/false，而不是 0/1
         """
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
         try:
             data = self._load_slclient_json()
@@ -2760,7 +2752,7 @@ class App(ctk.CTk):
         # 从UI显示名称反向查找存储键
 
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
 
         selected_key = None
@@ -2955,7 +2947,7 @@ class App(ctk.CTk):
         【实时保存】确保写入的是 JSON 标准的 true/false，而不是 0/1
         """
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
         try:
             data = self._load_slclient_json()
@@ -3832,7 +3824,7 @@ class App(ctk.CTk):
 
                 if success:
                     # 刷新一下配置
-                    messagebox.showinfo("Success", "Decompile Apk Successful!")
+                    messagebox.showinfo(_("success_title"), _("success_unzip"))
                     self.after(500, self.load_all_configs)
                 else:
                     return
@@ -3861,7 +3853,7 @@ class App(ctk.CTk):
         """
         start_time = time.time()
         if not PATH_SLCLIENT_JSON.exists():
-            messagebox.showerror("ERROR", f"Please unzip apk first")
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
 
         output_dir: str = "app_out"
@@ -3898,7 +3890,8 @@ class App(ctk.CTk):
 
                 model = self.ask_model_dialog()
                 if model is None:
-                    raise Exception("User cancels packaging")
+
+                    raise Exception(_("msg_err_canel"))
 
                 # 把 model 存入变量，供后面重命名使用,还需要写入devices的name中
                 self.current_device_model = model
@@ -3976,13 +3969,13 @@ class App(ctk.CTk):
                 self.load_all_configs()
                 end_time = time.time()
                 self.append_log(f"[SUCCESS] ✅  time spent: {(end_time - start_time):.2f}s\n")
-                self.show_custom_message("SUCCESS", f"APK Safe: \n{output_apk_path}")
+                messagebox.showinfo(_("success_title"),_("success_build"))
 
             except Exception as e:
                 error_msg = f"[FAIL] ❌ {str(e)}"
                 self.append_log(f"\n{error_msg}\n")
                 # self.status_label.configure(text="状态：打包失败", text_color="red")
-                messagebox.showerror("ERROR", error_msg)
+                messagebox.showerror(_("error_title"), error_msg)
             finally:
                 self.build_apk_btn.configure(state="normal", text=_("btn_build"))
                 # 还原导入标示，后续打包继续使用覆盖input.json
