@@ -3789,7 +3789,7 @@ class App(ctk.CTk):
         if exit_code == 0:
             end_time = time.time()
 
-            if apk_type in ["中屏", "Middle APK"]:
+            if apk_type in ["中屏", "Medium"]:
                 self.append_log("[Info] Middle screen mode detected. Updating config...\n")
 
                 json_file = PATH_SLCLIENT_JSON
@@ -4058,15 +4058,19 @@ class App(ctk.CTk):
         try:
             launcher_module = self.get_json_field(PATH_SLCLIENT_JSON, LAUNCHER_MODULE_PATH)
             version_str = self.get_version_info(yml_path)[1]
+            base_part = version_str.rsplit('_', 1)[0]
+            # 替换时间戳
+            time_suffix = time.strftime("%Y%m%d%H%M%")
+            new_version_str = f"{base_part}_{time_suffix}"
             recorder_module = self.get_json_field(PATH_SLCLIENT_JSON, RECORDER_ENABLE_PATH)
 
             raw_model = getattr(self, 'current_device_model', 'Unknown')
             device_model = str(raw_model)
 
             if not device_model or device_model.strip() == "":
-                new_version_name = version_str
+                new_version_name = new_version_str
             else:
-                new_version_name = re.sub(r'(POCSTARS_)', r'\g<1>' + device_model + '_', version_str)
+                new_version_name = re.sub(r'(POCSTARS_)', r'\g<1>' + device_model + '_', new_version_str)
             if recorder_module:
                 newname = 'RSAPP_' + str(new_version_name) + '.apk'
 
