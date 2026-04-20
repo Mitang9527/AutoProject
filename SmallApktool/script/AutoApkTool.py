@@ -4060,7 +4060,7 @@ class App(ctk.CTk):
             version_str = self.get_version_info(yml_path)[1]
             base_part = version_str.rsplit('_', 1)[0]
             # 替换时间戳
-            time_suffix = time.strftime("%Y%m%d%H%M%")
+            time_suffix = time.strftime('%Y%m%d%H%M%S')
             new_version_str = f"{base_part}_{time_suffix}"
             recorder_module = self.get_json_field(PATH_SLCLIENT_JSON, RECORDER_ENABLE_PATH)
 
