@@ -2349,6 +2349,7 @@ class App(ctk.CTk):
         # 获取profile节点下的配置
         profile_config = config_data.get("profile", {})
 
+        # 仅展示 DNS，不保存为实际值
         dns_list = profile_config.get("dns", [])
         if dns_list and isinstance(dns_list, list):
             first_dns = dns_list[0] if dns_list else ""
@@ -2356,21 +2357,20 @@ class App(ctk.CTk):
                 self.entry_custom_ip.delete(0, "end")
                 self.entry_custom_ip.insert(0, first_dns)
                 self.entry_custom_ip.configure(text_color="gray")
-                self.original_dns_value = first_dns
 
+        # 仅展示 context，不保存为实际值
         context_value = profile_config.get("context", "")
         if context_value:
             self.entry_custom_context.delete(0, "end")
             self.entry_custom_context.insert(0, context_value)
             self.entry_custom_context.configure(text_color="gray")
-            self.original_context_value = context_value
 
+        # 仅展示 upgrade_url，不保存为实际值
         upgrade_url = profile_config.get("upgrade_url", "")
         if upgrade_url:
             self.entry_custom_upgrade.delete(0, "end")
             self.entry_custom_upgrade.insert(0, upgrade_url)
             self.entry_custom_upgrade.configure(text_color="gray")
-            self.original_upgrade_url = upgrade_url
 
         self.append_log("Configuration loaded and echoed successfully.\n")
 
@@ -2432,9 +2432,9 @@ class App(ctk.CTk):
             messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
 
-        new_ip = self.entry_custom_ip.get().strip()
-        new_context = self.entry_custom_context.get().strip()
-        upgrade_url = self.entry_custom_upgrade.get().strip()
+        new_ip = self.entry_custom_ip.get().strip() if self.entry_custom_ip.cget("text_color") == "black" else ""
+        new_context = self.entry_custom_context.get().strip() if self.entry_custom_context.cget("text_color") == "black" else ""
+        upgrade_url = self.entry_custom_upgrade.get().strip() if self.entry_custom_upgrade.cget("text_color") == "black" else ""
 
         # 1. 基础验证：必须同时存在 IP 和 Context
         if not new_ip or not new_context:
