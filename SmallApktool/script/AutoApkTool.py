@@ -55,6 +55,18 @@ LOGIN_TYPE_MAPPING = {
 }
 
 MAP_CONFIG_TEMPLATES = {
+    "google": {
+        "display_name": {"zh": "谷歌", "en": "Google"},
+        "config": {
+            "enabled": True,
+            "report": True,
+            "map_type": "google",
+            "provider": "google",
+            "coor": "wgs84",
+            "update_period_sec": 40,
+            "report_period_sec": 40
+        }
+    },
     "baidu_domestic": {
         "display_name": {"zh": "百度 [国内]", "en": "Baidu [Domestic]"},
         "config": {
@@ -74,18 +86,6 @@ MAP_CONFIG_TEMPLATES = {
             "report": True,
             "map_type": "baidu",
             "provider": "baidu",
-            "coor": "wgs84",
-            "update_period_sec": 40,
-            "report_period_sec": 40
-        }
-    },
-    "google": {
-        "display_name": {"zh": "谷歌", "en": "Google"},
-        "config": {
-            "enabled": True,
-            "report": True,
-            "map_type": "google",
-            "provider": "google",
             "coor": "wgs84",
             "update_period_sec": 40,
             "report_period_sec": 40
@@ -1148,8 +1148,6 @@ class App(ctk.CTk):
 
         self.scroll_frame.configure(label_text=i18n.get("msg_config_list_title"))
 
-        self.env_custom.configure(text=_("env_custom"))
-
         if hasattr(self, 'sound_title_label'):
             self.sound_title_label.configure(text=i18n.get("msg_card_sound"))
         if hasattr(self, 'map_title_label'):
@@ -1247,13 +1245,13 @@ class App(ctk.CTk):
             self.opt_map_source.configure(values=map_source_display_names)
 
             # b. 根据存储的原始键，恢复当前选中的显示名称
-            current_map_source_key = "Google"  # 默认值
+            current_map_source_key = "google"  # 默认值
             if PATH_SLCLIENT_JSON.exists():
                 try:
                     with open(PATH_SLCLIENT_JSON, "r", encoding="utf-8") as f:
                         slclient_data = json.load(f)
 
-                    current_map_source_key = slclient_data.get("lbs", {}).get("map_type", "Google")
+                    current_map_source_key = slclient_data.get("lbs", {}).get("map_type", "google")
                     self.map_type = self.get_json_field(PATH_SLCLIENT_JSON, LBS_MAP_PYPE)
                     if self.map_coor == "wgs84" and self.map_type == "baidu":
                         current_map_source_key = "baidu_oversea"
@@ -2738,7 +2736,9 @@ class App(ctk.CTk):
         # 动态生成当前语言下的显示名称列表
         map_source_display_names = [v["display_name"][i18n.current_lang] for v in MAP_CONFIG_TEMPLATES.values()]
         self.opt_map_source = ctk.CTkOptionMenu(
-            parent, values=map_source_display_names, command=self.on_map_source_change
+            parent,
+            values=map_source_display_names,
+            command=self.on_map_source_change
         )
         self.opt_map_source.grid(
             row=0, column=1, padx=5, pady=10, sticky="w"
@@ -2767,7 +2767,7 @@ class App(ctk.CTk):
         if selected_key:
             config = MAP_CONFIG_TEMPLATES[selected_key]["config"]
 
-        # 假设你有一个函数来更新地图源配置
+        #
         if selected_key:
             if update_slclient_map_type(selected_key):  # 传入存储键
                 self._update_preview("map_source", selected_display_name)
