@@ -2432,9 +2432,9 @@ class App(ctk.CTk):
             messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
 
-        new_ip = self.entry_custom_ip.get().strip() if self.entry_custom_ip.cget("text_color") == "black" else ""
-        new_context = self.entry_custom_context.get().strip() if self.entry_custom_context.cget("text_color") == "black" else ""
-        upgrade_url = self.entry_custom_upgrade.get().strip() if self.entry_custom_upgrade.cget("text_color") == "black" else ""
+        new_ip = self.entry_custom_ip.get().strip() if self.entry_custom_ip.cget("text_color") != "gray" else ""
+        new_context = self.entry_custom_context.get().strip() if self.entry_custom_context.cget("text_color") != "gray" else ""
+        upgrade_url = self.entry_custom_upgrade.get().strip() if self.entry_custom_upgrade.cget("text_color") != "gray" else ""
 
         # 1. 基础验证：必须同时存在 IP 和 Context
         if not new_ip or not new_context:
