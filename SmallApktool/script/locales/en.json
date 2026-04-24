@@ -1,5 +1,5 @@
 {
-    "app_title": "App Adaptation_2.4",
+    "app_title": "App Adaptation_2.5",
     "sidebar_logo": "App\nAdaptation",
     "lbl_device": "Device Selection",
     "btn_refresh": "Refresh Devices",
@@ -76,6 +76,7 @@
     "confirm_button": "✅ Confirm Package",
     "cancel_button": "❌ Cancel",
     "error_title": "Error",
+    "error_poc": "Not POC APK, please select again",
     "msg_unzip_first": "Please unzip apk first",
     "msg_err_safe": "IP and Context must be entered！",
     "msg_err_adb": "Please select a valid ADB device first!",

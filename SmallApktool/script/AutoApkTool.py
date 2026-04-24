@@ -92,7 +92,7 @@ MAP_CONFIG_TEMPLATES = {
         }
     },
     "none": {
-        "display_name": {"zh": "GPS", "en": "GPS"},
+        "display_name": {"zh": "GPS[谷歌地图]", "en": "GPS[Google Map]"},
         "config": {
             "enabled": True,
             "report": True,
@@ -111,6 +111,7 @@ PATH_ASS = PROJECT_PATH / "app_out" / "assets"
 PATH_SLCLIENT = PROJECT_PATH / "app_out" / "assets" / "slclient"
 PATH_SLCLIENT_JSON = PROJECT_PATH / "app_out" / "assets" / "slclient.json"
 PATH_INPUT_JSON_SRC = "input.json"
+PATH_INPUT_DEFAULT_JSON = PROJECT_PATH / 'terminal_configs' / 'input_default.json'
 PATH_INPUT_JSON_DST = PROJECT_PATH / "app_out" / "assets" / "slclient" / "input.json"
 
 # 命名空间（确保与 manifest 中一致）
@@ -629,7 +630,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title(_("app_title"))
-        self.geometry("1200x780")
+        self.geometry("1200x750")
 
         # 添加标志跟踪是否是环境预设值
         self.is_default_dns = False
@@ -906,6 +907,7 @@ class App(ctk.CTk):
         )
         self.log_textbox.pack(fill="both", expand=True, padx=10, pady=10)
         self.tab_frames["log"] = frame_log
+
 
         # Tab 2: Config (保持原样)
         frame_config = ctk.CTkFrame(self.content_container, fg_color="transparent")
@@ -1311,7 +1313,7 @@ class App(ctk.CTk):
                 if "\tdevice" in line and not line.startswith("List")
             ]
             current_val = self.device_var.get()
-            self.device_menu.configure(values=devs if devs else ["no devices"])
+            self.device_menu.configure(values=devs if devs else [" "])
 
             if devs:
                 if current_val not in devs or current_val in ["未连接", "未检测到设备", "检测中...", "等待环境修复"]:
@@ -1321,7 +1323,7 @@ class App(ctk.CTk):
                     self.current_device = current_val
                 # self.status_label.configure(text=f"状态：已连接\n{self.current_device}", text_color="green")
             else:
-                self.device_var.set("no devices")
+                self.device_var.set(" ")
                 self.current_device = ""
                 # self.status_label.configure(text="no devices", text_color="red")
         except Exception:
@@ -1376,25 +1378,35 @@ class App(ctk.CTk):
         self.log_queue.put(text)
 
     def process_log_queue(self) -> None:
-        """处理日志队列并更新 UI"""
+        """处理日志队列并更新 UI（只读文本框安全版）"""
         if not self.winfo_exists():
             return
+
         try:
             while True:
                 try:
                     text = self.log_queue.get_nowait()
+
                     if self.log_textbox.winfo_exists():
+                        self.log_textbox.configure(state="normal")
                         self.log_textbox.insert("end", text)
                         self.log_textbox.see("end")
+                        self.log_textbox.configure(state="disabled")
+
                 except queue.Empty:
                     break
+
         except Exception:
             pass
+
+        # 50ms 后继续监听
         self.after(50, self.process_log_queue)
 
     def clear_log(self) -> None:
         if self.log_textbox.winfo_exists():
+            self.log_textbox.configure(state="normal")
             self.log_textbox.delete("0.0", "end")
+            self.log_textbox.configure(state="disabled")
 
     def refresh_config_view(self) -> None:
         if not self.winfo_exists():
@@ -1812,7 +1824,7 @@ class App(ctk.CTk):
             # 名称
             name_label = ctk.CTkLabel(
                 icon_frame,
-                text=folder.name[:10] + ("..." if len(folder.name) > 10 else ""),
+                text=folder.name[:20] + ("..." if len(folder.name) > 20 else ""),
                 font=ctk.CTkFont(size=12),
                 wraplength=100
             )
@@ -2260,14 +2272,14 @@ class App(ctk.CTk):
         )
 
         # --- 5. 【新增】分割线 ---
-        separator = ctk.CTkFrame(
-            parent,
-            height=2,
-            fg_color=("#3B8ED0", "gray60")
-        )
-        separator.grid(
-            row=3, column=0, columnspan=2, pady=(5, 10), sticky="ew" # 跨两列，填满宽度
-        )
+        # separator = ctk.CTkFrame(
+        #     parent,
+        #     height=2,
+        #     fg_color=("#3B8ED0", "gray60")
+        # )
+        # separator.grid(
+        #     row=3, column=0, columnspan=2, pady=(5, 10), sticky="ew" # 跨两列，填满宽度
+        # )
 
         # --- 6. DNS 输入框
         ctk.CTkLabel(parent, text="DNS IP:", anchor="w").grid(
@@ -2432,9 +2444,10 @@ class App(ctk.CTk):
             messagebox.showerror(_("error_title"), _("msg_unzip_first"))
             return False
 
-        new_ip = self.entry_custom_ip.get().strip() if self.entry_custom_ip.cget("text_color") != "gray" else ""
-        new_context = self.entry_custom_context.get().strip() if self.entry_custom_context.cget("text_color") != "gray" else ""
-        upgrade_url = self.entry_custom_upgrade.get().strip() if self.entry_custom_upgrade.cget("text_color") != "gray" else ""
+        # new_ip = self.entry_custom_ip.get().strip() if self.entry_custom_ip.cget("text_color") != "gray" else ""
+        new_ip = self.entry_custom_ip.get().strip()
+        new_context = self.entry_custom_context.get().strip()
+        upgrade_url = self.entry_custom_upgrade.get().strip()
 
         # 1. 基础验证：必须同时存在 IP 和 Context
         if not new_ip or not new_context:
@@ -2829,7 +2842,7 @@ class App(ctk.CTk):
         # 创建开关
         self.switch_launcher = ctk.CTkSwitch(
             parent,
-            text="",
+            text=" ",
             command=lambda: self.modify_manifest(bool(self.switch_launcher.get()))
         )
         self.switch_launcher.grid(row=2, column=1, padx=5, pady=8, sticky="w")
@@ -2837,6 +2850,24 @@ class App(ctk.CTk):
     # -------------mainfest辅助构造函数----------
     def android_attr(self, name):
         return f"{{{ANDROID_NAMESPACE}}}{name}"
+
+    def get_package_from_manifest(self,manifest_path):
+        """
+        从 AndroidManifest.xml 中提取 package 属性
+        """
+        try:
+            # 解析 XML 文件
+            tree = ET.parse(manifest_path)
+            root = tree.getroot()
+
+            # Android 命名空间通常用于 manifest 标签
+            # 获取 package 属性值
+            package_name = root.get('package')
+            return package_name
+
+        except Exception as e:
+            print(f"解析 Manifest 失败: {e}")
+            return None
 
     def write_pretty_xml(self, tree, file_path):
         rough_string = ET.tostring(tree.getroot(), encoding='utf-8')
@@ -2855,6 +2886,9 @@ class App(ctk.CTk):
         :param is_enabled: True=添加 Launcher, False=移除 Launcher
         """
         manifest_path = PATH_MANIFEST_XML
+        if not PATH_SLCLIENT_JSON.exists():
+            messagebox.showerror(_("error_title"), _("msg_unzip_first"))
+            return False
 
         if not os.path.exists(manifest_path):
             self.append_log(" Error: Unable to find AndroidManifest.xml")
@@ -2879,6 +2913,20 @@ class App(ctk.CTk):
                 "com.shanlitech.ptt.SplashActivity",
                 "com.shanlitech.noscreen.SplashActivity"
             ]
+
+            # package_name = self.get_package_from_manifest(PATH_MANIFEST_XML)
+            # if package_name:
+            #     candidate_activity_names = [
+            #         f"{package_name}.SplashActivity",
+            #         f"{package_name}.MainActivity",
+            #         f"{package_name}.ui.MainActivity"
+            #     ]
+            # else:
+            #     candidate_activity_names = [
+            #         "com.shanli.pocstar.SplashActivity",
+            #         "com.shanlitech.ptt.SplashActivity",
+            #         "com.shanlitech.noscreen.SplashActivity"
+            #     ]
 
             target_activity = None
             found_activity_name = ""
@@ -3104,13 +3152,14 @@ class App(ctk.CTk):
             # 写回文件
             with open(PATH_SLCLIENT_JSON, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
-
             # self.append_log(f"[OK] Node switched: {node_name}\n")
             # self.status_label.configure(
             #     text=f"Login method updated to\n"
             #          f"{node_name}",
             #     text_color="#27ae60"
             # )
+            self.load_and_echo_config_after_unzip()
+            self.focus()
 
         except Exception as e:
             # self.append_log(f"[Error] Failed to synchronize node configuration: {e}\n")
@@ -3788,18 +3837,17 @@ class App(ctk.CTk):
 
         if exit_code == 0:
             end_time = time.time()
-
-            if apk_type in ["中屏", "Medium"]:
-                self.append_log("[Info] Middle screen mode detected. Updating config...\n")
-
-                json_file = PATH_SLCLIENT_JSON
-                field_path = ["ui", "launcherModule"]
-                new_value = "middle"
-
-                if self.set_json_field(json_file, field_path, new_value):
-                    self.append_log(f"[Success] Auto-config: ui.launcherModule set to '{new_value}'\n")
-                else:
-                    self.append_log("[Warning] Config update failed after unzip.\n")
+            # 只解压poc的apk
+            package_names = [
+                "com.shli.interphone",
+                "com.shanlitech.noscreen",
+                "com.shanlitech.ptt"
+            ]
+            if not self.get_package_from_manifest(PATH_MANIFEST_XML) in package_names:
+                messagebox.showerror(_("error_title"),_("error_poc"))
+                shutil.rmtree(output_dir, ignore_errors=True)
+                self.append_log("[ERROR]:The file has been deleted\n")
+                return False
 
             self.load_and_echo_config_after_unzip()
 
@@ -3903,6 +3951,22 @@ class App(ctk.CTk):
                 if not self.is_import:
                     self.copy_files(PATH_INPUT_JSON_SRC, PATH_INPUT_JSON_DST)
 
+                # 兼容无屏问题
+                new_screen = "none"  # 设置默认值
+
+                if self.current_apk_type in ["无屏", "Screenless"]:
+                    new_screen = "none"
+                elif self.current_apk_type in ["大屏", "Large"]:
+                    new_screen = "large"
+                elif self.current_apk_type in ["中屏", "Medium"]:
+                    new_screen = "middle"
+                elif self.current_apk_type in ["小屏", "Small"]:
+                    new_screen = "small"
+
+                self.set_json_field(PATH_SLCLIENT_JSON, LAUNCHER_MODULE_PATH, new_screen)
+                self.append_log(f"APK type: {self.current_apk_type} -> Setting Screen to: {new_screen}")
+
+
                 # 3. 构建未签名 APK
                 self.append_log("\n[Step 3] Packing APK...\n")
                 apktool_cmd = [
@@ -3980,6 +4044,7 @@ class App(ctk.CTk):
                 self.build_apk_btn.configure(state="normal", text=_("btn_build"))
                 # 还原导入标示，后续打包继续使用覆盖input.json
                 self.is_import = False
+                self.copy_files(PATH_INPUT_DEFAULT_JSON,PATH_INPUT_JSON_SRC)
 
         threading.Thread(target=task, daemon=True).start()
 
@@ -4085,7 +4150,7 @@ class App(ctk.CTk):
             else:
                 newname = 'NSAPP_' + str(new_version_name) + '.apk'
 
-            self.append_log(f'[Info] Changed name to {newname}')
+            self.append_log(f'[Info] Changed name to {newname}\n')
             return newname
 
         except Exception as e:

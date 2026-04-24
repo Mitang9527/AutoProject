@@ -1,5 +1,5 @@
 {
-  "app_title": "App Adaptation_2.4",
+  "app_title": "App Adaptation_2.5",
   "sidebar_logo": "App\nAdaptation",
   "lbl_device": "设备选择",
   "btn_refresh": "刷新设备",
@@ -25,7 +25,6 @@
   "login_account": "账号登录",
   "login_imei ": "IMEI登录",
   "login_iccid ": "ICCID登录",
-  "placeholder_model_input": "例如: T100-Pro",
   "msg_btn_cancel": "取消",
   "msg_btn_confirm": "确认",
   "model_title": "型号",
@@ -77,6 +76,7 @@
   "confirm_button": "✅ 确认打包",
   "cancel_button": "❌ 取消",
   "error_title": "错误",
+  "error_poc": "非POC APK,请重新选择",
   "msg_unzip_first": "请先解压apk",
   "msg_err_adb": "请先选择有效的 ADB 设备！",
   "msg_err_safe": "IP 和 Context不能为空",
